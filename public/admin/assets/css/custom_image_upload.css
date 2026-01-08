@@ -1,0 +1,83 @@
+/* public/assets/css/custom_image_upload.css */
+
+/* CSS tùy chỉnh cho vùng tải ảnh */
+.image-upload-wrapper {
+    border: 2px dashed #ccc; /* Viền nét đứt */
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+    position: relative; /* Quan trọng cho input ẩn */
+    min-height: 150px; /* Đảm bảo có đủ không gian */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.image-upload-wrapper:hover {
+    border-color: #007bff; /* Đổi màu viền khi hover */
+}
+
+/* Ẩn input file mặc định */
+.hidden-input {
+    display: none;
+}
+
+/* Đảm bảo các lớp bx và fs-48text-primary của bạn vẫn hoạt hoạt động */
+.bx {
+    /* Bạn cần đảm bảo đã liên kết thư viện Boxicons */
+    /* Ví dụ: <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'> */
+}
+.fs-48 {
+    font-size: 48px;
+}
+.text-primary {
+    color: #007bff !important; /* Màu xanh của Bootstrap primary, bạn có thể thay đổi */
+}
+.mt-4 {
+    margin-top: 1.5rem !important;
+}
+.text-muted {
+    color: #6c757d !important;
+}
+.fs-13 {
+    font-size: 0.8125rem; /* ~13px */
+}
+.mt-2 {
+    margin-top: 0.5rem !important;
+}
+.mt-3 {
+    margin-top: 1rem !important;
+}
+
+.selected-file-name {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.image-preview {
+    max-width: 100%;
+    max-height: 120px; /* Chiều cao tối đa cho ảnh xem trước */
+    object-fit: contain;
+    margin-top: 10px;
+}
+.image-preview img {
+    max-width: 100%;
+    max-height: 120px;
+    display: block; /* Loại bỏ khoảng trống dưới ảnh */
+    margin: 0 auto; /* Căn giữa ảnh xem trước */
+    border-radius: 4px;
+}
+
+/* Style for existing image in the left card (chỉ dùng cho updateCategory.blade.php) */
+.avatar-xxl {
+    width: 120px; /* Điều chỉnh kích thước nếu cần */
+    height: 120px; /* Điều chỉnh kích thước nếu cần */
+    object-fit: cover;
+    border-radius: 50%; /* Nếu bạn muốn ảnh tròn */
+    margin: 15px auto;
+    display: block;
+}
