@@ -2,49 +2,28 @@
 
 use Illuminate\Support\Facades\Route;
 
-use App\Http\Controllers\Admin\AdminController; // đúng namespace Admin (A hoa)
+use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\admin\CategoryController as AdminCategoryController;
 
-/*
-|--------------------------------------------------------------------------
-| ONLY ADMIN + CATEGORY + PRODUCT (GIỮ NGUYÊN ROUTE NAME CŨ)
-|--------------------------------------------------------------------------
-| - /admin            -> redirect về /admin/dashboard
-| - /admin/dashboard  -> homeAdmin (giữ name admin.homeAdmin)
-| - product giữ nguyên: admin.product.listProduct, admin.product.create, ...
-| - category giữ nguyên group listCategory.* (nếu view đang dùng)
-|--------------------------------------------------------------------------
-*/
 
-// Trang chủ -> admin dashboard
 Route::redirect('/', '/admin/dashboard');
 
-// Gõ /admin -> vào dashboard luôn
+
 Route::get('/admin', function () {
     return redirect('/admin/dashboard');
 });
 
 Route::prefix('admin')->name('admin.')->group(function () {
 
-    // Dashboard (giữ y như route cũ)
+
     Route::get('/dashboard', [AdminController::class, 'homeAdmin'])->name('homeAdmin');
 
-    /*
-    |--------------------------------------------------------------------------
-    | PRODUCT (GIỮ NGUYÊN y hệt route cũ)
-    |--------------------------------------------------------------------------
-    */
-    
+
+
 
 });
 
-/*
-|--------------------------------------------------------------------------
-| CATEGORY (GIỮ NGUYÊN y hệt route cũ: listCategory.*)
-|--------------------------------------------------------------------------
-| Vì view/menu dự án bạn đang gọi listCategory.list, listCategory.addCategory...
-|--------------------------------------------------------------------------
-*/
+
 Route::prefix('listCategory')->name('listCategory.')->group(function () {
     Route::get('/', [AdminCategoryController::class, 'index'])->name('list');
 
