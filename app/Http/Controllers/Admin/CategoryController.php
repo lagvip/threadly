@@ -32,8 +32,10 @@ class CategoryController extends Controller
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-    {
+    {   
+        
         $data = $request->except('image');
+        
 
         $request->validate(
             [
@@ -66,7 +68,7 @@ class CategoryController extends Controller
         $data['id_parent'] = $request->input('id_parent');
 
 
-
+        
         Category::create($data);
 
         return redirect()->route('listCategory.list')->with('success', 'Thêm thành công');
