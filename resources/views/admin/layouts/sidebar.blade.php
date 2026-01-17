@@ -57,6 +57,21 @@
                 </div>
             </li>
 
+            <li class="nav-item">
+                <a class="nav-link menu-arrow" href="#sidebarBanner" data-bs-toggle="collapse" role="button"
+                    aria-expanded="false" aria-controls="sidebarBanner">
+
+                    <span class="nav-text"> Banner </span>
+                </a>
+                <div class="collapse" id="sidebarBanner">
+                    <ul class="nav sub-navbar-nav">
+                        <li class="sub-nav-item">
+                            <a class="sub-nav-link" href="{{ route('listBanner.list') }}">Danh sách</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
 
 
 
