@@ -57,11 +57,7 @@ class CategoryController extends Controller
             ]
         );
         if ($request->hasFile('image')) {
-            // Tự động lưu vào storage/app/category và trả về path
-            // dd($request->file('image'));
-            // $data['image'] = Storage::put('public/category', $request->file('image'));
-            $data['image'] = str_replace('public/', '', Storage::put('public/category', $request->file('image')));
-
+            $data['image'] = Storage::disk('public')->putFile('category', $request->file('image'));
         }
         $data['id_parent'] = $request->input('id_parent');
 
@@ -123,8 +119,7 @@ class CategoryController extends Controller
         $newImagePath = null; // Biến để lưu đường dẫn ảnh mới nếu có
 
         if ($request->hasFile('image')) { // Luôn dùng hasFile để kiểm tra file được upload
-            // $newImagePath = Storage::put('public/category', $request->file('image')); // Lưu ảnh mới
-            $newImagePath = $request->file('image')->store('category', 'public');
+            $newImagePath = Storage::disk('public')->putFile('category', $request->file('image'));
 
             $data["image"] = $newImagePath; // Cập nhật đường dẫn ảnh MỚI vào mảng $data
         }
@@ -135,8 +130,8 @@ class CategoryController extends Controller
 
         // --- Logic xóa ảnh cũ chỉ khi update thành công và có ảnh mới ---
         if ($is_update && $newImagePath) { // Nếu update thành công VÀ có ảnh mới được tải lên
-            if ($currentImage && Storage::exists($currentImage)) { // Nếu có ảnh cũ VÀ ảnh cũ tồn tại trên storage
-                Storage::delete($currentImage); // Xóa ảnh cũ
+            if ($currentImage && Storage::disk('public')->exists($currentImage)) { // Nếu có ảnh cũ VÀ ảnh cũ tồn tại trên storage
+                Storage::disk('public')->delete($currentImage); // Xóa ảnh cũ
             }
         }
         // ---------------------------------------------------------------
@@ -158,8 +153,8 @@ class CategoryController extends Controller
 
         $imagePath = $category->image;
 
-        if ($imagePath && Storage::exists($imagePath)) {
-            Storage::delete($imagePath);
+        if ($imagePath && Storage::disk('public')->exists($imagePath)) {
+            Storage::disk('public')->delete($imagePath);
         }
 
         $category->delete();
