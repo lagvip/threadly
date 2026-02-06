@@ -56,6 +56,20 @@
                     </ul>
                 </div>
             </li>
+            <li class="nav-item">
+                <a class="nav-link menu-arrow" href="#sidebarColor" data-bs-toggle="collapse" role="button"
+                    aria-expanded="false" aria-controls="sidebarColor">
+
+                    <span class="nav-text"> Màu sắc </span>
+                </a>
+                <div class="collapse" id="sidebarColor">
+                    <ul class="nav sub-navbar-nav">
+                        <li class="sub-nav-item">
+                            <a class="sub-nav-link" href="{{ route('listColor.list') }}">Danh sách</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
 
             <li class="nav-item">
                 <a class="nav-link menu-arrow" href="#sidebarBanner" data-bs-toggle="collapse" role="button"

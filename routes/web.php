@@ -1,11 +1,13 @@
 <?php
 
+
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\BannerController;
 
+use App\Http\Controllers\Admin\ColorController as AdminColorController;
 
 Route::redirect('/', '/admin/dashboard');
 
@@ -53,4 +55,18 @@ Route::prefix('listBanner')->name('listBanner.')->group(function () {
 
     Route::delete('/delete/{id}', [BannerController::class, 'destroy'])->name('deleteBanner');
     Route::get('/search', [BannerController::class, 'search'])->name('searchBanner');
+});
+Route::prefix('listColor')->name('listColor.')->group(function () {
+    Route::get('/', [AdminColorController::class, 'index'])->name('list');
+
+    Route::get('/detail/{id}', [AdminColorController::class, 'show'])->name('detailColor');
+
+    Route::get('/add', [AdminColorController::class, 'create'])->name('addColor');
+    Route::post('/store', [AdminColorController::class, 'store'])->name('storeColor');
+
+    Route::get('/edit/{id}', [AdminColorController::class, 'edit'])->name('editColor');
+    Route::put('/update{id}', [AdminColorController::class, 'update'])->name('updateColor');
+
+    Route::delete('/delete/{id}', [AdminColorController::class, 'destroy'])->name('deleteColor');
+    Route::get('/search', [AdminColorController::class, 'search'])->name('searchColor');
 });
