@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Admin\AdminController; // đúng namespace Admin (A hoa)
 use App\Http\Controllers\admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\VoucherController;
 
 /*
 |--------------------------------------------------------------------------
@@ -58,4 +59,11 @@ Route::prefix('listCategory')->name('listCategory.')->group(function () {
 
     Route::delete('/delete/{id}', [AdminCategoryController::class, 'destroy'])->name('deleteCategory');
     Route::get('/search', [AdminCategoryController::class, 'search'])->name('searchCategory');
+
+  Route::resource('vouchers', VoucherController::class);
+
 });
+
+// Provide top-level voucher routes so views/controllers using
+// route('vouchers.*') work without route-name prefixes.
+Route::resource('vouchers', VoucherController::class);
