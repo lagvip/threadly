@@ -55,34 +55,27 @@
                         </li>
                     </ul>
                 </div>
-
-               
             </li>
+                <li class="nav-item">
+                <a class="nav-link menu-arrow" href="#sidebarSize" data-bs-toggle="collapse" role="button"
+                    aria-expanded="false" aria-controls="sidebarSize">
 
-<li class="nav-item">
-    <a class="nav-link menu-arrow" href="#sidebarVoucher" data-bs-toggle="collapse" role="button"
-        aria-expanded="false" aria-controls="sidebarVoucher">
+                    <span class="nav-text"> Size </span>
+                </a>
 
-        <span class="nav-text"> Voucher </span>
-    </a>
-
-    <div class="collapse" id="sidebarVoucher">
+               <div class="collapse" id="sidebarSize">
         <ul class="nav sub-navbar-nav">
+
             <li class="sub-nav-item">
-                <a class="sub-nav-link" href="{{ route('vouchers.index') }}">
-                    Danh sách voucher
+                <a class="sub-nav-link" href="{{ route('listSize.list') }}">
+                    Danh sách Size
                 </a>
             </li>
 
-            <li class="sub-nav-item">
-                <a class="sub-nav-link" href="{{ route('vouchers.create') }}">
-                    Thêm voucher
-                </a>
-            </li>
+
         </ul>
     </div>
-</li>
-
+            </li>
 
 
 
