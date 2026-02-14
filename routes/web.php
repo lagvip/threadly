@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Admin\AdminController; // đúng namespace Admin (A hoa)
 use App\Http\Controllers\admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\SizeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -59,3 +60,22 @@ Route::prefix('listCategory')->name('listCategory.')->group(function () {
     Route::delete('/delete/{id}', [AdminCategoryController::class, 'destroy'])->name('deleteCategory');
     Route::get('/search', [AdminCategoryController::class, 'search'])->name('searchCategory');
 });
+Route::prefix('listSize')->name('listSize.')->group(function () {
+
+    Route::get('/', [SizeController::class, 'index'])->name('list');
+
+    Route::get('/detail/{id}', [SizeController::class, 'show'])->name('detailSize');
+
+    Route::get('/add', [SizeController::class, 'create'])->name('addSize');
+
+    Route::post('/store', [SizeController::class, 'store'])->name('storeSize');
+
+    Route::get('/edit/{id}', [SizeController::class, 'edit'])->name('editSize');
+
+    Route::put('/update/{id}', [SizeController::class, 'update'])->name('updateSize');
+
+    Route::delete('/delete/{id}', [SizeController::class, 'destroy'])->name('deleteSize');
+
+    Route::get('/search', [SizeController::class, 'search'])->name('searchSize');
+});
+
