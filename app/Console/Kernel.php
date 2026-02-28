@@ -12,8 +12,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Cập nhật trạng thái voucher hết hạn mỗi ngày lúc 00:01
-        $schedule->command('voucher:update-expired')->dailyAt('00:01');
+        // $schedule->command('inspire')->hourly();
     }
 
     /**

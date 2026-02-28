@@ -39,12 +39,12 @@ class VoucherService
     }
 
     public function softDeleteWithStatus($id)
-    {
-        $voucher = Voucher::findOrFail($id);
-        $voucher->status = 'inactive';
-        $voucher->save();
-        return $voucher->delete();
-    }
+{
+    $voucher = Voucher::findOrFail($id);
+    $voucher->status = 'inactive';
+    $voucher->save();
+    return $voucher->delete();
+}
 
     public function getVoucherById($id)
     {
@@ -73,14 +73,14 @@ class VoucherService
         return Voucher::findOrFail($id);
     }
     public function getStatus($status){
-        if($status === 'active'){
-            return 'Hoạt động';
-        }elseif($status === 'inactive'){
-            return 'Không hoạt động';
-        }elseif($status === 'expired'){
-            return 'Hết hạn';
+        if($status == 0){
+            return 'Active';
+        }elseif($status == 1){
+            return 'Inactive';
+        }elseif($status == 2){
+            return 'Future Plan';
         }else{
-            return 'Không xác định';
+            return 'Unknown';
         }
     }
     public function countCoupons(){
@@ -120,30 +120,6 @@ public function bulkDelete(array $ids)
 public function bulkRestoreVoucher(array $ids)
 {
     return Voucher::onlyTrashed()->whereIn('id', $ids)->restore();
-}
-
-/**
- * Lấy tất cả voucher hoạt động (active hoặc expired)
- */
-public function getActiveVouchers()
-{
-    return Voucher::whereIn('status', ['active', 'expired'])->get();
-}
-
-/**
- * Lấy tất cả voucher chưa hết hạn
- */
-public function getValidVouchers()
-{
-    return Voucher::where('status', 'active')->get();
-}
-
-/**
- * Lấy tất cả voucher hết hạn
- */
-public function getExpiredVouchers()
-{
-    return Voucher::where('status', 'expired')->get();
 }
 
 
