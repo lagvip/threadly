@@ -86,6 +86,26 @@
                 </div>
             </li>
             <li class="nav-item">
+                            <a class="nav-link menu-arrow" href="#sidebarSize" data-bs-toggle="collapse" role="button"
+                                aria-expanded="false" aria-controls="sidebarSize">
+
+                                <span class="nav-text"> Size </span>
+                            </a>
+
+                        <div class="collapse" id="sidebarSize">
+                    <ul class="nav sub-navbar-nav">
+
+                        <li class="sub-nav-item">
+                            <a class="sub-nav-link" href="{{ route('listSize.list') }}">
+                                Danh sách
+                            </a>
+                        </li>
+
+                    </ul>
+                   </div>
+                </li>
+
+            <li class="nav-item">
                 <a class="nav-link menu-arrow" href="#sidebarUsers" data-bs-toggle="collapse" role="button"
                     aria-expanded="false" aria-controls="sidebarUsers">
 
@@ -98,12 +118,10 @@
                             <a class="sub-nav-link" href="{{ route('users.list') }}">Danh sách</a>
                         </li>
 
-                        
+
                     </ul>
                 </div>
             </li>
-
-
 
 
 

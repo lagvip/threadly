@@ -8,7 +8,7 @@ use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\ColorController as AdminColorController;
 use App\Http\Controllers\Admin\UserController;
-
+use App\Http\Controllers\Admin\SizeController;
 // Redirect
 Route::redirect('/', '/admin/dashboard');
 Route::get('/admin', fn () => redirect('/admin/dashboard'));
@@ -87,3 +87,22 @@ Route::middleware(['auth'])->group(function () {
     });
 
 });
+Route::prefix('listSize')->name('listSize.')->group(function () {
+
+    Route::get('/', [SizeController::class, 'index'])->name('list');
+
+    Route::get('/detail/{id}', [SizeController::class, 'show'])->name('detailSize');
+
+    Route::get('/add', [SizeController::class, 'create'])->name('addSize');
+
+    Route::post('/store', [SizeController::class, 'store'])->name('storeSize');
+
+    Route::get('/edit/{id}', [SizeController::class, 'edit'])->name('editSize');
+
+    Route::put('/update/{id}', [SizeController::class, 'update'])->name('updateSize');
+
+    Route::delete('/delete/{id}', [SizeController::class, 'destroy'])->name('deleteSize');
+
+    Route::get('/search', [SizeController::class, 'search'])->name('searchSize');
+});
+
