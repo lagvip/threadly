@@ -3,7 +3,7 @@
 <div class="container-xxl">
 
     <div class="row">
-        <div class="col-xl-3 col-lg-4">
+        <!-- <div class="col-xl-3 col-lg-4">
             <div class="card">
                 <div class="card-body">
                     <div class="mt-3">
@@ -20,10 +20,10 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> -->
 
-        <div class="col-xl-9 col-lg-8 ">
-            <form action="{{ route('listColor.updateColor', $color) }}" method="POST"
+        <div class="col-xl-12 col-lg-12 ">
+            <form action="{{ route('color.update', $color) }}" method="POST"
                 enctype="multipart/form-data" id="updateColorForm"> {{-- Đổi ID form --}}
                 @csrf
                 @method('PUT')
@@ -46,7 +46,7 @@
                             <div class="col-lg-6">
                                 <div class="mb-3">
                                     <label for="color-code" class="form-label">Mã màu</label>
-                                    <input type="text" name="code" value="{{ $color['code'] }}"
+                                    <input type="color" name="code" value="{{ $color['code'] }}"
                                         id="color-code" class="form-control" placeholder="Nhập mã màu">
                                     @if ($errors->has('code'))
                                     <span style="color: red;">{{ $errors->first('code') }}</span>
@@ -65,7 +65,7 @@
                         </div>
 
                         <div class="col-lg-2">
-                            <a href="{{ route('listCategory.list') }}" class="btn btn-primary w-100">Hủy</a>
+                            <a href="{{ route('color.list') }}" class="btn btn-primary w-100">Hủy</a>
                             {{-- Đổi link hủy --}}
                         </div>
                     </div>

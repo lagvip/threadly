@@ -40,17 +40,21 @@ Route::prefix('listCategory')->name('listCategory.')->group(function () {
     Route::get('/search', [AdminCategoryController::class, 'search'])->name('searchCategory');
 });
 
-Route::prefix('listColor')->name('listColor.')->group(function () {
+Route::prefix('color')->name('color.')->group(function () {
     Route::get('/', [AdminColorController::class, 'index'])->name('list');
+    Route::get('/bin', [AdminColorController::class, 'bin'])->name('bin');
+    Route::post('/{id}/restore', [AdminColorController::class, 'restore'])->name('restore');
+    Route::post('/{id}/forceDelete', [AdminColorController::class, 'forceDelete'])->name('forceDelete');
+    Route::post('/forceDeleteAll', [AdminColorController::class, 'forceDeleteAll'])->name('forceDeleteAll');
 
-    Route::get('/detail/{id}', [AdminColorController::class, 'show'])->name('detailColor');
+    Route::get('/detail/{id}', [AdminColorController::class, 'show'])->name('detail');
 
-    Route::get('/add', [AdminColorController::class, 'create'])->name('addColor');
-    Route::post('/store', [AdminColorController::class, 'store'])->name('storeColor');
+    Route::get('/add', [AdminColorController::class, 'create'])->name('add');
+    Route::post('/store', [AdminColorController::class, 'store'])->name('store');
 
-    Route::get('/edit/{id}', [AdminColorController::class, 'edit'])->name('editColor');
-    Route::put('/update{id}', [AdminColorController::class, 'update'])->name('updateColor');
+    Route::get('/edit/{id}', [AdminColorController::class, 'edit'])->name('edit');
+    Route::put('/update{id}', [AdminColorController::class, 'update'])->name('update');
 
-    Route::delete('/delete/{id}', [AdminColorController::class, 'destroy'])->name('deleteColor');
-    Route::get('/search', [AdminColorController::class, 'search'])->name('searchColor');
+    Route::delete('/delete/{id}', [AdminColorController::class, 'destroy'])->name('delete');
+    Route::get('/search', [AdminColorController::class, 'search'])->name('search');
 });

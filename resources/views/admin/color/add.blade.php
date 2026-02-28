@@ -2,7 +2,7 @@
 @section('content')
 <div class="container-xxl">
     <div class="">
-        <form action="{{ route('listColor.storeColor') }}" method="POST"
+        <form action="{{ route('color.store') }}" method="POST"
             id="colorForm">
             @csrf
 
@@ -30,8 +30,8 @@
                     <div class="col-lg-6">
                         <div class="mb-3">
                             <label for="color-code" class="form-label">Mã màu</label>
-                            <input type="text" name="code" id="color-code" class="form-control"
-                                placeholder="Nhập mã màu" value="{{ old('code', $Color->code ?? '') }}">
+                            <input type="color" name="code" id="color-code" class="form-control"
+                                placeholder="Nhập mã màu" value="{{ old('code', $Color->code ?? '#FFFFFF') }}">
                             @if ($errors->has('code'))
                             <span style="color: red;">{{ $errors->first('code') }}</span>
                             @endif
@@ -46,7 +46,7 @@
                         <button type="submit" class="btn btn-outline-secondary w-100">Thêm</button>
                     </div>
                     <div class="col-lg-2">
-                        <a href="{{ route('listColor.list') }}" class="btn btn-primary w-100">Hủy</a>
+                        <a href="{{ route('color.list') }}" class="btn btn-primary w-100">Hủy</a>
                     </div>
                 </div>
             </div>

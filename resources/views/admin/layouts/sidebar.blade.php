@@ -65,7 +65,8 @@
                 <div class="collapse" id="sidebarColor">
                     <ul class="nav sub-navbar-nav">
                         <li class="sub-nav-item">
-                            <a class="sub-nav-link" href="{{ route('listColor.list') }}">Danh sách</a>
+                            <a class="sub-nav-link" href="{{ route('color.list') }}">Danh sách</a>
+                            <a class="sub-nav-link" href="{{ route('color.bin') }}">Thùng rác</a>
                         </li>
                     </ul>
                 </div>

@@ -12,7 +12,13 @@ class ColorController extends Controller
     public function index()
     {
         $colors = Color::query()->latest('id')->paginate(10);
-        return view('admin.color.listColors', compact('colors'));
+        return view('admin.color.list', compact('colors'));
+    }
+
+    public function bin()
+    {
+        $colors = Color::query()->onlyTrashed()->latest('id')->paginate(10);
+        return view('admin.color.bin', compact('colors'));
     }
 
     /**
@@ -21,7 +27,7 @@ class ColorController extends Controller
     public function create()
     {
         $colors = Color::all();
-        return view('admin.color.addColor', compact('colors'));
+        return view('admin.color.add', compact('colors'));
     }
 
     /**
@@ -54,7 +60,7 @@ class ColorController extends Controller
         // die;
         Color::create($data);
 
-        return redirect()->route('listColor.list')->with('success', 'Thêm thành công');
+        return redirect()->route('color.list')->with('success', 'Thêm thành công');
     }
 
 
@@ -64,7 +70,7 @@ class ColorController extends Controller
     public function show(string $id)
     {
         $color = Color::findOrFail($id);
-        return view('admin.color.detailColor', compact('color'));
+        return view('admin.color.detail', compact('color'));
     }
 
     /**
@@ -73,7 +79,7 @@ class ColorController extends Controller
     public function edit(string $id)
     {
         $color = Color::findOrFail($id);
-        return view('admin.color.updateColor', compact('color'));
+        return view('admin.color.update', compact('color'));
 
     }
 
@@ -105,9 +111,9 @@ class ColorController extends Controller
 
 
         if ($is_update) {
-            return redirect()->route("listColor.list")->with("success", "Sửa thành công sản phẩm!");
+            return redirect()->route("color.list")->with("success", "Sửa thành công sản phẩm!");
         } else {
-            return redirect()->route("listColor.list")->with("error", "Sửa không thành công!");
+            return redirect()->route("color.list")->with("error", "Sửa không thành công!");
         }
     }
 
@@ -119,13 +125,34 @@ class ColorController extends Controller
         $color = Color::findOrFail($id);
 
         $color->delete();
-        return redirect()->route('listColor.list');
+        return redirect()->route('color.list');
     }
 
     public function search(Request $request)
     {
         $search = $request->input('search');
         $colors = Color::where('name', 'like', '%' . $search . '%')->paginate(10);
-        return view('admin.color.listColors', compact('colors'));
+        return view('admin.color.list', compact('colors'));
+    }
+
+    public function restore($id)
+    {
+        Color::withTrashed()->findOrFail($id)->restore();
+
+        return redirect()->route('color.bin');
+    }
+
+    public function forceDelete($id)
+    {
+        Color::withTrashed()->findOrFail($id)->forceDelete();
+
+        return redirect()->route('color.bin');
+    }
+
+    public function forceDeleteAll()
+    {
+        Color::onlyTrashed()->forceDelete();
+
+        return redirect()->route('color.bin');
     }
 }
