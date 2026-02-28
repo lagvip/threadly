@@ -1,34 +1,69 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\AdminController;
-use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+
+use App\Http\Controllers\Admin\AdminController; // đúng namespace Admin (A hoa)
+use App\Http\Controllers\admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\VoucherController;
 
-/* HOME */
+/*
+|--------------------------------------------------------------------------
+| ONLY ADMIN + CATEGORY + PRODUCT (GIỮ NGUYÊN ROUTE NAME CŨ)
+|--------------------------------------------------------------------------
+| - /admin            -> redirect về /admin/dashboard
+| - /admin/dashboard  -> homeAdmin (giữ name admin.homeAdmin)
+| - product giữ nguyên: admin.product.listProduct, admin.product.create, ...
+| - category giữ nguyên group listCategory.* (nếu view đang dùng)
+|--------------------------------------------------------------------------
+*/
+
+// Trang chủ -> admin dashboard
 Route::redirect('/', '/admin/dashboard');
 
+// Gõ /admin -> vào dashboard luôn
 Route::get('/admin', function () {
     return redirect('/admin/dashboard');
 });
 
-/* ADMIN DASHBOARD */
 Route::prefix('admin')->name('admin.')->group(function () {
+
+    // Dashboard (giữ y như route cũ)
     Route::get('/dashboard', [AdminController::class, 'homeAdmin'])->name('homeAdmin');
+
+    /*
+    |--------------------------------------------------------------------------
+    | PRODUCT (GIỮ NGUYÊN y hệt route cũ)
+    |--------------------------------------------------------------------------
+    */
+    
+
 });
 
-/* CATEGORY */
+/*
+|--------------------------------------------------------------------------
+| CATEGORY (GIỮ NGUYÊN y hệt route cũ: listCategory.*)
+|--------------------------------------------------------------------------
+| Vì view/menu dự án bạn đang gọi listCategory.list, listCategory.addCategory...
+|--------------------------------------------------------------------------
+*/
 Route::prefix('listCategory')->name('listCategory.')->group(function () {
     Route::get('/', [AdminCategoryController::class, 'index'])->name('list');
+
     Route::get('/detail/{id}', [AdminCategoryController::class, 'show'])->name('detailCategory');
+
     Route::get('/add', [AdminCategoryController::class, 'create'])->name('addCategory');
     Route::post('/store', [AdminCategoryController::class, 'store'])->name('storeCategory');
+
     Route::get('/edit/{id}', [AdminCategoryController::class, 'edit'])->name('editCategory');
-    Route::put('/update/{id}', [AdminCategoryController::class, 'update'])->name('updateCategory');
+    Route::put('/update{id}', [AdminCategoryController::class, 'update'])->name('updateCategory');
+
     Route::delete('/delete/{id}', [AdminCategoryController::class, 'destroy'])->name('deleteCategory');
     Route::get('/search', [AdminCategoryController::class, 'search'])->name('searchCategory');
+
+  Route::resource('vouchers', VoucherController::class);
+
 });
 
-// Route::middleware(['admin'])->group(function () {
-    Route::resource('vouchers', VoucherController::class);
-// });
+// Provide top-level voucher routes so views/controllers using
+// route('vouchers.*') work without route-name prefixes.
+Route::resource('vouchers', VoucherController::class);

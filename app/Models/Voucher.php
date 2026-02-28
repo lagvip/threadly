@@ -27,32 +27,16 @@ class Voucher extends Model
     protected $casts = [
         'start_date' => 'datetime',
         'end_date'   => 'datetime',
-        'status'     => 'string'
+        'status'     => 'boolean'
     ];
-
-    /**
-     * Accessor: Lấy trạng thái thực tế (tính toán dựa trên ngày hết hạn)
-     */
-    public function getActualStatusAttribute()
-    {
-        $now = Carbon::now();
-
-        // Nếu đã hết hạn
-        if ($now->gt($this->end_date)) {
-            return 'expired';
-        }
-
-        // Trả về status từ database
-        return $this->status;
-    }
 
     /**
      * Kiểm tra voucher có hợp lệ không
      */
     public function isValid($orderTotal)
     {
-        // Bị tắt hoặc hết hạn
-        if ($this->actual_status !== 'active') return false;
+        // Bị tắt
+        if (!$this->status) return false;
 
         // Hết lượt dùng
         if ($this->quantity <= 0) return false;

@@ -6,25 +6,22 @@
 
 <div class="mb-3">
     <label>Loại</label>
-    <select id="type" name="type" class="form-control" onchange="toggleMaxDiscount()">
-        <option value="percent" @selected(($voucher->type ?? '')=='percent')>Giảm theo %</option>
-        <option value="fixed" @selected(($voucher->type ?? '')=='fixed')>Trừ tiền cố định</option>
+    <select name="type" class="form-control">
+        <option value="percent" @selected(($voucher->type ?? '')=='percent')>%</option>
+        <option value="fixed" @selected(($voucher->type ?? '')=='fixed')>Trừ tiền</option>
     </select>
 </div>
 
 <div class="mb-3">
-    <label>Giá trị <span id="valueUnit">(%):</span></label>
-    <input type="number" id="value" name="value" class="form-control" step="0.01"
-           value="{{ old('value',$voucher->value ?? '') }}"
-           min="0" max="100">
-    <small id="valueHelp" class="form-text text-muted">Nhập số từ 0-100 nếu là %</small>
+    <label>Giá trị</label>
+    <input type="number" name="value" class="form-control"
+           value="{{ old('value',$voucher->value ?? '') }}">
 </div>
 
-<div class="mb-3" id="maxDiscountDiv">
-    <label>Giảm tối đa (VND)</label>
-    <input type="number" id="max_discount" name="max_discount" class="form-control" step="0.01"
-           value="{{ old('max_discount',$voucher->max_discount ?? '') }}" min="0">
-    <small class="form-text text-muted">Chỉ áp dụng khi loại voucher là %</small>
+<div class="mb-3">
+    <label>Giảm tối đa (chỉ %)</label>
+    <input type="number" name="max_discount" class="form-control"
+           value="{{ old('max_discount',$voucher->max_discount ?? '') }}">
 </div>
 
 <div class="mb-3">
@@ -52,30 +49,3 @@
 </div>
 
 <button class="btn btn-success">Lưu</button>
-
-<script>
-    function toggleMaxDiscount() {
-        const type = document.getElementById('type').value;
-        const maxDiscountDiv = document.getElementById('maxDiscountDiv');
-        const valueUnit = document.getElementById('valueUnit');
-        const valueHelp = document.getElementById('valueHelp');
-        const value = document.getElementById('value');
-        
-        if (type === 'percent') {
-            maxDiscountDiv.style.display = 'block';
-            valueUnit.textContent = '(%)';
-            valueHelp.textContent = 'Nhập số từ 0-100 nếu là %';
-            value.max = '100';
-        } else {
-            maxDiscountDiv.style.display = 'none';
-            valueUnit.textContent = '(VND)';
-            valueHelp.textContent = 'Nhập số tiền được giảm';
-            value.max = '';
-        }
-    }
-    
-    // Chạy khi load trang
-    document.addEventListener('DOMContentLoaded', function() {
-        toggleMaxDiscount();
-    });
-</script>
