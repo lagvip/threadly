@@ -5,16 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AdminController; // đúng namespace Admin (A hoa)
 use App\Http\Controllers\admin\CategoryController as AdminCategoryController;
 
-/*
-|--------------------------------------------------------------------------
-| ONLY ADMIN + CATEGORY + PRODUCT (GIỮ NGUYÊN ROUTE NAME CŨ)
-|--------------------------------------------------------------------------
-| - /admin            -> redirect về /admin/dashboard
-| - /admin/dashboard  -> homeAdmin (giữ name admin.homeAdmin)
-| - product giữ nguyên: admin.product.listProduct, admin.product.create, ...
-| - category giữ nguyên group listCategory.* (nếu view đang dùng)
-|--------------------------------------------------------------------------
-*/
+
 
 // Trang chủ -> admin dashboard
 Route::redirect('/', '/admin/dashboard');
@@ -26,25 +17,22 @@ Route::get('/admin', function () {
 
 Route::prefix('admin')->name('admin.')->group(function () {
 
-    // Dashboard (giữ y như route cũ)
+   
     Route::get('/dashboard', [AdminController::class, 'homeAdmin'])->name('homeAdmin');
 
-    /*
-    |--------------------------------------------------------------------------
-    | PRODUCT (GIỮ NGUYÊN y hệt route cũ)
-    |--------------------------------------------------------------------------
-    */
+     Route::prefix('shipping')->name('shipping.')->controller(ShippingController::class)->group(function() {
+        Route::get('/', 'index')->name('index');         // -> Tên: admin.shipping.index
+        Route::post('/store', 'store')->name('store');   // -> Tên: admin.shipping.store
+        Route::get('/edit/{id}', 'edit')->name('edit');  // -> Tên: admin.shipping.edit
+        Route::put('/update/{id}', 'update')->name('update'); // -> Tên: admin.shipping.update
+        Route::get('/delete/{id}', 'destroy')->name('delete'); // -> Tên: admin.shipping.delete
+        Route::patch('/update-status/{id}', 'updateStatus')->name('updateStatus');
+    });
     
 
 });
 
-/*
-|--------------------------------------------------------------------------
-| CATEGORY (GIỮ NGUYÊN y hệt route cũ: listCategory.*)
-|--------------------------------------------------------------------------
-| Vì view/menu dự án bạn đang gọi listCategory.list, listCategory.addCategory...
-|--------------------------------------------------------------------------
-*/
+
 Route::prefix('listCategory')->name('listCategory.')->group(function () {
     Route::get('/', [AdminCategoryController::class, 'index'])->name('list');
 
