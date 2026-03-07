@@ -9,26 +9,35 @@ use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\ColorController as AdminColorController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SizeController;
+use App\Http\Controllers\Admin\VoucherController;
+use App\Http\Controllers\Admin\BrandController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\ProductVariantController;
+use App\Http\Controllers\Auth\GoogleController;
 // Redirect
 Route::redirect('/', '/admin/dashboard');
 Route::get('/admin', fn () => redirect('/admin/dashboard'));
 
-// ======================
-// AUTH (KHÔNG BỌC auth)
-// ======================
-Route::prefix('admin')->name('admin.')->group(function () {
+//
+// LOGIN
+//
+Route::prefix('admin')->name('admin.')->middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('auth.login');
     Route::post('/login', [AuthController::class, 'postLoginAdmin'])->name('auth.postLoginAdmin');
 
     Route::get('/register', [AuthController::class, 'showRegister'])->name('auth.register');
     Route::post('/register', [AuthController::class, 'postRegister'])->name('auth.postRegister');
 
+});
+    Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
+    Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
+    Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
 });
 
-// =========================================================
+//
 // BỌC TẤT CẢ ROUTE CẦN ĐĂNG NHẬP BẰNG auth
-// =========================================================
+//
 Route::middleware(['auth'])->group(function () {
 
     // DASHBOARD
@@ -85,24 +94,51 @@ Route::middleware(['auth'])->group(function () {
 
         Route::post('/{id}/assign-role', [UserController::class, 'assignRole'])->name('assignRole');
     });
-
-});
-Route::prefix('listSize')->name('listSize.')->group(function () {
-
+    // SIZE
+    Route::prefix('listSize')->name('listSize.')->group(function () {
     Route::get('/', [SizeController::class, 'index'])->name('list');
-
     Route::get('/detail/{id}', [SizeController::class, 'show'])->name('detailSize');
-
     Route::get('/add', [SizeController::class, 'create'])->name('addSize');
-
     Route::post('/store', [SizeController::class, 'store'])->name('storeSize');
-
     Route::get('/edit/{id}', [SizeController::class, 'edit'])->name('editSize');
-
     Route::put('/update/{id}', [SizeController::class, 'update'])->name('updateSize');
-
     Route::delete('/delete/{id}', [SizeController::class, 'destroy'])->name('deleteSize');
-
     Route::get('/search', [SizeController::class, 'search'])->name('searchSize');
+   });
+     // VOUCHERS
+    Route::resource('vouchers', VoucherController::class);
+    //BRAND
+    Route::get('/brands', [BrandController::class, 'index'])->name('brands.index');
+
+    Route::get('/brands/create', [BrandController::class, 'create'])->name('brands.create');
+    Route::post('/brands', [BrandController::class, 'store'])->name('brands.store');
+
+    Route::delete('/brands/{id}', [BrandController::class, 'destroy'])->name('brands.destroy');
+
+    Route::get('/brands/{id}/edit', [BrandController::class, 'edit'])->name('brands.edit');
+    Route::put('/brands/{id}', [BrandController::class, 'update'])->name('brands.update');
+    // PRODUCT
+    Route::prefix('product')->name('product.')->group(function () {
+        Route::get('/list-product', [AdminProductController::class, 'list'])->name('listProduct');
+        Route::get('/add', [AdminProductController::class, 'create'])->name('create');
+        Route::post('/postCreate', [AdminProductController::class, 'postCreate'])->name('postCreate');
+        Route::get('/edit/{id}', [AdminProductController::class, 'edit'])->name('edit');
+        Route::post('/update/{id}', [AdminProductController::class, 'postEdit'])->name('postEdit');
+        Route::get('/detail/{id}', [AdminProductController::class, 'detail'])->name('detail');
+        Route::get('/show/{id}', [AdminProductController::class, 'show'])->name('show');
+        Route::get('/delete/{id}', [AdminProductController::class, 'destroy'])->name('destroy');
+        Route::get('/trash', [AdminProductController::class, 'trash'])->name('trash');
+        Route::get('/restore/{id}', [AdminProductController::class, 'restore'])->name('restore');
+        Route::get('/force-delete/{id}', [AdminProductController::class, 'forceDelete'])->name('forceDelete');
+        Route::post('/bulk-delete', [AdminProductController::class, 'bulkDelete'])->name('bulkDelete');
+        Route::post('/bulk-restore', [AdminProductController::class, 'bulkRestore'])->name('bulkRestore');
+        // phần search
+        Route::get('/search', [AdminProductController::class, 'search'])->name('search');
+        // biến thể
+        Route::get('/variant-trash', [AdminProductController::class, 'variantTrash'])->name('variant.trash');
+    Route::post('/variant-restore', [AdminProductController::class, 'variantRestore'])->name('variant.restore');
+    Route::post('/variant-force-delete',[AdminProductController::class, 'variantForceDelete'])->name('variant.forceDelete');
+    });
 });
+
 

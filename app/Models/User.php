@@ -14,6 +14,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'google_id',
+        'avatar',
+        'status',
+        'email_verified_at',
     ];
 
     protected $hidden = [
@@ -25,20 +29,20 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
-    // users <-> roles (pivot: role_users)
+    // users <-> roles 
     public function roles()
     {
         return $this->belongsToMany(Role::class, 'role_users', 'user_id', 'role_id')
             ->withTimestamps();
     }
 
-    // user -> addresses (addresses.user_id)
+    // user -> addresses
     public function addresses()
     {
         return $this->hasMany(Address::class, 'user_id', 'id');
     }
 
-    // Helper: kiểm tra role theo name (admin/staff/customer)
+    //  kiểm tra role theo name
     public function hasRole(string $roleName): bool
     {
         return $this->roles()->where('name', $roleName)->exists();

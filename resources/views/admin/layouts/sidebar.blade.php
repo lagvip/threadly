@@ -55,6 +55,36 @@
                         </li>
                     </ul>
                 </div>
+
+
+            </li>
+            <li class="nav-item">
+                <a class="nav-link menu-arrow" href="#sidebarBrand" data-bs-toggle="collapse" role="button"
+                    aria-expanded="false" aria-controls="sidebarBrand">
+                    <span class="nav-text"> Thương hiệu </span>
+                </a>
+
+                <div class="collapse" id="sidebarBrand">
+                    <ul class="nav sub-navbar-nav">
+                        <li class="sub-nav-item">
+                            <a class="sub-nav-link" href="{{ route('brands.index') }}">Danh sách</a>
+                        </li>
+
+                    </ul>
+                </div>
+            </li>
+             <li class="nav-item">
+                <a class="nav-link menu-arrow" href="#sidebarProducts" data-bs-toggle="collapse" role="button"
+                    aria-expanded="false" aria-controls="sidebarProducts">
+                    <span class="nav-text"> Sản phẩm </span>
+                </a>
+                <div class="collapse" id="sidebarProducts">
+                    <ul class="nav sub-navbar-nav">
+                        <li class="sub-nav-item">
+                            <a class="sub-nav-link" href="{{ route('product.listProduct') }}">Danh sách</a>
+                        </li>
+                    </ul>
+                </div>
             </li>
             <li class="nav-item">
                 <a class="nav-link menu-arrow" href="#sidebarColor" data-bs-toggle="collapse" role="button"
@@ -116,6 +146,24 @@
                     <ul class="nav sub-navbar-nav">
                         <li class="sub-nav-item">
                             <a class="sub-nav-link" href="{{ route('users.list') }}">Danh sách</a>
+                        </li>
+
+                    </ul>
+                </div>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link menu-arrow" href="#sidebarVoucher" data-bs-toggle="collapse" role="button"
+                    aria-expanded="false" aria-controls="sidebarVoucher">
+
+                    <span class="nav-text"> Voucher </span>
+                </a>
+
+                <div class="collapse" id="sidebarVoucher">
+                    <ul class="nav sub-navbar-nav">
+                        <li class="sub-nav-item">
+                            <a class="sub-nav-link" href="{{ route('vouchers.index') }}">
+                                Danh sách voucher
+                            </a>
                         </li>
 
 

@@ -53,7 +53,11 @@
             <table class="table align-middle mb-0 table-hover table-centered">
                 <thead class="bg-light-subtle">
                     <tr>
-                        <th>ID</th>
+                        {{-- Checkbox chọn tất cả --}}
+                        <th style="width: 60px;">
+                            <input type="checkbox" id="checkAll">
+                        </th>
+
                         <th>Tên</th>
                         <th>Email</th>
                         <th>Role</th>
@@ -65,7 +69,12 @@
                 <tbody>
                     @forelse ($users as $user)
                         <tr>
-                            <td>#{{ $user->id }}</td>
+                            {{-- Checkbox từng dòng + hiển thị ID --}}
+                            <td>
+                                <input type="checkbox" class="row-check" value="{{ $user->id }}">
+                                
+                            </td>
+
                             <td class="fw-medium">{{ $user->name }}</td>
                             <td>{{ $user->email }}</td>
                             <td>
@@ -110,4 +119,33 @@
         </div>
     </div>
 </div>
+
+{{-- JS chọn tất cả / bỏ chọn tất cả --}}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const checkAll = document.getElementById('checkAll');
+
+    const rowChecks = () => Array.from(document.querySelectorAll('.row-check'));
+
+    if (!checkAll) return;
+
+    // Click checkbox "chọn tất cả"
+    checkAll.addEventListener('change', function () {
+        rowChecks().forEach(cb => cb.checked = checkAll.checked);
+        checkAll.indeterminate = false;
+    });
+
+    // Khi tick từng dòng: cập nhật trạng thái checkbox "chọn tất cả"
+    document.addEventListener('change', function (e) {
+        if (!e.target.classList.contains('row-check')) return;
+
+        const all = rowChecks();
+        const checkedCount = all.filter(cb => cb.checked).length;
+
+        checkAll.checked = checkedCount === all.length && all.length > 0;
+        checkAll.indeterminate = checkedCount > 0 && checkedCount < all.length;
+    });
+});
+</script>
+
 @endsection
