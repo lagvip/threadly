@@ -9,10 +9,28 @@ use Illuminate\Http\Request;
 class VoucherController extends Controller
 {
     /* ================= DANH SÁCH ================= */
-    public function index()
+    public function index(Request $request)
     {
-        $vouchers = Voucher::orderBy('id','desc')->get();
-        return view('admin.vouchers.index', compact('vouchers'));
+        $search = $request->get('search');
+        $type = $request->get('type');
+        $status = $request->get('status');
+        
+        $query = Voucher::orderBy('id','desc');
+        
+        if ($search) {
+            $query->where('code', 'like', '%' . $search . '%');
+        }
+        
+        if ($type && $type !== '') {
+            $query->where('type', $type);
+        }
+        
+        if ($status && $status !== '') {
+            $query->where('status', $status);
+        }
+        
+        $vouchers = $query->paginate(10)->appends(request()->query());
+        return view('admin.vouchers.index', compact('vouchers', 'search', 'type', 'status'));
     }
 
     /* ================= FORM THÊM ================= */

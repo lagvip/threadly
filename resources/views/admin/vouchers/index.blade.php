@@ -8,6 +8,40 @@
         Thêm Voucher
     </a>
 
+    <!-- Search Form -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form action="{{ route('vouchers.index') }}" method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Tìm kiếm theo mã</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           placeholder="Nhập mã voucher..." value="{{ request('search') }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="type" class="form-label">Loại voucher</label>
+                    <select class="form-select" id="type" name="type">
+                        <option value="">-- Tất cả --</option>
+                        <option value="percent" {{ request('type') == 'percent' ? 'selected' : '' }}>Giảm %</option>
+                        <option value="fixed" {{ request('type') == 'fixed' ? 'selected' : '' }}>Trừ tiền</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Trạng thái</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">-- Tất cả --</option>
+                        <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Hoạt động</option>
+                        <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Tắt</option>
+                        <option value="expired" {{ request('status') == 'expired' ? 'selected' : '' }}>Hết hạn</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-info w-100">Tìm kiếm</button>
+                    <a href="{{ route('vouchers.index') }}" class="btn btn-secondary">Xóa bộ lọc</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <table class="table table-bordered">
         <thead>
         <tr>
@@ -22,6 +56,13 @@
         </tr>
         </thead>
         <tbody>
+        @if($vouchers->count() == 0)
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                    <em>Không tìm thấy voucher nào</em>
+                </td>
+            </tr>
+        @else
         @foreach($vouchers as $v)
         <tr>
             <td><strong>{{ $v->code }}</strong></td>
@@ -67,12 +108,23 @@
 
                 <form action="{{ route('vouchers.destroy',$v) }}" method="POST" style="display:inline">
                     @csrf @method('DELETE')
-                    <button class="btn btn-sm btn-danger">Xóa</button>
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa voucher này không?')">Xóa</button>
                 </form>
             </td>
         </tr>
         @endforeach
+        @endif
         </tbody>
     </table>
+
+    <!-- Pagination Info -->
+    <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+        <div class="text-muted">
+            Hiển thị {{ $vouchers->count() }} / {{ $vouchers->total() }} voucher
+        </div>
+        <div>
+            {{ $vouchers->links() }}
+        </div>
+    </div>
 </div>
 @endsection
