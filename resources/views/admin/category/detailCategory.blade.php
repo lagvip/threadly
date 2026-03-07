@@ -9,7 +9,7 @@
                 <div class="card">
                     <div class="card-body">
                         <div class=" text-center rounded ">
-                            <img src="{{ Storage::url($category['image']) }}" alt="" width="250">
+                            <img src="{{ Storage::disk('public')->url($category['image']) }}" alt="" width="250">
                         </div>
                         <div class="mt-3">
 

@@ -10,7 +10,7 @@
                             Add Category
                         </a>
                         <form action="{{ route('listCategory.searchCategory') }}" method="GET">
-                            <div class="search-bar">    
+                            <div class="search-bar">
                             <span><i class="bx bx-search-alt"></i></span>
                             <input name="search" type="search" class="form-control" id="search" placeholder="Search task...">
                         </div>
@@ -47,8 +47,8 @@
                                                 <div class="d-flex align-items-center gap-2">
                                                     <div
                                                         class="rounded bg-light avatar-md d-flex align-items-center justify-content-center">
-                                                        <img src="{{ Storage::url($value->image) }}" alt=""
-                                                            class="avatar-md">
+                                                        <img src="{{ asset('storage/' . $value->image) }}" alt="" class="avatar-md">
+
                                                     </div>
                                                     <p class="text-dark fw-medium fs-15 mb-0">{{ $value->name }}</p>
                                                 </div>

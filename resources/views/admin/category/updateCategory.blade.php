@@ -9,7 +9,7 @@
                         <div class="bg-light text-center rounded bg-light">
                             {{-- Hiển thị ảnh hiện có --}}
                             @if ($category['image'])
-                                <img src="{{ Storage::url($category['image']) }}" alt="Current Image" class="avatar-xxl"
+                                <img src="{{ Storage::disk('public')->url($category['image']) }}" alt="Current Image" class="avatar-xxl"
                                     id="leftImagePreview"> {{-- Thêm ID cho ảnh bên trái --}}
                             @else
                                 <p>Không có ảnh hiện tại.</p>
@@ -59,7 +59,7 @@
                                     <div id="imagePreviewUpdate" class="image-preview mt-3">
                                         {{-- Hiển thị ảnh xem trước mặc định nếu có ảnh cũ --}}
                                         @if ($category['image'])
-                                            <img src="{{ Storage::url($category['image']) }}" alt="Current Image"
+                                            <img src="{{ Storage::disk('public')->url($category['image']) }}" alt="Current Image"
                                                 style="max-width: 100%; max-height: 120px; display: block; margin: 0 auto; border-radius: 4px;">
                                         @endif
                                     </div>
