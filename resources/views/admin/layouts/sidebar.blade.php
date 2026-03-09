@@ -60,7 +60,7 @@
                 <a class="nav-link menu-arrow" href="#sidebarSize" data-bs-toggle="collapse" role="button"
                     aria-expanded="false" aria-controls="sidebarSize">
 
-                    <span class="nav-text"> Size </span>
+                    <span class="nav-text"> Kích thước </span>
                 </a>
 
                <div class="collapse" id="sidebarSize">
@@ -68,7 +68,7 @@
 
             <li class="sub-nav-item">
                 <a class="sub-nav-link" href="{{ route('listSize.list') }}">
-                    Danh sách Size
+                    Danh sách kích thước
                 </a>
             </li>
 

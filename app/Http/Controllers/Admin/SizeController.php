@@ -80,4 +80,6 @@ class SizeController extends Controller
 
         return view('admin.size.index', compact('sizes'));
     }
+
+    
 }
