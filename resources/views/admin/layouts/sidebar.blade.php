@@ -134,7 +134,43 @@
                     </ul>
                    </div>
                 </li>
+            <li class="nav-item">
+                <a class="nav-link menu-arrow" href="#sidebarOrders" data-bs-toggle="collapse" role="button"
+                    aria-expanded="false" aria-controls="sidebarOrders">
+                    <span class="nav-text"> Đơn hàng </span>
+                </a>
+                <div class="collapse" id="sidebarOrders">
+                    <ul class="nav sub-navbar-nav">
+                        <li class="sub-nav-item">
+                            <a class="sub-nav-link" href="{{ route('orders.index') }}">Danh sách</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="collapse" id="sidebarOrders">
+                    <ul class="nav sub-navbar-nav">
+                        <li class="sub-nav-item">
+                            <a class="sub-nav-link" href="{{ route('deleted.index') }}">
+                                Đơn hàng đã xoá
+                            </a>
+                        </li>
+                    </ul>
+                </div>
 
+            </li>
+             <li class="nav-item">
+                <a class="nav-link menu-arrow" href="#sidebarShippingRate" data-bs-toggle="collapse" role="button"
+                    aria-expanded="false" aria-controls="sidebarShippingRate">
+                    <span class="nav-text"> Đánh giá </span>
+                </a>
+
+                <div class="collapse" id="sidebarShippingRate">
+                    <ul class="nav sub-navbar-nav">
+                        <li class="sub-nav-item">
+                            <a class="sub-nav-link" href="{{ route('reviews.index') }}">Danh sách</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
             <li class="nav-item">
                 <a class="nav-link menu-arrow" href="#sidebarUsers" data-bs-toggle="collapse" role="button"
                     aria-expanded="false" aria-controls="sidebarUsers">

@@ -4,51 +4,34 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        $category = Category::query()->latest('id')->paginate(10);
+        $category = Category::with('parent')->latest('id')->paginate(10);
         return view('admin.category.listCategories', compact('category'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        $categories = Category::all();
+        // Chỉ cho phép chọn category gốc làm cha
+        $categories = Category::whereNull('id_parent')->get();
+
         return view('admin.category.addCategory', compact('categories'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
-    {   
-        
-        $data = $request->except('image');
-        
-
+    {
         $request->validate(
             [
-                'name' => [
-                    'required',
-                    Rule::unique('categories')
-                ],
-                'image' => [
-                    'required',
-                    'image',
-                    'max:2048'
-                ],
-
+                'name' => ['required', Rule::unique('categories', 'name')],
+                'image' => ['required', 'image', 'max:2048'],
+                'id_parent' => ['nullable', 'exists:categories,id'],
             ],
             [
                 'name.required' => 'Bạn chưa nhập tên.',
@@ -56,53 +39,68 @@ class CategoryController extends Controller
                 'image.required' => 'Bạn chưa chọn ảnh.',
                 'image.image' => 'File phải là ảnh hợp lệ.',
                 'image.max' => 'Ảnh không được vượt quá 2MB.',
+                'id_parent.exists' => 'Danh mục cha không tồn tại.',
             ]
         );
+
+        if ($request->filled('id_parent')) {
+            $parent = Category::findOrFail($request->id_parent);
+
+            // Chỉ cho phép 1 tầng: cha phải là category gốc
+            if (!is_null($parent->id_parent)) {
+                return back()
+                    ->withErrors(['id_parent' => 'Chỉ được chọn danh mục gốc làm danh mục cha.'])
+                    ->withInput();
+            }
+        }
+
+        $data = $request->except('image');
+
         if ($request->hasFile('image')) {
             $data['image'] = Storage::disk('public')->putFile('category', $request->file('image'));
         }
-        $data['id_parent'] = $request->input('id_parent');
 
+        $data['id_parent'] = $request->filled('id_parent') ? $request->id_parent : null;
 
-        
         Category::create($data);
 
         return redirect()->route('listCategory.list')->with('success', 'Thêm thành công');
     }
 
-
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
-        $category = Category::findOrFail($id);
-        return view('admin.category.detailCategory', compact('category'));
+        $category = Category::with(['parent', 'children'])->findOrFail($id);
+
+        $childIds = $category->children->pluck('id')->toArray();
+        $categoryIds = array_merge([$category->id], $childIds);
+
+        $products = Product::with(['brand', 'category'])
+            ->whereIn('id_category', $categoryIds)
+            ->latest('id')
+            ->paginate(10);
+
+        return view('admin.category.detailCategory', compact('category', 'products'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(string $id)
     {
         $category = Category::findOrFail($id);
-        $allCategories = Category::all();
-        return view('admin.category.updateCategory', compact('category', 'allCategories'));
 
+        $allCategories = Category::whereNull('id_parent')
+            ->where('id', '!=', $category->id)
+            ->get();
+
+        return view('admin.category.updateCategory', compact('category', 'allCategories'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id) // Giả định bạn đang dùng Request và id
+    public function update(Request $request, string $id)
     {
-
-        $category = Category::findOrFail($id); // Tìm category theo ID
+        $category = Category::findOrFail($id);
 
         $request->validate([
-            'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-
+            'name' => ['required', 'string', 'max:255', Rule::unique('categories', 'name')->ignore($category->id)],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
+            'id_parent' => ['nullable', 'exists:categories,id'],
         ], [
             'name.required' => 'Tên danh mục không được để trống.',
             'name.unique' => 'Tên danh mục đã tồn tại.',
@@ -110,48 +108,75 @@ class CategoryController extends Controller
             'image.image' => 'File tải lên phải là hình ảnh.',
             'image.mimes' => 'Hình ảnh phải có định dạng: jpeg, png, jpg, gif, svg.',
             'image.max' => 'Kích thước hình ảnh không được vượt quá 2MB.',
-
+            'id_parent.exists' => 'Danh mục cha không tồn tại.',
         ]);
 
-        $data = $request->except('image'); // Lấy tất cả dữ liệu trừ 'image'
+        if ($request->filled('id_parent')) {
+            $parentId = (int) $request->id_parent;
 
-        $currentImage = $category->image; // Lưu đường dẫn ảnh CŨ trước khi xử lý ảnh mới
+            if ($parentId === (int) $category->id) {
+                return back()
+                    ->withErrors(['id_parent' => 'Danh mục không thể là cha của chính nó.'])
+                    ->withInput();
+            }
 
+            // Nếu category hiện tại đang là cha thì không cho biến thành con
+            if ($category->children()->exists()) {
+                return back()
+                    ->withErrors(['id_parent' => 'Danh mục đang là danh mục cha, không thể chuyển thành danh mục con.'])
+                    ->withInput();
+            }
 
-        $newImagePath = null; // Biến để lưu đường dẫn ảnh mới nếu có
+            $parent = Category::findOrFail($parentId);
 
-        if ($request->hasFile('image')) { // Luôn dùng hasFile để kiểm tra file được upload
-            $newImagePath = Storage::disk('public')->putFile('category', $request->file('image'));
-
-            $data["image"] = $newImagePath; // Cập nhật đường dẫn ảnh MỚI vào mảng $data
-        }
-        $data['id_parent'] = $request->input('id_parent');
-
-
-        $is_update = $category->update($data); // Cập nhật category vào database
-
-        // --- Logic xóa ảnh cũ chỉ khi update thành công và có ảnh mới ---
-        if ($is_update && $newImagePath) { // Nếu update thành công VÀ có ảnh mới được tải lên
-            if ($currentImage && Storage::disk('public')->exists($currentImage)) { // Nếu có ảnh cũ VÀ ảnh cũ tồn tại trên storage
-                Storage::disk('public')->delete($currentImage); // Xóa ảnh cũ
+            // Chỉ cho phép 1 tầng: không được chọn một category con làm cha
+            if (!is_null($parent->id_parent)) {
+                return back()
+                    ->withErrors(['id_parent' => 'Chỉ được chọn danh mục gốc làm danh mục cha.'])
+                    ->withInput();
             }
         }
-        // ---------------------------------------------------------------
 
+        $data = $request->except('image');
 
-        if ($is_update) {
-            return redirect()->route("listCategory.list")->with("success", "Sửa thành công sản phẩm!");
-        } else {
-            return redirect()->route("listCategory.list")->with("error", "Sửa không thành công!");
+        $currentImage = $category->image;
+        $newImagePath = null;
+
+        if ($request->hasFile('image')) {
+            $newImagePath = Storage::disk('public')->putFile('category', $request->file('image'));
+            $data['image'] = $newImagePath;
         }
+
+        $data['id_parent'] = $request->filled('id_parent') ? $request->id_parent : null;
+
+        $isUpdate = $category->update($data);
+
+        if ($isUpdate && $newImagePath && $currentImage && Storage::disk('public')->exists($currentImage)) {
+            Storage::disk('public')->delete($currentImage);
+        }
+
+        if ($isUpdate) {
+            return redirect()->route('listCategory.list')->with('success', 'Sửa thành công danh mục!');
+        }
+
+        return redirect()->route('listCategory.list')->with('error', 'Sửa không thành công!');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
         $category = Category::findOrFail($id);
+
+        if ($category->children()->exists()) {
+            return redirect()
+                ->route('listCategory.list')
+                ->with('error', 'Không thể xoá danh mục đang có danh mục con.');
+        }
+
+        if ($category->products()->exists()) {
+            return redirect()
+                ->route('listCategory.list')
+                ->with('error', 'Không thể xoá danh mục đang có sản phẩm.');
+        }
 
         $imagePath = $category->image;
 
@@ -160,14 +185,19 @@ class CategoryController extends Controller
         }
 
         $category->delete();
-        return redirect()->route('listCategory.list');
+
+        return redirect()->route('listCategory.list')->with('success', 'Xóa thành công');
     }
 
     public function search(Request $request)
     {
         $search = $request->input('search');
-        $category = Category::where('name', 'like', '%' . $search . '%')->paginate(10);
+
+        $category = Category::with('parent')
+            ->where('name', 'like', '%' . $search . '%')
+            ->latest('id')
+            ->paginate(10);
+
         return view('admin.category.listCategories', compact('category'));
     }
-
 }

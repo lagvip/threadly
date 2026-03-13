@@ -12,8 +12,10 @@ use App\Http\Controllers\Admin\SizeController;
 use App\Http\Controllers\Admin\VoucherController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
-use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\OrderDetailController;
+use App\Http\Controllers\Admin\ReviewController;
 // Redirect
 Route::redirect('/', '/admin/dashboard');
 Route::get('/admin', fn () => redirect('/admin/dashboard'));
@@ -104,7 +106,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/update/{id}', [SizeController::class, 'update'])->name('updateSize');
     Route::delete('/delete/{id}', [SizeController::class, 'destroy'])->name('deleteSize');
     Route::get('/search', [SizeController::class, 'search'])->name('searchSize');
-   });
+    });
      // VOUCHERS
     Route::resource('vouchers', VoucherController::class);
     //BRAND
@@ -138,6 +140,27 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/variant-trash', [AdminProductController::class, 'variantTrash'])->name('variant.trash');
     Route::post('/variant-restore', [AdminProductController::class, 'variantRestore'])->name('variant.restore');
     Route::post('/variant-force-delete',[AdminProductController::class, 'variantForceDelete'])->name('variant.forceDelete');
+    });
+    // ORDER
+    Route::resource('orders', OrderController::class)->only(['index', 'show', 'edit', 'update', 'destroy']);
+    Route::get('/order-details', [OrderController::class, 'details'])->name('order.details');
+    Route::post('/orders/{id}/update-status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+    Route::post('/orders/{id}/refund', [OrderController::class, 'refund'])->name('orders.refund');
+    Route::get('/orders/{id}/print', [OrderController::class, 'print'])->name('orders.print');
+
+    Route::resource('order-details', OrderDetailController::class)->only(['index', 'store', 'destroy']);
+
+    Route::prefix('deleted')->name('deleted.')->group(function () {
+        Route::get('/', [OrderController::class, 'trash'])->name('index');
+        Route::post('/restore', [OrderController::class, 'restore'])->name('restore');
+        Route::post('/force-delete', [OrderController::class, 'forceDelete'])->name('forceDelete');
+    });
+    // REVIEW
+    Route::prefix('reviews')->name('reviews.')->group(function () {
+        Route::get('/', [ReviewController::class, 'index'])->name('index');
+        Route::get('/{review}/edit', [ReviewController::class, 'edit'])->name('edit');
+        Route::put('/{review}', [ReviewController::class, 'update'])->name('update');
+        Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
     });
 });
 
