@@ -96,6 +96,7 @@
                     <ul class="nav sub-navbar-nav">
                         <li class="sub-nav-item">
                             <a class="sub-nav-link" href="{{ route('listColor.list') }}">Danh sách</a>
+                            <a class="sub-nav-link" href="{{ route('listColor.bin') }}">Thùng rác</a>
                         </li>
                     </ul>
                 </div>

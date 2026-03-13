@@ -16,7 +16,7 @@ use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\Auth\GoogleController;
 // Redirect
 Route::redirect('/', '/admin/dashboard');
-Route::get('/admin', fn () => redirect('/admin/dashboard'));
+Route::get('/admin', fn() => redirect('/admin/dashboard'));
 
 //
 // LOGIN
@@ -27,11 +27,10 @@ Route::prefix('admin')->name('admin.')->middleware('guest')->group(function () {
 
     Route::get('/register', [AuthController::class, 'showRegister'])->name('auth.register');
     Route::post('/register', [AuthController::class, 'postRegister'])->name('auth.postRegister');
-
 });
-    Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
-    Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
-    Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
+Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
+Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
+Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
 });
 
@@ -72,13 +71,17 @@ Route::middleware(['auth'])->group(function () {
     // COLOR
     Route::prefix('listColor')->name('listColor.')->group(function () {
         Route::get('/', [AdminColorController::class, 'index'])->name('list');
-        Route::get('/detail/{id}', [AdminColorController::class, 'show'])->name('detailColor');
-        Route::get('/add', [AdminColorController::class, 'create'])->name('addColor');
-        Route::post('/store', [AdminColorController::class, 'store'])->name('storeColor');
-        Route::get('/edit/{id}', [AdminColorController::class, 'edit'])->name('editColor');
-        Route::put('/update/{id}', [AdminColorController::class, 'update'])->name('updateColor');
-        Route::delete('/delete/{id}', [AdminColorController::class, 'destroy'])->name('deleteColor');
-        Route::get('/search', [AdminColorController::class, 'search'])->name('searchColor');
+        Route::get('/detail/{id}', [AdminColorController::class, 'show'])->name('detail');
+        Route::get('/add', [AdminColorController::class, 'create'])->name('add');
+        Route::post('/store', [AdminColorController::class, 'store'])->name('store');
+        Route::get('/edit/{id}', [AdminColorController::class, 'edit'])->name('edit');
+        Route::put('/update/{id}', [AdminColorController::class, 'update'])->name('update');
+        Route::delete('/delete/{id}', [AdminColorController::class, 'destroy'])->name('delete');
+        Route::get('/search', [AdminColorController::class, 'search'])->name('search');
+        Route::get('/bin', [AdminColorController::class, 'bin'])->name('bin');
+        Route::post('/{id}/restore', [AdminColorController::class, 'restore'])->name('restore');
+        Route::post('/{id}/forceDelete', [AdminColorController::class, 'forceDelete'])->name('forceDelete');
+        Route::post('/forceDeleteAll', [AdminColorController::class, 'forceDeleteAll'])->name('forceDeleteAll');
     });
 
     // USERS
@@ -96,16 +99,16 @@ Route::middleware(['auth'])->group(function () {
     });
     // SIZE
     Route::prefix('listSize')->name('listSize.')->group(function () {
-    Route::get('/', [SizeController::class, 'index'])->name('list');
-    Route::get('/detail/{id}', [SizeController::class, 'show'])->name('detailSize');
-    Route::get('/add', [SizeController::class, 'create'])->name('addSize');
-    Route::post('/store', [SizeController::class, 'store'])->name('storeSize');
-    Route::get('/edit/{id}', [SizeController::class, 'edit'])->name('editSize');
-    Route::put('/update/{id}', [SizeController::class, 'update'])->name('updateSize');
-    Route::delete('/delete/{id}', [SizeController::class, 'destroy'])->name('deleteSize');
-    Route::get('/search', [SizeController::class, 'search'])->name('searchSize');
-   });
-     // VOUCHERS
+        Route::get('/', [SizeController::class, 'index'])->name('list');
+        Route::get('/detail/{id}', [SizeController::class, 'show'])->name('detailSize');
+        Route::get('/add', [SizeController::class, 'create'])->name('addSize');
+        Route::post('/store', [SizeController::class, 'store'])->name('storeSize');
+        Route::get('/edit/{id}', [SizeController::class, 'edit'])->name('editSize');
+        Route::put('/update/{id}', [SizeController::class, 'update'])->name('updateSize');
+        Route::delete('/delete/{id}', [SizeController::class, 'destroy'])->name('deleteSize');
+        Route::get('/search', [SizeController::class, 'search'])->name('searchSize');
+    });
+    // VOUCHERS
     Route::resource('vouchers', VoucherController::class);
     //BRAND
     Route::get('/brands', [BrandController::class, 'index'])->name('brands.index');
@@ -136,9 +139,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/search', [AdminProductController::class, 'search'])->name('search');
         // biến thể
         Route::get('/variant-trash', [AdminProductController::class, 'variantTrash'])->name('variant.trash');
-    Route::post('/variant-restore', [AdminProductController::class, 'variantRestore'])->name('variant.restore');
-    Route::post('/variant-force-delete',[AdminProductController::class, 'variantForceDelete'])->name('variant.forceDelete');
+        Route::post('/variant-restore', [AdminProductController::class, 'variantRestore'])->name('variant.restore');
+        Route::post('/variant-force-delete', [AdminProductController::class, 'variantForceDelete'])->name('variant.forceDelete');
     });
 });
-
-
