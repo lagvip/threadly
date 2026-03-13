@@ -62,6 +62,8 @@ Route::middleware(['auth'])->group(function () {
     // BANNER
     Route::prefix('listBanner')->name('listBanner.')->group(function () {
         Route::get('/', [BannerController::class, 'index'])->name('list');
+        Route::get('/trash', [BannerController::class, 'trash'])->name('trash');
+        Route::get('/restore/{id}', [BannerController::class, 'restore'])->name('restore');
         Route::get('/detail/{id}', [BannerController::class, 'show'])->name('detailBanner');
         Route::get('/add', [BannerController::class, 'create'])->name('addBanner');
         Route::post('/store', [BannerController::class, 'store'])->name('storeBanner');
