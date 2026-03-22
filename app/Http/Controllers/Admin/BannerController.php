@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreBannerRequest;
 use App\Http\Requests\UpdateBannerRequest;
 use App\Models\Banner;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class BannerController extends Controller
@@ -14,6 +15,20 @@ class BannerController extends Controller
     {
         $banners = Banner::query()->latest('id')->paginate(10);
         return view('admin.banner.listBanners', compact('banners'));
+    }
+
+    public function trash()
+    {
+        $banners = Banner::onlyTrashed()->latest('id')->paginate(10);
+        return view('admin.banner.trashBanners', compact('banners'));
+    }
+
+    public function restore(string $id)
+    {
+        $banner = Banner::onlyTrashed()->findOrFail($id);
+        $banner->restore();
+
+        return redirect()->route('listBanner.trash')->with('success', 'Khôi phục thành công');
     }
 
     public function create()
@@ -26,7 +41,7 @@ class BannerController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('image')) {
-            $data['image'] = Storage::disk('public')->putFile('banner', $request->file('image'));
+            $data['image'] = $request->file('image')->store('banner', 'public');
         }
 
         $data['is_active'] = $request->boolean('is_active');
@@ -59,7 +74,7 @@ class BannerController extends Controller
         $newImagePath = null;
 
         if ($request->hasFile('image')) {
-            $newImagePath = Storage::disk('public')->putFile('banner', $request->file('image'));
+            $newImagePath = $request->file('image')->store('banner', 'public');
             $data["image"] = $newImagePath;
         }
 
@@ -83,12 +98,6 @@ class BannerController extends Controller
     public function destroy(string $id)
     {
         $banner = Banner::findOrFail($id);
-
-        $imagePath = $banner->image;
-
-        if ($imagePath && Storage::disk('public')->exists($imagePath)) {
-            Storage::disk('public')->delete($imagePath);
-        }
 
         $banner->delete();
         return redirect()->route('listBanner.list')->with('success', 'Xóa thành công');

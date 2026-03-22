@@ -9,6 +9,9 @@
                         <a href="{{ route('listBanner.addBanner') }}" class="btn btn-sm btn-primary">
                             Add Banner
                         </a>
+                        <a href="{{ route('listBanner.trash') }}" class="btn btn-sm btn-light">
+                            Đã xoá
+                        </a>
                         <form action="{{ route('listBanner.searchBanner') }}" method="GET">
                             <div class="search-bar">
                             <span><i class="bx bx-search-alt"></i></span>
