@@ -36,17 +36,19 @@ class GoogleController extends Controller
                     'email_verified_at' => now(),
                     'password' => Hash::make(Str::random(24)),
                 ]);
-
-                $customerRole = Role::where('name', 'customer')->first();
-                if ($customerRole) {
-                    $user->roles()->attach($customerRole->id);
-                }
             } else {
                 $user->update([
                     'google_id' => $googleUser->id,
                     'avatar' => $googleUser->avatar,
                     'email_verified_at' => $user->email_verified_at ?? now(),
                 ]);
+            }
+
+            // Gán role customer theo slug
+            $customerRole = Role::where('slug', 'customer')->first();
+
+            if ($customerRole && !$user->hasRole('customer')) {
+                $user->roles()->syncWithoutDetaching([$customerRole->id]);
             }
 
             Auth::login($user, true);

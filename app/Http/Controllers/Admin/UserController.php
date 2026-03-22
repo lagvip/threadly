@@ -6,33 +6,87 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Role;
+use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
     // ============================
-    // LIST USERS (filter by role)
+    // HÀM PHỤ: lấy role admin theo slug
     // ============================
-    // /users
-    // /users?role=admin|staff|customer
+    private function getAdminRole()
+    {
+        return Role::where('slug', 'admin')->first();
+    }
+
+    // ============================
+    // HÀM PHỤ: kiểm tra role_id có phải admin không
+    // ============================
+    private function isAdminRoleId($roleId)
+    {
+        $adminRole = $this->getAdminRole();
+
+        if (!$adminRole) {
+            return false;
+        }
+
+        return (int) $adminRole->id === (int) $roleId;
+    }
+
+    // ============================
+    // HÀM PHỤ: đếm số user đang có role admin
+    // ============================
+    private function countAdminUsers()
+    {
+        return User::whereHas('roles', function ($q) {
+            $q->where('slug', 'admin');
+        })->count();
+    }
+
+    // ============================
+    // HÀM PHỤ: kiểm tra 1 user có phải admin không
+    // ============================
+    private function isAdminUser(User $user)
+    {
+        return $user->hasRole('admin');
+    }
+
+    // ============================
+    // DANH SÁCH USER (lọc theo role)
+    // ============================
     public function index(Request $request)
     {
-        $role = $request->get('role'); // admin|staff|customer|null
+        $role = $request->get('role');
+
+        $roles = Role::orderBy('name')->get();
 
         $users = User::with('roles')
             ->when($role, function ($q) use ($role) {
                 $q->whereHas('roles', function ($r) use ($role) {
-                    $r->where('name', $role);
+                    $r->where('slug', $role);
                 });
             })
             ->orderByDesc('id')
             ->paginate(10)
             ->appends(['role' => $role]);
 
-        return view('admin.users.index', compact('users', 'role'));
+        return view('admin.users.index', compact('users', 'role', 'roles'));
     }
 
     // ============================
-    // DETAIL USER
+    // THÙNG RÁC USER
+    // ============================
+    public function trash()
+    {
+        $users = User::onlyTrashed()
+            ->with('roles')
+            ->orderByDesc('deleted_at')
+            ->paginate(10);
+
+        return view('admin.users.trash', compact('users'));
+    }
+
+    // ============================
+    // CHI TIẾT USER
     // ============================
     public function show($id)
     {
@@ -41,16 +95,24 @@ class UserController extends Controller
     }
 
     // ============================
-    // ADD USER
+    // FORM THÊM USER
     // ============================
     public function create()
     {
         $roles = Role::orderBy('name')->get();
-        return view('admin.users.add', compact('roles'));
+        $hasAdmin = $this->countAdminUsers() >= 1;
+
+        if ($hasAdmin) {
+            $roles = $roles->reject(function ($role) {
+                return $role->slug === 'admin';
+            });
+        }
+
+        return view('admin.users.add', compact('roles', 'hasAdmin'));
     }
 
     // ============================
-    // STORE USER
+    // LƯU USER MỚI
     // ============================
     public function store(Request $request)
     {
@@ -59,33 +121,69 @@ class UserController extends Controller
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|min:6',
             'role_id'  => 'required|exists:roles,id',
+            'avatar'   => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ], [
+            'name.required'     => 'Tên không được để trống.',
+            'email.required'    => 'Email không được để trống.',
+            'email.email'       => 'Email không đúng định dạng.',
+            'email.unique'      => 'Email đã tồn tại.',
+            'password.required' => 'Mật khẩu không được để trống.',
+            'password.min'      => 'Mật khẩu phải có ít nhất 6 ký tự.',
+            'role_id.required'  => 'Vui lòng chọn role.',
+            'role_id.exists'    => 'Role không hợp lệ.',
+            'avatar.image'      => 'File tải lên phải là hình ảnh.',
+            'avatar.mimes'      => 'Ảnh chỉ chấp nhận định dạng jpg, jpeg, png, webp.',
+            'avatar.max'        => 'Kích thước ảnh không được vượt quá 2MB.',
         ]);
 
-        $user = User::create([
+        if ($this->isAdminRoleId($request->role_id) && $this->countAdminUsers() >= 1) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'role_id' => 'Hệ thống chỉ cho phép tồn tại 1 tài khoản Admin duy nhất.'
+                ]);
+        }
+
+        $data = [
             'name'     => $request->name,
             'email'    => $request->email,
             'password' => bcrypt($request->password),
-        ]);
+        ];
 
-        // Mỗi user 1 role (theo logic update đang dùng sync)
+        if ($request->hasFile('avatar')) {
+            $data['avatar'] = $request->file('avatar')->store('users', 'public');
+        }
+
+        $user = User::create($data);
+
         $user->roles()->sync([$request->role_id]);
 
         return redirect()->route('users.list')->with('success', 'Thêm User thành công');
     }
 
     // ============================
-    // EDIT USER
+    // FORM SỬA USER
     // ============================
     public function edit($id)
     {
         $user  = User::with('roles')->findOrFail($id);
         $roles = Role::orderBy('name')->get();
 
-        return view('admin.users.edit', compact('user', 'roles'));
+        $hasAdmin = User::whereHas('roles', function ($q) {
+            $q->where('slug', 'admin');
+        })->where('id', '!=', $user->id)->exists();
+
+        if ($this->countAdminUsers() >= 1 && !$this->isAdminUser($user)) {
+            $roles = $roles->reject(function ($role) {
+                return $role->slug === 'admin';
+            });
+        }
+
+        return view('admin.users.edit', compact('user', 'roles', 'hasAdmin'));
     }
 
     // ============================
-    // UPDATE USER
+    // CẬP NHẬT USER
     // ============================
     public function update(Request $request, $id)
     {
@@ -94,9 +192,41 @@ class UserController extends Controller
             'email'    => 'required|email|unique:users,email,' . $id,
             'password' => 'nullable|min:6',
             'role_id'  => 'required|exists:roles,id',
+            'avatar'   => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ], [
+            'name.required'    => 'Tên không được để trống.',
+            'email.required'   => 'Email không được để trống.',
+            'email.email'      => 'Email không đúng định dạng.',
+            'email.unique'     => 'Email đã tồn tại.',
+            'password.min'     => 'Mật khẩu phải có ít nhất 6 ký tự.',
+            'role_id.required' => 'Vui lòng chọn role.',
+            'role_id.exists'   => 'Role không hợp lệ.',
+            'avatar.image'     => 'File tải lên phải là hình ảnh.',
+            'avatar.mimes'     => 'Ảnh chỉ chấp nhận định dạng jpg, jpeg, png, webp.',
+            'avatar.max'       => 'Kích thước ảnh không được vượt quá 2MB.',
         ]);
 
-        $user = User::findOrFail($id);
+        $user = User::with('roles')->findOrFail($id);
+
+        $isCurrentAdmin = $this->isAdminUser($user);
+        $isNewAdminRole = $this->isAdminRoleId($request->role_id);
+        $adminCount = $this->countAdminUsers();
+
+        if (!$isCurrentAdmin && $isNewAdminRole && $adminCount >= 1) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'role_id' => 'Hệ thống chỉ cho phép tồn tại 1 tài khoản Admin duy nhất.'
+                ]);
+        }
+
+        if ($isCurrentAdmin && !$isNewAdminRole && $adminCount <= 1) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'role_id' => 'Không thể đổi role của Admin duy nhất sang quyền khác.'
+                ]);
+        }
 
         $data = [
             'name'  => $request->name,
@@ -107,65 +237,142 @@ class UserController extends Controller
             $data['password'] = bcrypt($request->password);
         }
 
+        if ($request->hasFile('avatar')) {
+            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                Storage::disk('public')->delete($user->avatar);
+            }
+
+            $data['avatar'] = $request->file('avatar')->store('users', 'public');
+        }
+
         $user->update($data);
 
-        // cập nhật role (1 role/user)
         $user->roles()->sync([$request->role_id]);
 
         return redirect()->route('users.list')->with('success', 'Cập nhật User thành công');
     }
 
     // ============================
-    // DELETE USER
+    // XÓA MỀM USER
     // ============================
     public function destroy($id)
     {
-        $user = User::findOrFail($id);
+        $user = User::with('roles')->findOrFail($id);
 
-        // detach role trước rồi xóa
-        $user->roles()->detach();
+        if ($this->isAdminUser($user)) {
+            return redirect()
+                ->route('users.list')
+                ->with('error', 'Không thể xóa tài khoản Admin duy nhất của hệ thống.');
+        }
+
+        // Xóa mềm: KHÔNG xóa avatar, KHÔNG detach role
         $user->delete();
 
-        return redirect()->route('users.list')->with('success', 'Xóa User thành công');
+        return redirect()->route('users.list')->with('success', 'Đã chuyển User vào thùng rác');
     }
 
     // ============================
-    // SEARCH USER (keep role filter)
+    // KHÔI PHỤC USER
+    // ============================
+    public function restore($id)
+    {
+        $user = User::onlyTrashed()
+            ->with('roles')
+            ->findOrFail($id);
+
+        $user->restore();
+
+        return redirect()->route('users.trash')->with('success', 'Khôi phục User thành công');
+    }
+
+    // ============================
+    // XÓA VĨNH VIỄN USER
+    // ============================
+    public function forceDelete($id)
+    {
+        $user = User::onlyTrashed()
+            ->with('roles')
+            ->findOrFail($id);
+
+        // Nếu muốn vẫn chặn admin kể cả trong thùng rác
+        if ($this->isAdminUser($user)) {
+            return redirect()
+                ->route('users.trash')
+                ->with('error', 'Không thể xóa vĩnh viễn tài khoản Admin.');
+        }
+
+        if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+            Storage::disk('public')->delete($user->avatar);
+        }
+
+        $user->roles()->detach();
+        $user->forceDelete();
+
+        return redirect()->route('users.trash')->with('success', 'Xóa vĩnh viễn User thành công');
+    }
+
+    // ============================
+    // TÌM KIẾM USER (giữ lại bộ lọc role)
     // ============================
     public function search(Request $request)
     {
         $keyword = $request->keyword;
-        $role = $request->get('role'); // admin|staff|customer|null
+        $role = $request->get('role');
+
+        $roles = Role::orderBy('name')->get();
 
         $users = User::with('roles')
             ->when($role, function ($q) use ($role) {
                 $q->whereHas('roles', function ($r) use ($role) {
-                    $r->where('name', $role);
+                    $r->where('slug', $role);
                 });
             })
             ->when($keyword, function ($q) use ($keyword) {
                 $q->where(function ($qq) use ($keyword) {
-                    $qq->where('name', 'LIKE', "%$keyword%")
-                       ->orWhere('email', 'LIKE', "%$keyword%");
+                    $qq->where('name', 'LIKE', "%{$keyword}%")
+                       ->orWhere('email', 'LIKE', "%{$keyword}%");
                 });
             })
             ->orderByDesc('id')
             ->paginate(10)
-            ->appends(['keyword' => $keyword, 'role' => $role]);
+            ->appends([
+                'keyword' => $keyword,
+                'role'    => $role
+            ]);
 
-        return view('admin.users.index', compact('users', 'keyword', 'role'));
+        return view('admin.users.index', compact('users', 'keyword', 'role', 'roles'));
     }
 
     // ============================
-    // ASSIGN ROLE (POST)
+    // GÁN ROLE CHO USER
     // ============================
     public function assignRole(Request $request, $id)
     {
         $request->validate([
             'role_id' => 'required|exists:roles,id'
+        ], [
+            'role_id.required' => 'Vui lòng chọn role.',
+            'role_id.exists'   => 'Role không hợp lệ.'
         ]);
 
-        $user = User::findOrFail($id);
+        $user = User::with('roles')->findOrFail($id);
+
+        $isCurrentAdmin = $this->isAdminUser($user);
+        $isNewAdminRole = $this->isAdminRoleId($request->role_id);
+        $adminCount = $this->countAdminUsers();
+
+        if (!$isCurrentAdmin && $isNewAdminRole && $adminCount >= 1) {
+            return back()->withErrors([
+                'role_id' => 'Hệ thống chỉ cho phép tồn tại 1 tài khoản Admin duy nhất.'
+            ]);
+        }
+
+        if ($isCurrentAdmin && !$isNewAdminRole && $adminCount <= 1) {
+            return back()->withErrors([
+                'role_id' => 'Không thể đổi role của Admin duy nhất sang quyền khác.'
+            ]);
+        }
+
         $user->roles()->sync([$request->role_id]);
 
         return back()->with('success', 'Cập nhật quyền thành công!');

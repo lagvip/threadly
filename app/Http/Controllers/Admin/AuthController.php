@@ -66,4 +66,11 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
         return redirect()->route('admin.auth.login');
     }
+    public function logoutabc(Request $request)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        return redirect()->route('admin.auth.login');
+    }
 }

@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -27,9 +28,10 @@ class User extends Authenticatable
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
-    // users <-> roles 
+    // users <-> roles
     public function roles()
     {
         return $this->belongsToMany(Role::class, 'role_users', 'user_id', 'role_id')
@@ -42,9 +44,48 @@ class User extends Authenticatable
         return $this->hasMany(Address::class, 'user_id', 'id');
     }
 
-    //  kiểm tra role theo name
-    public function hasRole(string $roleName): bool
+    // kiểm tra 1 role theo slug
+    public function hasRole(string $role): bool
     {
-        return $this->roles()->where('name', $roleName)->exists();
+        return $this->roles()->where('slug', $role)->exists();
+    }
+
+    // kiểm tra nhiều role
+    public function hasAnyRole(array $roles): bool
+    {
+        return $this->roles()->whereIn('slug', $roles)->exists();
+    }
+
+    // lấy danh sách tên role
+    public function roleNames()
+    {
+        return $this->roles->pluck('name')->toArray();
+    }
+
+    // lấy danh sách slug role
+    public function roleSlugs()
+    {
+        return $this->roles->pluck('slug')->toArray();
+    }
+
+    // viết nhanh
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('admin');
+    }
+
+    public function isManager(): bool
+    {
+        return $this->hasRole('manager');
+    }
+
+    public function isCustomer(): bool
+    {
+        return $this->hasRole('customer');
+    }
+
+    public function isStaff(): bool
+    {
+        return $this->hasAnyRole(['admin', 'manager']);
     }
 }
