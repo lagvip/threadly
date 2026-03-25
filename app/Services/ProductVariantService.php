@@ -55,10 +55,26 @@ class ProductVariantService
                 if ($variant->image) {
                     Storage::disk('public')->delete($variant->image);
                 }
+
                 $data['image'] = $data['image']->store('variants', 'public');
+            } else {
+                unset($data['image']);
+            }
+
+            if (!isset($data['price']) || $data['price'] === null || $data['price'] === '') {
+                $data['price'] = 0;
+            }
+
+            if (!isset($data['quantity']) || $data['quantity'] === null || $data['quantity'] === '') {
+                $data['quantity'] = 0;
+            }
+
+            if (!isset($data['status']) || empty($data['status'])) {
+                $data['status'] = $variant->status ?? 'active';
             }
 
             $variant->update($data);
+
             return $variant;
         } catch (\Exception $e) {
             Log::error('Lỗi khi cập nhật biến thể sản phẩm: ' . $e->getMessage());

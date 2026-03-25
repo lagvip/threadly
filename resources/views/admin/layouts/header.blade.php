@@ -35,51 +35,59 @@
                          </button>
                     </div>
 
-                  
+
 
                     <!-- Người dùng -->
+                    @php
+                        $user = auth()->user();
+                        $avatar = $user && $user->avatar
+                            ? asset('storage/' . $user->avatar)
+                            : asset('admin/assets/images/users/avatar-1.jpg');
+                    @endphp
+
                     <div class="dropdown topbar-item">
-                         <a class="topbar-button" data-bs-toggle="dropdown">
-                              <span class="d-flex align-items-center">
-                                   <img class="rounded-circle" width="32" src="{{ asset('admin/assets/images/users/avatar-1.jpg') }}">
-                              </span>
-                         </a>
+                        <a class="topbar-button" data-bs-toggle="dropdown" href="javascript:void(0)">
+                            <span class="d-flex align-items-center gap-2">
+                                <img class="rounded-circle object-fit-cover" width="32" height="32" src="{{ $avatar }}" alt="{{ $user->name ?? 'User' }}">
+                            </span>
+                        </a>
 
-                         <div class="dropdown-menu dropdown-menu-end">
+                        <div class="dropdown-menu dropdown-menu-end p-0 overflow-hidden" style="min-width: 260px;">
+                            <div class="px-3 py-3 border-bottom">
+                                <div class="d-flex align-items-center gap-2">
+                                    <img class="rounded-circle object-fit-cover" width="48" height="48" src="{{ $avatar }}" alt="{{ $user->name ?? 'User' }}">
+                                    <div>
+                                        <h6 class="mb-1">Xin chào, {{ $user->name ?? 'Bạn' }}!</h6>
+                                        <div class="text-muted small">{{ $user->email ?? '' }}</div>
+                                    </div>
+                                </div>
+                            </div>
 
-                              <h6 class="dropdown-header">Xin chào, Admin!</h6>
+                            <a class="dropdown-item" href="#">
+                                <i class="bx bx-user-circle text-muted fs-18 align-middle me-1"></i>
+                                <span>Hồ sơ cá nhân</span>
+                            </a>
 
-                              <a class="dropdown-item" href="#">
-                                   <i class="bx bx-user-circle text-muted fs-18 align-middle me-1"></i>
-                                   <span>Hồ sơ cá nhân</span>
-                              </a>
-                              <a class="dropdown-item" href="#">
-                                   <i class="bx bx-message-dots text-muted fs-18 align-middle me-1"></i>
-                                   <span>Tin nhắn</span>
-                              </a>
-                              <a class="dropdown-item" href="#">
-                                   <i class="bx bx-wallet text-muted fs-18 align-middle me-1"></i>
-                                   <span>Gói nâng cấp</span>
-                              </a>
-                              <a class="dropdown-item" href="#">
-                                   <i class="bx bx-help-circle text-muted fs-18 align-middle me-1"></i>
-                                   <span>Trợ giúp</span>
-                              </a>
-                              <a class="dropdown-item" href="#">
-                                   <i class="bx bx-lock text-muted fs-18 align-middle me-1"></i>
-                                   <span>Khóa màn hình</span>
-                              </a>
+                            <a class="dropdown-item" href="{{ route('home') }}">
+                                <i class="bx bx-store text-muted fs-18 align-middle me-1"></i>
+                                <span>Ra trang client</span>
+                            </a>
 
-                              <div class="dropdown-divider my-1"></div>
+                            <a class="dropdown-item" href="{{ route('password.change') }}">
+                                <i class="bx bx-lock text-muted fs-18 align-middle me-1"></i>
+                                <span>Quên mật khẩu</span>
+                            </a>
 
-                              <form action="{{ route('admin.auth.logout') }}" method="POST">
-                                   @csrf
-                                   <button class="dropdown-item text-danger">
-                                        <i class="bx bx-log-out fs-18 align-middle me-1"></i>
-                                        <span>Đăng xuất</span>
-                                   </button>
-                              </form>
-                         </div>
+                            <div class="dropdown-divider my-1"></div>
+
+                            <form action="{{ route('logout') }}" method="POST">
+                                @csrf
+                                <button type="submit" class="dropdown-item text-danger">
+                                    <i class="bx bx-log-out fs-18 align-middle me-1"></i>
+                                    <span>Đăng xuất</span>
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
                </div>

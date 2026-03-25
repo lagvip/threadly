@@ -4,10 +4,12 @@ namespace App\Services;
 
 use App\Models\Product;
 use App\Models\OrderDetail;
+use App\Models\ProductVariant;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Http\Request;
 
 class ProductService
 {
@@ -45,40 +47,116 @@ class ProductService
         try {
             $product = Product::findOrFail($id);
 
-            if (isset($data['image_primary']) && $data['image_primary'] instanceof UploadedFile) {
+            // hỗ trợ cả Request lẫn array
+            $payload = $data instanceof Request ? $data->all() : $data;
+            $request = $data instanceof Request ? $data : request();
+
+            if (isset($payload['image_primary']) && $payload['image_primary'] instanceof UploadedFile) {
                 if ($product->image_primary) {
                     Storage::disk('public')->delete($product->image_primary);
                 }
-                $data['image_primary'] = $data['image_primary']->store('products', 'public');
+                $payload['image_primary'] = $payload['image_primary']->store('products', 'public');
             } else {
-                unset($data['image_primary']);
+                unset($payload['image_primary']);
             }
 
-            $product->update($data);
+            // không update trực tiếp các mảng biến thể vào bảng products
+            unset($payload['variants'], $payload['variants_new']);
 
-            if (!empty($data['variants']) && is_array($data['variants'])) {
-                foreach ($data['variants'] as $variantData) {
+            $product->update($payload);
+
+            $variantService = app(ProductVariantService::class);
+            $usedCombinations = [];
+
+            // 1. cập nhật / xóa biến thể cũ
+            if (!empty($request->input('variants')) && is_array($request->input('variants'))) {
+                foreach ($request->input('variants') as $index => $variantData) {
                     if (empty($variantData['id'])) {
                         continue;
                     }
 
-                    if (!empty($variantData['delete']) && (int) $variantData['delete'] === 1) {
-                        app(ProductVariantService::class)->deleteProductVariant($variantData['id']);
+                    $variant = ProductVariant::where('id', $variantData['id'])
+                        ->where('id_product', $product->id)
+                        ->first();
+
+                    if (!$variant) {
                         continue;
                     }
 
-                    app(ProductVariantService::class)->updateProductVariant($variantData, $variantData['id']);
+                    $delete = (int)($variantData['delete'] ?? 0);
+
+                    if ($delete === 1) {
+                        $variantService->deleteProductVariant($variant->id);
+                        continue;
+                    }
+
+                    $key = $variantData['id_color'] . '-' . $variantData['id_size'];
+
+                    if (in_array($key, $usedCombinations)) {
+                        throw new \Exception('Biến thể bị trùng màu sắc và kích cỡ.');
+                    }
+
+                    $usedCombinations[] = $key;
+
+                    $updateData = [
+                        'id_color' => $variantData['id_color'],
+                        'id_size' => $variantData['id_size'],
+                        'price' => $variantData['price'] ?? 0,
+                        'quantity' => $variantData['quantity'] ?? 0,
+                    ];
+
+                    if ($request->hasFile("variants.$index.image")) {
+                        $updateData['image'] = $request->file("variants.$index.image");
+                    }
+
+                    $updated = $variantService->updateProductVariant($updateData, $variant->id);
+
+                    if (!$updated) {
+                        throw new \Exception('Không thể cập nhật biến thể sản phẩm.');
+                    }
                 }
             }
 
-            if (!empty($data['variants_new']) && is_array($data['variants_new'])) {
-                foreach ($data['variants_new'] as $variantNew) {
-                    $variantNew['id_product'] = $product->id;
-                    $variantNew['price'] = $variantNew['price'] ?? 0;
-                    $variantNew['quantity'] = $variantNew['quantity'] ?? 0;
-                    $variantNew['status'] = $variantNew['status'] ?? 'active';
+            // 2. tạo biến thể mới
+            if (!empty($request->input('variants_new')) && is_array($request->input('variants_new'))) {
+                foreach ($request->input('variants_new') as $index => $variantNew) {
+                    $key = $variantNew['id_color'] . '-' . $variantNew['id_size'];
 
-                    app(ProductVariantService::class)->createProductVariant($variantNew);
+                    if (in_array($key, $usedCombinations)) {
+                        throw new \Exception('Biến thể mới bị trùng màu sắc và kích cỡ.');
+                    }
+
+                    // chống trùng với dữ liệu DB chưa bị xóa
+                    $exists = ProductVariant::where('id_product', $product->id)
+                        ->where('id_color', $variantNew['id_color'])
+                        ->where('id_size', $variantNew['id_size'])
+                        ->whereNull('deleted_at')
+                        ->exists();
+
+                    if ($exists) {
+                        throw new \Exception('Biến thể mới đã tồn tại.');
+                    }
+
+                    $usedCombinations[] = $key;
+
+                    $newData = [
+                        'id_product' => $product->id,
+                        'id_color' => $variantNew['id_color'],
+                        'id_size' => $variantNew['id_size'],
+                        'price' => $variantNew['price'] ?? 0,
+                        'quantity' => $variantNew['quantity'] ?? 0,
+                        'status' => $variantNew['status'] ?? 'active',
+                    ];
+
+                    if ($request->hasFile("variants_new.$index.image")) {
+                        $newData['image'] = $request->file("variants_new.$index.image");
+                    }
+
+                    $created = $variantService->createProductVariant($newData);
+
+                    if (!$created) {
+                        throw new \Exception('Không thể tạo biến thể mới.');
+                    }
                 }
             }
 
