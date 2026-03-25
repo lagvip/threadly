@@ -43,7 +43,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/checkout/shipping-fee', [CheckoutController::class, 'getShippingFee'])->name('client.checkout.shipping-fee');
     Route::post('/checkout/store', [CheckoutController::class, 'store'])->name('client.checkout.store');
     Route::get('/checkout/vnpay/return', [CheckoutController::class, 'paymentReturn'])->name('client.checkout.vnpay-return');
-    
+
     Route::get('/checkout/ghn/provinces', [CheckoutController::class, 'getProvinces'])->name('client.checkout.ghn.provinces');
     Route::get('/checkout/ghn/districts', [CheckoutController::class, 'getDistricts'])->name('client.checkout.ghn.districts');
     Route::get('/checkout/ghn/wards', [CheckoutController::class, 'getWards'])->name('client.checkout.ghn.wards');
