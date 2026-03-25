@@ -51,6 +51,20 @@
            value="{{ old('quantity',$voucher->quantity ?? '') }}">
 </div>
 
+<div class="mb-3">
+    <label>Số lần sử dụng tối đa cho mỗi tài khoản</label>
+    <input type="number" name="max_uses_per_user" class="form-control" min="1"
+           value="{{ old('max_uses_per_user',$voucher->max_uses_per_user ?? 1) }}">
+    <small class="form-text text-muted">Mỗi tài khoản có thể sử dụng voucher này bao nhiêu lần</small>
+</div>
+
+<div class="mb-3">
+    <label>Số lần sử dụng tối đa cho mỗi đơn hàng</label>
+    <input type="number" name="max_uses_per_order" class="form-control" min="1"
+           value="{{ old('max_uses_per_order',$voucher->max_uses_per_order ?? 1) }}">
+    <small class="form-text text-muted">Một đơn hàng có thể sử dụng voucher này bao nhiêu lần</small>
+</div>
+
 <button class="btn btn-success">Lưu</button>
 
 <script>
@@ -74,7 +88,7 @@
         }
     }
     
-    // Chạy khi load trang
+ 
     document.addEventListener('DOMContentLoaded', function() {
         toggleMaxDiscount();
     });

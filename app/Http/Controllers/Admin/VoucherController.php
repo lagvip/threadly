@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class VoucherController extends Controller
 {
-    /* ================= DANH SÁCH ================= */
+   
     public function index(Request $request)
     {
         $search = $request->get('search');
@@ -33,13 +33,13 @@ class VoucherController extends Controller
         return view('admin.vouchers.index', compact('vouchers', 'search', 'type', 'status'));
     }
 
-    /* ================= FORM THÊM ================= */
+   
     public function create()
     {
         return view('admin.vouchers.create');
     }
 
-    /* ================= LƯU MỚI ================= */
+  
     public function store(Request $request)
     {
         $request->validate([
@@ -50,10 +50,12 @@ class VoucherController extends Controller
             'end_date' => 'required|after:start_date',
             'quantity' => 'required|integer|min:1',
             'min_order_value' => 'nullable|numeric|min:0',
-            'max_discount' => 'nullable|numeric|min:0'
+            'max_discount' => 'nullable|numeric|min:0',
+            'max_uses_per_user' => 'required|integer|min:1',
+            'max_uses_per_order' => 'required|integer|min:1'
         ]);
 
-        // Kiểm tra validation thêm cho % discount
+       
         if ($request->type == 'percent' && $request->value > 100) {
             return back()->withErrors(['value' => 'Phần trăm giảm không được vượt quá 100%'])->withInput();
         }
@@ -67,6 +69,8 @@ class VoucherController extends Controller
             'start_date' => str_replace('T', ' ', $request->start_date),
             'end_date' => str_replace('T', ' ', $request->end_date),
             'quantity' => $request->quantity,
+            'max_uses_per_user' => $request->max_uses_per_user,
+            'max_uses_per_order' => $request->max_uses_per_order,
             'status' => 'active'
         ]);
 
@@ -74,13 +78,13 @@ class VoucherController extends Controller
             ->with('success','Đã tạo voucher thành công');
     }
 
-    /* ================= FORM SỬA ================= */
+   
     public function edit(Voucher $voucher)
     {
         return view('admin.vouchers.edit', compact('voucher'));
     }
 
-    /* ================= CẬP NHẬT ================= */
+ 
     public function update(Request $request, Voucher $voucher)
     {
         $request->validate([
@@ -91,10 +95,12 @@ class VoucherController extends Controller
             'end_date' => 'required|after:start_date',
             'quantity' => 'required|integer|min:0',
             'min_order_value' => 'nullable|numeric|min:0',
-            'max_discount' => 'nullable|numeric|min:0'
+            'max_discount' => 'nullable|numeric|min:0',
+            'max_uses_per_user' => 'required|integer|min:1',
+            'max_uses_per_order' => 'required|integer|min:1'
         ]);
 
-        // Kiểm tra validation thêm cho % discount
+       
         if ($request->type == 'percent' && $request->value > 100) {
             return back()->withErrors(['value' => 'Phần trăm giảm không được vượt quá 100%'])->withInput();
         }
@@ -108,18 +114,47 @@ class VoucherController extends Controller
             'start_date' => str_replace('T', ' ', $request->start_date),
             'end_date' => str_replace('T', ' ', $request->end_date),
             'quantity' => $request->quantity,
+            'max_uses_per_user' => $request->max_uses_per_user,
+            'max_uses_per_order' => $request->max_uses_per_order,
         ]);
 
         return redirect()->route('vouchers.index')
             ->with('success','Đã cập nhật voucher');
     }
 
-    /* ================= XOÁ ================= */
+   
     public function destroy(Voucher $voucher)
     {
         $voucher->delete();
 
         return redirect()->route('vouchers.index')
             ->with('success','Đã xóa voucher');
+    }
+
+    
+    public function trashed()
+    {
+        $vouchers = Voucher::onlyTrashed()->paginate(10);
+        return view('admin.vouchers.trashed', compact('vouchers'));
+    }
+
+    
+    public function restore($id)
+    {
+        $voucher = Voucher::withTrashed()->findOrFail($id);
+        $voucher->restore();
+
+        return redirect()->route('vouchers.trashed')
+            ->with('success','Đã khôi phục voucher');
+    }
+
+   
+    public function forceDelete($id)
+    {
+        $voucher = Voucher::withTrashed()->findOrFail($id);
+        $voucher->forceDelete();
+
+        return redirect()->route('vouchers.trashed')
+            ->with('success','Đã xóa vĩnh viễn voucher');
     }
 }

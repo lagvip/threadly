@@ -4,11 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Carbon\Carbon;
 
 class Voucher extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'vouchers';
 
@@ -21,7 +22,9 @@ class Voucher extends Model
         'start_date',
         'end_date',
         'quantity',
-        'status'
+        'status',
+        'max_uses_per_user',
+        'max_uses_per_order'
     ];
 
     protected $casts = [
@@ -106,5 +109,21 @@ class Voucher extends Model
             $this->quantity -= 1;
             $this->save();
         }
+    }
+
+    /**
+     * Kiểm tra xem user có thể sử dụng voucher này không (dựa trên giới hạn sử dụng)
+     */
+    public function canUserUse($userId, $currentUses = 0)
+    {
+        return $currentUses < $this->max_uses_per_user;
+    }
+
+    /**
+     * Kiểm tra xem voucher có thể được sử dụng trong đơn hàng này không
+     */
+    public function canUseInOrder($usesInOrder = 1)
+    {
+        return $usesInOrder <= $this->max_uses_per_order;
     }
 }

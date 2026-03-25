@@ -17,6 +17,10 @@
                         Thêm Voucher
                     </a>
 
+                    <a href="{{ route('vouchers.trashed') }}" class="btn btn-sm btn-outline-danger">
+                        Đã xóa
+                    </a>
+
                  
                     <form action="{{ route('vouchers.index') }}" method="GET">
                         <div class="search-bar">
@@ -45,7 +49,7 @@
                                 <th>Giảm tối đa</th>
                                 <th>Thời gian</th>
                                 <th>Số lượng</th>
-                                <th>Trạng thái</th>
+                                <th></th>Trạng thái</th>
                                 <th>Hành động</th>
                             </tr>
                         </thead>
@@ -88,9 +92,20 @@
                                     <span class="text-muted">
                                         → {{ $v->end_date->format('d/m/Y') }}
                                     </span>
+                                    @if($v->actual_status == 'active')
+                                        <br>
+                                        <span class="badge bg-danger countdown-timer" 
+                                              data-end-date="{{ $v->end_date->format('Y-m-d H:i:s') }}">
+                                            Đang tải...
+                                        </span>
+                                    @endif
                                 </td>
 
                                 <td>{{ $v->quantity }}</td>
+
+                                <td>{{ $v->max_uses_per_user }}</td>
+
+                                <td>{{ $v->max_uses_per_order }}</td>
 
                                 <td>
                                     @if($v->actual_status == 'active')
@@ -135,7 +150,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center py-4 text-muted">
+                                <td colspan="11" class="text-center py-4 text-muted">
                                     Không có voucher
                                 </td>
                             </tr>
@@ -159,4 +174,36 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Countdown timer cho các voucher đang hoạt động
+    const countdownElements = document.querySelectorAll('.countdown-timer');
+    
+    countdownElements.forEach(function(element) {
+        const endDate = new Date(element.getAttribute('data-end-date')).getTime();
+        
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const distance = endDate - now;
+            
+            if (distance > 0) {
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                
+                element.textContent = `${days} ngày ${hours}:${minutes}:${seconds}`;
+            } else {
+                element.textContent = 'Đã hết hạn';
+                element.classList.remove('bg-danger');
+                element.classList.add('bg-secondary');
+            }
+        }
+        
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    });
+});
+</script>
 @endsection
