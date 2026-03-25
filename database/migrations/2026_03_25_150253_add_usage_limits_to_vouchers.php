@@ -11,10 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('vouchers', function (Blueprint $table) {
-            $table->integer('max_uses_per_user')->default(1)->after('quantity');
-            $table->integer('max_uses_per_order')->default(1)->after('max_uses_per_user');
-        });
+        if (Schema::hasTable('vouchers')) {
+            Schema::table('vouchers', function (Blueprint $table) {
+                if (!Schema::hasColumn('vouchers', 'max_uses_per_user')) {
+                    $table->integer('max_uses_per_user')->default(1)->after('quantity');
+                }
+                if (!Schema::hasColumn('vouchers', 'max_uses_per_order')) {
+                    $table->integer('max_uses_per_order')->default(1)->after('max_uses_per_user');
+                }
+            });
+        }
     }
 
     /**
@@ -22,8 +28,15 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('vouchers', function (Blueprint $table) {
-            $table->dropColumn(['max_uses_per_user', 'max_uses_per_order']);
-        });
+        if (Schema::hasTable('vouchers')) {
+            Schema::table('vouchers', function (Blueprint $table) {
+                if (Schema::hasColumn('vouchers', 'max_uses_per_user')) {
+                    $table->dropColumn('max_uses_per_user');
+                }
+                if (Schema::hasColumn('vouchers', 'max_uses_per_order')) {
+                    $table->dropColumn('max_uses_per_order');
+                }
+            });
+        }
     }
 };

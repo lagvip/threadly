@@ -49,7 +49,9 @@
                                 <th>Giảm tối đa</th>
                                 <th>Thời gian</th>
                                 <th>Số lượng</th>
-                                <th></th>Trạng thái</th>
+                                <th>Số lần sử dụng tối đa cho mỗi tài khoản</th>
+                                <th>Số lần sử dụng tối đa cho mỗi đơn hàng</th>
+                                 <th>Trạng thái</th>
                                 <th>Hành động</th>
                             </tr>
                         </thead>

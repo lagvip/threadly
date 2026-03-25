@@ -13,15 +13,18 @@ return new class extends Migration
     {
         Schema::create('vouchers', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
             $table->string('code')->unique();
-            $table->text('description')->nullable();
             $table->string('type');
-             $table->integer('quantity');
-            $table->decimal('discount_amount', 10, 2);
+            $table->decimal('value', 10, 2);
+            $table->decimal('max_discount', 10, 2)->nullable();
+            $table->decimal('min_order_value', 10, 2)->default(0);
+            $table->integer('quantity')->default(1);
+            $table->integer('max_uses_per_user')->default(1);
+            $table->integer('max_uses_per_order')->default(1);
             $table->dateTime('start_date');
             $table->dateTime('end_date');
             $table->string('status')->default('active');
+            $table->softDeletes();
             $table->timestamps();
         });
     }

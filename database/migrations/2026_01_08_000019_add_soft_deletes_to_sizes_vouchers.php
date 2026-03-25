@@ -11,27 +11,31 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sizes', function (Blueprint $table) {
-            $table->softDeletes();
-        });
+        if (Schema::hasTable('sizes') && !Schema::hasColumn('sizes', 'deleted_at')) {
+            Schema::table('sizes', function (Blueprint $table) {
+                $table->softDeletes();
+            });
+        }
 
-      
-
-        Schema::table('vouchers', function (Blueprint $table) {
-            $table->softDeletes();
-        });
+        if (Schema::hasTable('vouchers') && !Schema::hasColumn('vouchers', 'deleted_at')) {
+            Schema::table('vouchers', function (Blueprint $table) {
+                $table->softDeletes();
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('sizes', function (Blueprint $table) {
-            $table->dropSoftDeletes();
-        });
+        if (Schema::hasTable('sizes') && Schema::hasColumn('sizes', 'deleted_at')) {
+            Schema::table('sizes', function (Blueprint $table) {
+                $table->dropSoftDeletes();
+            });
+        }
 
-        
-
-        Schema::table('vouchers', function (Blueprint $table) {
-            $table->dropSoftDeletes();
-        });
+        if (Schema::hasTable('vouchers') && Schema::hasColumn('vouchers', 'deleted_at')) {
+            Schema::table('vouchers', function (Blueprint $table) {
+                $table->dropSoftDeletes();
+            });
+        }
     }
 };
