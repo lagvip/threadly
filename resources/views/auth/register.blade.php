@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="{{ asset('admin/auth/css/main.css') }}">
 
     <style>
-        
+
             .input100 {
                 width: 100%;
                 background: #f5f5f5 !important;      /* nền xám nhạt */
@@ -96,7 +96,7 @@
                 <div class="alert alert-success mb-3">{{ session('success') }}</div>
             @endif
 
-            <form class="login100-form validate-form" method="POST" action="{{ route('admin.auth.postRegister') }}">
+            <form class="login100-form validate-form" method="POST" action="{{ route('register.submit') }}">
                 @csrf
 
                 <span class="login100-form-title p-b-30">
@@ -141,7 +141,7 @@
                 {{-- Đã có tài khoản --}}
                 <div class="w-full text-center p-t-40">
                     <span class="txt2">Đã có tài khoản?</span>
-                    <a href="{{ route('admin.auth.login') }}" class="txt2 bo1">Đăng nhập</a>
+                    <a href="{{ route('login') }}" class="txt2 bo1">Đăng nhập</a>
                 </div>
 
             </form>

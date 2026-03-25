@@ -138,21 +138,33 @@ class ProductController extends Controller
             'image_primary' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
             'status' => 'required|in:active,inactive',
 
+            'variants' => 'nullable|array',
+            'variants.*.id' => 'nullable|exists:product_variants,id',
+            'variants.*.id_color' => 'required|exists:colors,id',
+            'variants.*.id_size' => 'required|exists:sizes,id',
+            'variants.*.price' => 'nullable|numeric|min:0',
+            'variants.*.quantity' => 'nullable|integer|min:0',
+            'variants.*.image' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
+            'variants.*.delete' => 'nullable|in:0,1',
+
             'variants_new' => 'nullable|array',
-            'variants_new.*.id_color' => 'nullable|exists:colors,id',
-            'variants_new.*.id_size' => 'nullable|exists:sizes,id',
+            'variants_new.*.id_color' => 'required|exists:colors,id',
+            'variants_new.*.id_size' => 'required|exists:sizes,id',
             'variants_new.*.price' => 'nullable|numeric|min:0',
             'variants_new.*.quantity' => 'nullable|integer|min:0',
             'variants_new.*.image' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
         ]);
 
-        $product = $this->productService->updateProduct($request->all(), $id);
+        $product = $this->productService->updateProduct($request, $id);
 
         if ($product) {
-            return redirect()->route('product.listProduct')->with('success', 'Cập nhật sản phẩm thành công');
+            return redirect()->route('product.listProduct')
+                ->with('success', 'Cập nhật sản phẩm thành công');
         }
 
-        return redirect()->back()->withInput()->with('error', 'Cập nhật sản phẩm thất bại');
+        return redirect()->back()
+            ->withInput()
+            ->with('error', 'Cập nhật sản phẩm thất bại');
     }
 
     public function detail($id)

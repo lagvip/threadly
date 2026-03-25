@@ -207,8 +207,14 @@
 
                                         <div class="col-md-2">
                                             <label class="form-label">Màu sắc</label>
-                                            <input type="text" class="form-control" value="{{ $variant->color->name ?? '' }}" readonly>
-                                            <input type="hidden" name="variants[{{ $index }}][id_color]" value="{{ old('variants.'.$index.'.id_color', $variant->id_color) }}">
+                                            <select name="variants[{{ $index }}][id_color]" class="form-control">
+                                                @foreach($colors as $color)
+                                                    <option value="{{ $color->id }}"
+                                                        {{ old('variants.'.$index.'.id_color', $variant->id_color) == $color->id ? 'selected' : '' }}>
+                                                        {{ $color->name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
                                             @error("variants.$index.id_color")
                                                 <span class="text-danger">{{ $message }}</span>
                                             @enderror
@@ -216,8 +222,14 @@
 
                                         <div class="col-md-2">
                                             <label class="form-label">Kích cỡ</label>
-                                            <input type="text" class="form-control" value="{{ $variant->size->name ?? '' }}" readonly>
-                                            <input type="hidden" name="variants[{{ $index }}][id_size]" value="{{ old('variants.'.$index.'.id_size', $variant->id_size) }}">
+                                            <select name="variants[{{ $index }}][id_size]" class="form-control">
+                                                @foreach($sizes as $size)
+                                                    <option value="{{ $size->id }}"
+                                                        {{ old('variants.'.$index.'.id_size', $variant->id_size) == $size->id ? 'selected' : '' }}>
+                                                        {{ $size->name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
                                             @error("variants.$index.id_size")
                                                 <span class="text-danger">{{ $message }}</span>
                                             @enderror
@@ -279,7 +291,7 @@
                             <div id="variant-new-list" class="mt-3"></div>
 
                             <div class="d-flex justify-content-end gap-2 mt-3">
-                                <button type="button" class="btn btn-success" id="add-variant-btn">+ Thêm biến thể</button>
+
                                 <button type="submit" class="btn btn-primary">Lưu</button>
                                 <a href="{{ route('product.listProduct') }}" class="btn btn-secondary">Hủy</a>
                             </div>
@@ -294,6 +306,7 @@
 @push('scripts')
 <script>
     let variantNewIndex = 0;
+    const PLACEHOLDER_SRC = `{{ asset('images/placeholder-80x80.png') }}`;
 
     function getSelectedOptions(selector) {
         return Array.from(document.querySelectorAll(selector + ':checked')).map(item => ({
@@ -302,12 +315,14 @@
         }));
     }
 
-    function getSelectedCombinations(colors, sizes) {
-        const combinations = [];
+    function getSelectedKeys() {
+        const colors = getSelectedOptions('.color-checkbox');
+        const sizes = getSelectedOptions('.size-checkbox');
+        const keys = [];
 
         colors.forEach(color => {
             sizes.forEach(size => {
-                combinations.push({
+                keys.push({
                     key: `${color.id}-${size.id}`,
                     color,
                     size
@@ -315,25 +330,50 @@
             });
         });
 
-        return combinations;
+        return keys;
     }
 
-    function getActiveExistingKeys() {
+    function getOldVariantRows() {
+        return Array.from(document.querySelectorAll('#variant-list .variant-row'));
+    }
+
+    function getNewVariantRows() {
+        return Array.from(document.querySelectorAll('#variant-new-list .variant-item'));
+    }
+
+    function rowHasUserData(row) {
+        const priceInput = row.querySelector('input[name*="[price]"]');
+        const quantityInput = row.querySelector('input[name*="[quantity]"]');
+        const imageInput = row.querySelector('input[type="file"]');
+        const previewImg = row.querySelector('.img-thumb');
+
+        const hasPrice = priceInput && priceInput.value !== '' && Number(priceInput.value) > 0;
+        const hasQuantity = quantityInput && quantityInput.value !== '' && Number(quantityInput.value) > 0;
+        const hasNewFile = imageInput && imageInput.files && imageInput.files.length > 0;
+
+        let hasExistingImage = false;
+        if (previewImg && previewImg.getAttribute('src')) {
+            const currentSrc = previewImg.getAttribute('src');
+            hasExistingImage = currentSrc && !currentSrc.includes('placeholder-80x80.png');
+        }
+
+        return hasPrice || hasQuantity || hasNewFile || hasExistingImage;
+    }
+
+    function getVisibleExistingKeys() {
         const keys = [];
 
-        document.querySelectorAll('#variant-list .variant-row').forEach(row => {
+        getOldVariantRows().forEach(row => {
             const deleteFlag = row.querySelector('.delete-flag');
-            const isDeleted = deleteFlag && deleteFlag.value === '1';
-            const key = row.dataset.key || `${row.dataset.color}-${row.dataset.size}`;
-
-            if (!isDeleted) {
-                keys.push(key);
+            if (deleteFlag && deleteFlag.value === '0' && row.style.display !== 'none') {
+                keys.push(row.dataset.key);
             }
         });
 
-        document.querySelectorAll('#variant-new-list .variant-item').forEach(row => {
-            const key = row.dataset.key || `${row.dataset.color}-${row.dataset.size}`;
-            keys.push(key);
+        getNewVariantRows().forEach(row => {
+            if (row.style.display !== 'none') {
+                keys.push(row.dataset.key);
+            }
         });
 
         return keys;
@@ -348,14 +388,20 @@
                  data-key="${color.id}-${size.id}">
                 <div class="col-md-2">
                     <label>Màu sắc</label>
-                    <input type="text" class="form-control" value="${color.name}" readonly>
-                    <input type="hidden" name="variants_new[${variantNewIndex}][id_color]" value="${color.id}">
+                    <select name="variants_new[${variantNewIndex}][id_color]" class="form-control variant-color-select">
+                        @foreach($colors as $color)
+                            <option value="{{ $color->id }}" ${String({{ $color->id }}) === String(color.id) ? 'selected' : ''}>{{ $color->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <div class="col-md-2">
                     <label>Kích cỡ</label>
-                    <input type="text" class="form-control" value="${size.name}" readonly>
-                    <input type="hidden" name="variants_new[${variantNewIndex}][id_size]" value="${size.id}">
+                    <select name="variants_new[${variantNewIndex}][id_size]" class="form-control variant-size-select">
+                        @foreach($sizes as $size)
+                            <option value="{{ $size->id }}" ${String({{ $size->id }}) === String(size.id) ? 'selected' : ''}>{{ $size->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <div class="col-md-2">
@@ -372,7 +418,7 @@
                     <label>Ảnh biến thể</label>
                     <div class="variant-image-card text-center border rounded p-2">
                         <img id="variant-new-preview-${variantNewIndex}"
-                             src="{{ asset('images/placeholder-80x80.png') }}"
+                             src="${PLACEHOLDER_SRC}"
                              class="img-thumb mb-2 rounded"
                              alt="preview">
 
@@ -394,19 +440,43 @@
         variantNewIndex++;
     }
 
-    function syncVariants() {
-        const selectedColors = getSelectedOptions('.color-checkbox');
-        const selectedSizes = getSelectedOptions('.size-checkbox');
+    function syncVariantsBySelection() {
+        const selected = getSelectedKeys();
+        const selectedKeyMap = selected.map(item => item.key);
 
-        if (selectedColors.length === 0 || selectedSizes.length === 0) {
-            alert('Vui lòng chọn ít nhất 1 màu sắc và 1 kích cỡ');
-            return;
-        }
+        // Biến thể cũ: chỉ đánh dấu xóa nếu KHÔNG có dữ liệu người dùng
+        getOldVariantRows().forEach(row => {
+            const rowKey = row.dataset.key;
+            const deleteFlag = row.querySelector('.delete-flag');
+            const hasData = rowHasUserData(row);
 
-        const selectedCombinations = getSelectedCombinations(selectedColors, selectedSizes);
-        const existingKeys = getActiveExistingKeys();
+            if (selectedKeyMap.includes(rowKey)) {
+                deleteFlag.value = '0';
+                row.style.display = '';
+            } else {
+                if (!hasData) {
+                    deleteFlag.value = '1';
+                    row.style.display = 'none';
+                } else {
+                    deleteFlag.value = '0';
+                    row.style.display = '';
+                }
+            }
+        });
 
-        selectedCombinations.forEach(item => {
+        // Biến thể mới: chỉ remove nếu chưa có dữ liệu
+        getNewVariantRows().forEach(row => {
+            const hasData = rowHasUserData(row);
+
+            if (!selectedKeyMap.includes(row.dataset.key) && !hasData) {
+                row.remove();
+            }
+        });
+
+        // Thêm tổ hợp còn thiếu
+        const existingKeys = getVisibleExistingKeys();
+
+        selected.forEach(item => {
             if (!existingKeys.includes(item.key)) {
                 createNewVariantRow(item.color, item.size);
             }
@@ -414,39 +484,17 @@
     }
 
     document.getElementById('generate-variants').addEventListener('click', function() {
-        syncVariants();
-    });
+        const colors = getSelectedOptions('.color-checkbox');
+        const sizes = getSelectedOptions('.size-checkbox');
 
-    document.getElementById('add-variant-btn').addEventListener('click', function() {
-        const firstColor = document.querySelector('.color-checkbox');
-        const firstSize = document.querySelector('.size-checkbox');
-
-        const colorId = firstColor ? firstColor.value : '';
-        const colorName = firstColor ? firstColor.dataset.name : 'Màu mặc định';
-
-        const sizeId = firstSize ? firstSize.value : '';
-        const sizeName = firstSize ? firstSize.dataset.name : 'Size mặc định';
-
-        if (!colorId || !sizeId) {
-            alert('Bạn nên chọn ít nhất 1 màu và 1 size ở phần tạo nhanh, hoặc chỉnh JS để cho phép thêm rỗng.');
+        if (colors.length === 0 || sizes.length === 0) {
+            alert('Vui lòng chọn ít nhất 1 màu sắc và 1 kích cỡ');
             return;
         }
 
-        const newKey = `${colorId}-${sizeId}`;
-        const existingKeys = getActiveExistingKeys();
-
-        if (existingKeys.includes(newKey)) {
-            alert('Biến thể này đã tồn tại.');
-            return;
-        }
-
-        createNewVariantRow(
-            { id: colorId, name: colorName },
-            { id: sizeId, name: sizeName }
-        );
+        syncVariantsBySelection();
     });
 
-    // preview ảnh khi chọn file
     document.addEventListener('change', function(e) {
         if (e.target.classList.contains('variant-image-input')) {
             const previewId = e.target.getAttribute('data-preview');
@@ -459,20 +507,18 @@
         }
     });
 
-    // xóa biến thể mới
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('remove-variant')) {
             e.target.closest('.variant-item').remove();
         }
     });
 
-    // đánh dấu xóa biến thể cũ
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('btn-mark-delete')) {
             if (!confirm('Bạn có chắc muốn xoá biến thể này?')) return;
 
             const row = e.target.closest('.variant-row');
-            row.querySelector('.delete-flag').value = 1;
+            row.querySelector('.delete-flag').value = '1';
             row.style.display = 'none';
         }
     });

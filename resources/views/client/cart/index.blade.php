@@ -181,7 +181,7 @@
                     </ul>
 
                     <div class="d-grid mt-4">
-                        <a href="#" class="btn cart-theme-btn w-100">
+                        <a href="{{ route('client.checkout.index') }}" class="btn cart-theme-btn w-100">
                             Tiến Hành Thanh Toán
                         </a>
                     </div>

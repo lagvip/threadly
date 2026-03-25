@@ -209,42 +209,7 @@
                             <p>Đừng bỏ lỡ cơ hội nhận mức giá đặc biệt chỉ trong tuần này.</p>
                         </div>
                         <div class="timing-box">
-                            <div class="timing">
-                                <i data-feather="clock"></i>
-                                <h6 class="name">Kết thúc sau :</h6>
-                                <div class="time" id="clockdiv-1" data-hours="1" data-minutes="2" data-seconds="3">
-                                    <ul>
-                                        <li>
-                                            <div class="counter">
-                                                <div class="days">
-                                                    <h6></h6>
-                                                </div>
-                                            </div>
-                                        </li>
-                                        <li>
-                                            <div class="counter">
-                                                <div class="hours">
-                                                    <h6></h6>
-                                                </div>
-                                            </div>
-                                        </li>
-                                        <li>
-                                            <div class="counter">
-                                                <div class="minutes">
-                                                    <h6></h6>
-                                                </div>
-                                            </div>
-                                        </li>
-                                        <li>
-                                            <div class="counter">
-                                                <div class="seconds">
-                                                    <h6></h6>
-                                                </div>
-                                            </div>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
+
                         </div>
                     </div>
 
@@ -731,22 +696,7 @@
                             </ul>
                         </div>
 
-                        <div class="ratio_156 section-t-space">
-                            <div class="home-contain hover-effect">
-                                <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/banner/3.jpg') }}" class="bg-img blur-up lazyload"
-                                    alt="">
-                                <div class="home-detail p-top-left home-p-medium">
-                                    <div>
-                                        <h4 class="text-yellow home-banner text-kaushan">Hàng mới về</h4>
-                                        <h3 class="text-uppercase theme-color fw-bold mb-1">Bàn làm việc</h3>
-                                        <p class="text-content mb-3">Bán chạy nhất tuần! Ưu đãi độc quyền!</p>
-                                        <button onclick="location.href = 'shop-left-sidebar.html';"
-                                            class="btn btn-furniture btn-md mend-auto" >Mua ngay <i
-                                                class="fa-solid fa-arrow-right icon"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                       
 
                         <div class="section-t-space">
                             <div class="category-menu">

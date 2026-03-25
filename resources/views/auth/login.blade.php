@@ -61,7 +61,7 @@
 
             {{-- FORM --}}
             <form class="login100-form validate-form "
-                  method="POST" action="{{ route('admin.auth.postLoginAdmin') }}">
+                  method="POST" action="{{ route('login.submit') }}">
                 @csrf
 
                 <span class="login100-form-title p-b-40">
@@ -95,8 +95,7 @@
                 {{-- REMEMBER --}}
                 <div class="p-t-15 p-b-25">
                     <label class="d-inline-flex align-items-center" style="gap:8px; cursor:pointer;">
-                        <input type="checkbox" name="remember" value="1">
-                        <span class="txt2">Ghi nhớ đăng nhập</span>
+                        <a href="{{ route('password.request') }}">Quên mật khẩu</a>
                     </label>
                 </div>
 
@@ -138,7 +137,7 @@
                 {{-- REGISTER --}}
                 <div class="w-full text-center p-t-55">
                     <span class="txt2">Chưa có tài khoản?</span>
-                    <a href="{{ route('admin.auth.register') }}" class="txt2 bo1">Đăng ký</a>
+                    <a href="{{ route('register') }}" class="txt2 bo1">Đăng ký</a>
                 </div>
 
             </form>

@@ -605,25 +605,59 @@
                                             <i data-feather="user"></i>
                                         </div>
                                         <div class="delivery-detail">
-                                            <h6>Xin chào,</h6>
-                                            <h5>Tài khoản của tôi</h5>
+                                            @auth
+                                                <h6>Xin chào,</h6>
+                                                <h5>{{ Auth::user()->name }}</h5>
+                                            @else
+                                                <h6>Xin chào,</h6>
+                                                <h5>Tài khoản của tôi</h5>
+                                            @endauth
                                         </div>
                                     </div>
 
                                     <div class="onhover-div onhover-div-login">
                                         <ul class="user-box-name">
-                                            <li class="product-box-contain">
-                                                <i></i>
-                                                <a href="login.html">Đăng nhập</a>
-                                            </li>
+                                            @guest
+                                                <li class="product-box-contain">
+                                                    <a href="{{ route('login', ['redirect' => url()->current()]) }}">Đăng nhập</a>
+                                                </li>
 
-                                            <li class="product-box-contain">
-                                                <a href="sign-up.html">Đăng ký</a>
-                                            </li>
+                                                <li class="product-box-contain">
+                                                    <a href="{{ route('register') }}">Đăng ký</a>
+                                                </li>
 
-                                            <li class="product-box-contain">
-                                                <a href="forgot.html">Quên mật khẩu</a>
-                                            </li>
+                                                <li class="product-box-contain">
+                                                    <a href="#">Quên mật khẩu</a>
+                                                </li>
+                                            @endguest
+
+                                            @auth
+                                                @if(Auth::user()->isAdmin() || Auth::user()->isManager())
+                                                    <li class="product-box-contain">
+                                                        <a href="{{ route('admin.homeAdmin') }}">Trang quản trị</a>
+                                                    </li>
+                                                @endif
+
+                                                <li class="product-box-contain">
+                                                    <a href="#">Tài khoản của tôi</a>
+                                                </li>
+
+                                                <li class="product-box-contain">
+                                                    <a href="{{ route('client.cart.index') }}">Giỏ hàng</a>
+                                                </li>
+                                                <li class="product-box-contain">
+                                                    <a href="{{ route('password.change') }}">Đặt lại mật khẩu</a>
+                                                </li>
+
+                                                <li class="product-box-contain">
+                                                    <form action="{{ route('logout') }}" method="POST" style="display:inline;">
+                                                        @csrf
+                                                        <button type="submit" style="background:none;border:none;padding:0;color:inherit;cursor:pointer;">
+                                                            Đăng xuất
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            @endauth
                                         </ul>
                                     </div>
                                 </li>

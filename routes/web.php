@@ -20,37 +20,60 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\ProductController;
 use App\Http\Controllers\Client\CartController;
+use App\Http\Controllers\Client\CheckoutController;
+
+
 
 // Redirect
-Route::redirect('/', '/admin/dashboard');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/admin', fn () => redirect('/admin/dashboard'));
 //client giao diện
-Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/san-pham/{id}', [ProductController::class, 'show'])->name('client.product.detail');
 //client cần đăng nhập
+// giỏ hàng
 Route::middleware('auth')->group(function () {
     Route::get('/gio-hang', [CartController::class, 'index'])->name('client.cart.index');
     Route::post('/gio-hang/them', [CartController::class, 'add'])->name('client.cart.add');
     Route::post('/gio-hang/cap-nhat', [CartController::class, 'update'])->name('client.cart.update');
     Route::delete('/gio-hang/xoa/{id}', [CartController::class, 'remove'])->name('client.cart.remove');
 });
+// thanh toán
+Route::middleware(['auth'])->group(function () {
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('client.checkout.index');
+    Route::post('/checkout/shipping-fee', [CheckoutController::class, 'getShippingFee'])->name('client.checkout.shipping-fee');
+    Route::post('/checkout/store', [CheckoutController::class, 'store'])->name('client.checkout.store');
+    Route::get('/checkout/vnpay/return', [CheckoutController::class, 'paymentReturn'])->name('client.checkout.vnpay-return');
+    
+    Route::get('/checkout/ghn/provinces', [CheckoutController::class, 'getProvinces'])->name('client.checkout.ghn.provinces');
+    Route::get('/checkout/ghn/districts', [CheckoutController::class, 'getDistricts'])->name('client.checkout.ghn.districts');
+    Route::get('/checkout/ghn/wards', [CheckoutController::class, 'getWards'])->name('client.checkout.ghn.wards');
+    Route::post('/checkout/address/store', [CheckoutController::class, 'storeAddress'])->name('client.checkout.address.store');
+});
 //
 // LOGIN
 //
-Route::prefix('admin')->name('admin.')->middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'showLogin'])->name('auth.login');
-    Route::post('/login', [AuthController::class, 'postLoginAdmin'])->name('auth.postLoginAdmin');
-    Route::get('/register', [AuthController::class, 'showRegister'])->name('auth.register');
-    Route::post('/register', [AuthController::class, 'postRegister'])->name('auth.postRegister');
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'postLogin'])->name('login.submit');
+    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+    Route::post('/register', [AuthController::class, 'postRegister'])->name('register.submit');
+    Route::get('/forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.request');
+    Route::post('/forgot-password', [AuthController::class, 'sendOtp'])->name('password.email');
+    Route::get('/reset-password', [AuthController::class, 'showResetPasswordForm'])->name('password.reset');
+    Route::post('/reset-password', [AuthController::class, 'resetPasswordWithOtp'])->name('password.update');
 });
 
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/change-password', [AuthController::class, 'showChangePasswordForm'])->name('password.change.form');
+    Route::post('/change-password', [AuthController::class, 'changePassword'])->name('password.change');
+});
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
 
-Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
-});
-Route::get('/userlogout', [AuthController::class, 'logoutabc']);
+
+
 
 //
 // TẤT CẢ ROUTE CẦN ĐĂNG NHẬP
