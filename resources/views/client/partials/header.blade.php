@@ -639,7 +639,7 @@
                                                 @endif
 
                                                 <li class="product-box-contain">
-                                                    <a href="#">Tài khoản của tôi</a>
+                                                    <a href="{{ route('client.account.index') }}">Tài khoản của tôi</a>
                                                 </li>
 
                                                 <li class="product-box-contain">

@@ -74,7 +74,6 @@ class ColorController extends Controller
     {
         $color = Color::findOrFail($id);
         return view('admin.color.updateColor', compact('color'));
-
     }
 
     /**
@@ -101,7 +100,7 @@ class ColorController extends Controller
 
         $data = $request->all();
 
-        $is_update = $color->update($data); 
+        $is_update = $color->update($data);
 
 
         if ($is_update) {
@@ -127,5 +126,32 @@ class ColorController extends Controller
         $search = $request->input('search');
         $colors = Color::where('name', 'like', '%' . $search . '%')->paginate(10);
         return view('admin.color.listColors', compact('colors'));
+    }
+
+    public function bin()
+    {
+        $colors = Color::query()->onlyTrashed()->latest('id')->paginate(10);
+        return view('admin.color.bin', compact('colors'));
+    }
+
+    public function restore($id)
+    {
+        Color::withTrashed()->findOrFail($id)->restore();
+
+        return redirect()->route('listColor.bin');
+    }
+
+    public function forceDelete($id)
+    {
+        Color::withTrashed()->findOrFail($id)->forceDelete();
+
+        return redirect()->route('listColor.bin');
+    }
+
+    public function forceDeleteAll()
+    {
+        Color::onlyTrashed()->forceDelete();
+
+        return redirect()->route('listColor.bin');
     }
 }

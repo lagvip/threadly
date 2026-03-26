@@ -2,7 +2,7 @@
 @section('content')
 <div class="container-xxl">
     <div class="">
-        <form action="{{ route('listColor.storeColor') }}" method="POST"
+        <form action="{{ route('listColor.store') }}" method="POST"
             id="colorForm">
             @csrf
 
@@ -30,8 +30,8 @@
                     <div class="col-lg-6">
                         <div class="mb-3">
                             <label for="color-code" class="form-label">Mã màu</label>
-                            <input type="text" name="code" id="color-code" class="form-control"
-                                placeholder="Nhập mã màu" value="{{ old('code', $Color->code ?? '') }}">
+                            <input type="color" name="code" id="color-code" class="form-control"
+                                placeholder="Nhập mã màu" value="{{ old('code', $Color->code ?? '#FFFFFF') }}">
                             @if ($errors->has('code'))
                             <span style="color: red;">{{ $errors->first('code') }}</span>
                             @endif

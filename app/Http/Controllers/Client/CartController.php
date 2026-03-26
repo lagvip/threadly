@@ -16,6 +16,7 @@ class CartController extends Controller
         $cart = Cart::where('id_user', Auth::id())->first();
 
         $cartItems = collect();
+        $selectedCartItemIds = [];
 
         if ($cart) {
             $cartItems = CartDetail::with([
@@ -23,9 +24,22 @@ class CartController extends Controller
                 'variant.color',
                 'variant.size'
             ])->where('id_cart', $cart->id)->get();
+
+            $selectedCartItemIds = session('checkout_selected_items', []);
+            $selectedCartItemIds = collect($selectedCartItemIds)
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn ($id) => $cartItems->contains('id', $id))
+                ->values()
+                ->toArray();
+
+            if (empty($selectedCartItemIds) && $cartItems->isNotEmpty()) {
+                $selectedCartItemIds = $cartItems->pluck('id')
+                    ->map(fn ($id) => (int) $id)
+                    ->toArray();
+            }
         }
 
-        return view('client.cart.index', compact('cartItems', 'cart'));
+        return view('client.cart.index', compact('cartItems', 'cart', 'selectedCartItemIds'));
     }
 
     public function add(Request $request)
@@ -116,6 +130,8 @@ class CartController extends Controller
             ]);
         }
 
+        $this->syncSelectedCheckoutItems($cart);
+
         return redirect()
             ->route('client.cart.index')
             ->with('success', 'Đã cập nhật giỏ hàng.');
@@ -137,8 +153,44 @@ class CartController extends Controller
 
         $item->delete();
 
+        $selectedIds = collect(session('checkout_selected_items', []))
+            ->map(fn ($itemId) => (int) $itemId)
+            ->reject(fn ($itemId) => $itemId === (int) $id)
+            ->values()
+            ->toArray();
+
+        if (empty($selectedIds)) {
+            session()->forget('checkout_selected_items');
+        } else {
+            session(['checkout_selected_items' => $selectedIds]);
+        }
+
         return redirect()
             ->route('client.cart.index')
             ->with('success', 'Đã xóa sản phẩm khỏi giỏ hàng.');
+    }
+    protected function syncSelectedCheckoutItems(Cart $cart): void
+    {
+        $selectedIds = collect(session('checkout_selected_items', []))
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        if ($selectedIds->isEmpty()) {
+            return;
+        }
+
+        $validIds = CartDetail::where('id_cart', $cart->id)
+            ->whereIn('id', $selectedIds->all())
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->toArray();
+
+        if (empty($validIds)) {
+            session()->forget('checkout_selected_items');
+            return;
+        }
+
+        session(['checkout_selected_items' => $validIds]);
     }
 }

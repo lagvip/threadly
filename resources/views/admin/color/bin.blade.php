@@ -5,21 +5,19 @@
         <div class="col-xl-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center gap-1">
-                    <h4 class="card-title flex-grow-1">All Colors List</h4>
-                    <form action="{{ route('listColor.searchColor') }}" method="GET">
-                        <div class="search-bar">
-                            <span><i class="bx bx-search-alt"></i></span>
-                            <input name="search" type="search" class="form-control" id="search" placeholder="Search task...">
-                        </div>
+                    <h4 class="card-title flex-grow-1">All Colors Bin</h4>
+                    <a href="{{ route('listColor.list') }}" class="btn btn-sm btn-primary">
+                        List Color
+                    </a>
+                    <form action="{{ route('listColor.forceDeleteAll') }}"
+                        method="post">
+                        @csrf
+                        @method ('POST')
+                        <button onclick="return confirm('bạn có chắc muốn xoá tất cả ko')"
+                            type="submit" class="btn btn-soft-danger btn-sm">
+                            Delete All
+                        </button>
                     </form>
-                    <a href="{{ route('listColor.add') }}" class="btn btn-sm btn-primary">
-                        Add Color
-                    </a>
-
-                    <a href="{{ route('listColor.bin') }}" class="btn btn-sm btn-danger">
-                        Color Bin
-                    </a>
-
                 </div>
                 <div>
                     <div class="table-responsive">
@@ -53,6 +51,7 @@
                                             </div>
                                             <p class="text-dark fw-medium fs-15 mb-0">{{ $value->name }}</p>
                                         </div>
+
                                     </td>
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
@@ -62,21 +61,23 @@
 
                                     <td>
                                         <div class="d-flex gap-2">
-                                            <a href="{{ route('listColor.detail', $value) }}"
-                                                class="btn btn-light btn-sm"><iconify-icon icon="solar:eye-broken"
-                                                    class="align-middle fs-18"></iconify-icon></a>
-                                            <a href="{{ route('listColor.edit', $value) }}"
-                                                class="btn btn-soft-primary btn-sm"><iconify-icon
-                                                    icon="solar:pen-2-broken"
-                                                    class="align-middle fs-18"></iconify-icon></a>
-
-                                            <form action="{{ route('listColor.delete', $value) }}"
+                                            <form action="{{ route('listColor.restore', $value->id) }}"
                                                 method="post">
                                                 @csrf
-                                                @method ('DELETE')
+                                                @method ('POST')
+                                                <button onclick="return confirm('bạn có chắc muốn khôi phục ko')"
+                                                    type="submit" class="btn btn-soft-success btn-sm"><iconify-icon
+                                                        icon="solar:archive-up-broken"
+                                                        class="align-middle fs-18">
+                                                </button>
+                                            </form>
+                                            <form action="{{ route('listColor.forceDelete', $value->id) }}"
+                                                method="post">
+                                                @csrf
+                                                @method ('POST')
                                                 <button onclick="return confirm('bạn có chắc muốn xoá ko')"
                                                     type="submit" class="btn btn-soft-danger btn-sm"><iconify-icon
-                                                        icon="solar:archive-down-broken"
+                                                        icon="solar:trash-bin-minimalistic-2-broken"
                                                         class="align-middle fs-18">
                                                 </button>
                                             </form>

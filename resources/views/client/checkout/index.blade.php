@@ -58,7 +58,7 @@
                                 <label class="form-label">Địa chỉ nhận hàng</label>
 
                                 <div class="d-flex justify-content-between align-items-center mt-2 mb-3">
-                                    <button type="button" class="btn btn-sm btn-outline-dark" id="toggle-new-address">
+                                    <button type="button" class="btn btn-sm cart-theme-btn" id="toggle-new-address">
                                         + Thêm địa chỉ mới
                                     </button>
                                 </div>
@@ -73,14 +73,14 @@
                                                     data-province="{{ $address->province }}"
                                                     data-district="{{ $address->district }}"
                                                     data-ward="{{ $address->ward }}"
-                                                    data-detail="{{ $address->detailed_address  }}"
+                                                    data-detail="{{ $address->detailed_address }}"
                                                     data-recipient="{{ $address->recipient_name }}"
                                                     data-phone="{{ $address->phone_number }}"
                                                     data-ghn_district_id="{{ $address->ghn_district_id }}"
                                                     data-ghn_ward_code="{{ $address->ghn_ward_code }}"
                                                     {{ old('address_id', $defaultAddress->id ?? '') == $address->id ? 'selected' : '' }}
                                                 >
-                                                    {{ $address->detailed_address  }}, {{ $address->ward }}, {{ $address->district }}, {{ $address->province }}
+                                                    {{ $address->detailed_address }}, {{ $address->ward }}, {{ $address->district }}, {{ $address->province }}
                                                     @if(!empty($address->is_default)) (Mặc định) @endif
                                                 </option>
                                             @endforeach
@@ -286,25 +286,64 @@
                     <div class="card-body p-4">
                         <h4 class="card-title mb-4">Tóm Tắt Đơn Hàng</h4>
 
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Mã giảm giá</label>
+
+                            @if(!empty($appliedVoucher))
+                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                    <div class="small text-success">
+                                        Đã áp dụng: <strong>{{ $appliedVoucher['voucher_code'] }}</strong>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-sm cart-theme-btn"
+                                        form="remove-voucher-form"
+                                    >
+                                        Bỏ mã
+                                    </button>
+                                </div>
+                            @else
+                                <div class="d-flex gap-2">
+                                    <input
+                                        type="text"
+                                        name="voucher_code"
+                                        class="form-control checkout-input"
+                                        placeholder="Nhập mã voucher"
+                                        form="apply-voucher-form"
+                                    >
+                                    <button
+                                        type="submit"
+                                        class="btn cart-theme-btn"
+                                        form="apply-voucher-form"
+                                    >
+                                        Áp dụng
+                                    </button>
+                                </div>
+                            @endif
+                        </div>
+
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
-                                Tạm Tính
-                                <span id="subtotal-value">{{ number_format($subtotal, 0, ',', '.') }} ₫</span>
+                                Tạm tính
+                                <span id="subtotal-value">{{ number_format($subtotal ?? 0, 0, ',', '.') }} ₫</span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                                Phí vận chuyển
+                                <span id="shipping-fee-text">{{ number_format($shippingFee ?? 0, 0, ',', '.') }} ₫</span>
                             </li>
 
                             <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
                                 Giảm Giá
-                                <span>0 ₫</span>
-                            </li>
-
-                            <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
-                                Phí Vận Chuyển
-                                <span id="shipping-fee-text">{{ number_format($shippingFee ?? 0, 0, ',', '.') }} ₫</span>
+                                <span id="discount-value">{{ number_format($discount ?? 0, 0, ',', '.') }} ₫</span>
                             </li>
 
                             <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent fw-bold">
                                 Tổng
-                                <span id="grand-total-value">{{ number_format($subtotal + ($shippingFee ?? 0), 0, ',', '.') }} ₫</span>
+                                <span id="grand-total-value">
+                                    {{ number_format($grandTotal ?? (($subtotal ?? 0) + ($shippingFee ?? 0) - ($discount ?? 0)), 0, ',', '.') }} ₫
+                                </span>
                             </li>
                         </ul>
 
@@ -320,6 +359,14 @@
             </div>
 
         </div>
+    </form>
+
+    <form action="{{ route('client.checkout.voucher.apply') }}" method="POST" id="apply-voucher-form" class="d-none">
+        @csrf
+    </form>
+
+    <form action="{{ route('client.checkout.voucher.remove') }}" method="POST" id="remove-voucher-form" class="d-none">
+        @csrf
     </form>
 </div>
 @endsection
@@ -433,8 +480,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const districtSelect = document.getElementById('new_district');
     const wardSelect = document.getElementById('new_ward');
 
-    const subtotal = {{ (int) $subtotal }};
-
+    const subtotal = {{ (int) round($subtotal ?? 0) }};
+    const appliedDiscount = {{ (int) round($discount ?? 0) }};
 
     function formatMoney(number) {
         return new Intl.NumberFormat('vi-VN').format(Number(number || 0)) + ' ₫';
@@ -488,10 +535,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateGrandTotal() {
         const shipping = parseInt(shippingFeeInput?.value || 0, 10) || 0;
-        const grandTotal = subtotal + shipping;
+        const grandTotal = Math.max(0, subtotal + shipping - appliedDiscount);
 
         if (shippingFeeText) {
             shippingFeeText.textContent = formatMoney(shipping);
+        }
+
+        const discountEl = document.getElementById('discount-value');
+        if (discountEl) {
+            discountEl.textContent = formatMoney(appliedDiscount);
         }
 
         if (grandTotalEl) {
@@ -786,4 +838,3 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 @endpush
-
