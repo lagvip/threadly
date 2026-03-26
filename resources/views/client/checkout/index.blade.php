@@ -287,10 +287,18 @@
                         <h4 class="card-title mb-4">Tóm Tắt Đơn Hàng</h4>
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Mã giảm giá</label>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-semibold mb-0">Mã giảm giá</label>
+
+                                @if(!empty($availableVouchers) && count($availableVouchers))
+                                    <button type="button" class="btn btn-sm cart-theme-btn" id="toggle-voucher-list">
+                                        Voucher có thể dùng
+                                    </button>
+                                @endif
+                            </div>
 
                             @if(!empty($appliedVoucher))
-                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
                                     <div class="small text-success">
                                         Đã áp dụng: <strong>{{ $appliedVoucher['voucher_code'] }}</strong>
                                     </div>
@@ -303,22 +311,79 @@
                                         Bỏ mã
                                     </button>
                                 </div>
-                            @else
-                                <div class="d-flex gap-2">
-                                    <input
-                                        type="text"
-                                        name="voucher_code"
-                                        class="form-control checkout-input"
-                                        placeholder="Nhập mã voucher"
-                                        form="apply-voucher-form"
-                                    >
-                                    <button
-                                        type="submit"
-                                        class="btn cart-theme-btn"
-                                        form="apply-voucher-form"
-                                    >
-                                        Áp dụng
-                                    </button>
+                            @endif
+
+                            <div class="d-flex gap-2 mb-2">
+                                <input
+                                    type="text"
+                                    id="voucher_code_input"
+                                    name="voucher_code"
+                                    class="form-control checkout-input"
+                                    placeholder="Nhập mã voucher"
+                                    form="apply-voucher-form"
+                                    value="{{ $appliedVoucher['voucher_code'] ?? '' }}"
+                                >
+                                <button
+                                    type="submit"
+                                    class="btn cart-theme-btn"
+                                    form="apply-voucher-form"
+                                >
+                                    Áp dụng
+                                </button>
+                            </div>
+
+                            @if(!empty($availableVouchers) && count($availableVouchers))
+                                <div id="voucher-list-box" class="voucher-popup-box mt-3 d-none">
+                                    <div class="fw-semibold mb-2">Chọn voucher phù hợp</div>
+
+                                    <div class="voucher-list">
+                                        @foreach($availableVouchers as $voucher)
+                                            <div class="voucher-card {{ !empty($appliedVoucher) && $appliedVoucher['voucher_code'] === $voucher['code'] ? 'active' : '' }}">
+                                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                                    <div>
+                                                        <div class="fw-bold text-dark">{{ $voucher['code'] }}</div>
+
+                                                        <div class="small text-muted mt-1">
+                                                            @if($voucher['type'] === 'percent')
+                                                                Giảm {{ rtrim(rtrim(number_format($voucher['value'], 2, '.', ''), '0'), '.') }}%
+                                                                @if(!empty($voucher['max_discount']))
+                                                                    , tối đa {{ number_format($voucher['max_discount'], 0, ',', '.') }} ₫
+                                                                @endif
+                                                            @else
+                                                                Giảm {{ number_format($voucher['value'], 0, ',', '.') }} ₫
+                                                            @endif
+                                                        </div>
+
+                                                        <div class="small text-muted">
+                                                            Đơn tối thiểu: {{ number_format($voucher['min_order_value'], 0, ',', '.') }} ₫
+                                                        </div>
+
+                                                        <div class="small text-success">
+                                                            Dự kiến giảm: {{ number_format($voucher['discount_preview'], 0, ',', '.') }} ₫
+                                                        </div>
+
+                                                        <div class="small text-muted">
+                                                            HSD: {{ \Carbon\Carbon::parse($voucher['end_date'])->format('d/m/Y H:i') }}
+                                                        </div>
+                                                    </div>
+
+                                                    @if(!empty($appliedVoucher) && $appliedVoucher['voucher_code'] === $voucher['code'])
+                                                        <button type="button" class="btn btn-sm cart-theme-btn" disabled>
+                                                            Đã chọn
+                                                        </button>
+                                                    @else
+                                                        <button
+                                                            type="button"
+                                                            class="btn btn-sm cart-theme-btn voucher-select-btn"
+                                                            data-code="{{ $voucher['code'] }}"
+                                                        >
+                                                            Chọn
+                                                        </button>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
                                 </div>
                             @endif
                         </div>
@@ -453,6 +518,32 @@
         border-radius: 10px;
         padding: 14px;
     }
+    .voucher-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: 320px;
+        overflow-y: auto;
+    }
+
+    .voucher-card {
+        background: #fff;
+        border: 1px solid #e6e6e6;
+        border-radius: 10px;
+        padding: 12px;
+        transition: all 0.2s ease;
+    }
+
+    .voucher-card.active {
+        border-color: #212529;
+        box-shadow: 0 0 0 1px #212529 inset;
+    }
+    .voucher-popup-box {
+        background: #fff;
+        border: 1px solid #e6e6e6;
+        border-radius: 10px;
+        padding: 12px;
+    }
 </style>
 @endpush
 
@@ -479,6 +570,25 @@ document.addEventListener('DOMContentLoaded', function () {
     const provinceSelect = document.getElementById('new_province');
     const districtSelect = document.getElementById('new_district');
     const wardSelect = document.getElementById('new_ward');
+
+    const toggleVoucherListBtn = document.getElementById('toggle-voucher-list');
+    const voucherListBox = document.getElementById('voucher-list-box');
+    const voucherCodeInput = document.getElementById('voucher_code_input');
+    const applyVoucherForm = document.getElementById('apply-voucher-form');
+
+    toggleVoucherListBtn?.addEventListener('click', function () {
+        voucherListBox?.classList.toggle('d-none');
+    });
+
+    document.querySelectorAll('.voucher-select-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const code = this.dataset.code;
+            if (!code || !voucherCodeInput || !applyVoucherForm) return;
+
+            voucherCodeInput.value = code;
+            applyVoucherForm.submit();
+        });
+    });
 
     const subtotal = {{ (int) round($subtotal ?? 0) }};
     const appliedDiscount = {{ (int) round($discount ?? 0) }};

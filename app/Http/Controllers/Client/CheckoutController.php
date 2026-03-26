@@ -52,6 +52,7 @@ class CheckoutController extends Controller
         $appliedVoucher = $this->getAppliedVoucherPreview($subtotal);
         $discount = $appliedVoucher['discount'] ?? 0;
         $grandTotal = max(0, $subtotal + $shippingFee - $discount);
+        $availableVouchers = $this->getAvailableVouchersForCheckout($subtotal);
 
         return view('client.checkout.index', compact(
             'cartItems',
@@ -61,7 +62,8 @@ class CheckoutController extends Controller
             'subtotal',
             'appliedVoucher',
             'discount',
-            'grandTotal'
+            'grandTotal',
+            'availableVouchers'
         ));
     }
     public function getShippingFee(Request $request)
@@ -1071,6 +1073,32 @@ class CheckoutController extends Controller
             'voucher_code' => $voucher->code,
             'discount'     => (float) $voucher->getDiscount($subtotal),
         ];
+    }
+    protected function getAvailableVouchersForCheckout(float $subtotal)
+    {
+        return Voucher::query()
+            ->where('status', 'active')
+            ->where('quantity', '>', 0)
+            ->where('start_date', '<=', now())
+            ->where('end_date', '>=', now())
+            ->orderByDesc('value')
+            ->get()
+            ->filter(function ($voucher) use ($subtotal) {
+                return $voucher->isValid($subtotal);
+            })
+            ->map(function ($voucher) use ($subtotal) {
+                return [
+                    'id' => $voucher->id,
+                    'code' => $voucher->code,
+                    'type' => $voucher->type,
+                    'value' => $voucher->value,
+                    'max_discount' => $voucher->max_discount,
+                    'min_order_value' => $voucher->min_order_value,
+                    'discount_preview' => (float) $voucher->getDiscount($subtotal),
+                    'end_date' => $voucher->end_date,
+                ];
+            })
+            ->values();
     }
 
     public function applyVoucher(Request $request)
