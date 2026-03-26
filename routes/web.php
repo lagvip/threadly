@@ -21,6 +21,9 @@ use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\ProductController;
 use App\Http\Controllers\Client\CartController;
 use App\Http\Controllers\Client\CheckoutController;
+use App\Http\Controllers\Client\AccountController;
+use App\Http\Controllers\Client\ClientOrderController;
+use App\Http\Controllers\Client\AddressController;
 
 
 
@@ -29,6 +32,7 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/admin', fn () => redirect('/admin/dashboard'));
 //client giao diện
 Route::get('/san-pham/{id}', [ProductController::class, 'show'])->name('client.product.detail');
+
 //client cần đăng nhập
 // giỏ hàng
 Route::middleware('auth')->group(function () {
@@ -36,19 +40,51 @@ Route::middleware('auth')->group(function () {
     Route::post('/gio-hang/them', [CartController::class, 'add'])->name('client.cart.add');
     Route::post('/gio-hang/cap-nhat', [CartController::class, 'update'])->name('client.cart.update');
     Route::delete('/gio-hang/xoa/{id}', [CartController::class, 'remove'])->name('client.cart.remove');
+    Route::post('/checkout/select-items', [CheckoutController::class, 'selectItems'])->name('client.checkout.selectItems');
 });
 // thanh toán
 Route::middleware(['auth'])->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('client.checkout.index');
     Route::post('/checkout/shipping-fee', [CheckoutController::class, 'getShippingFee'])->name('client.checkout.shipping-fee');
     Route::post('/checkout/store', [CheckoutController::class, 'store'])->name('client.checkout.store');
-    Route::get('/checkout/vnpay/return', [CheckoutController::class, 'paymentReturn'])->name('client.checkout.vnpay-return');
 
     Route::get('/checkout/ghn/provinces', [CheckoutController::class, 'getProvinces'])->name('client.checkout.ghn.provinces');
     Route::get('/checkout/ghn/districts', [CheckoutController::class, 'getDistricts'])->name('client.checkout.ghn.districts');
     Route::get('/checkout/ghn/wards', [CheckoutController::class, 'getWards'])->name('client.checkout.ghn.wards');
     Route::post('/checkout/address/store', [CheckoutController::class, 'storeAddress'])->name('client.checkout.address.store');
+    Route::post('/checkout/buy-now', [CheckoutController::class, 'buyNow'])->name('client.checkout.buyNow');
+
+    Route::post('/orders/{id}/reorder', [CheckoutController::class, 'reorder'])->name('client.orders.reorder');
+    Route::post('/orders/{id}/repay-vnpay', [CheckoutController::class, 'repayVnpay'])->name('client.orders.repay-vnpay');
+    Route::post('/checkout/voucher/apply', [CheckoutController::class, 'applyVoucher'])->name('client.checkout.voucher.apply');
+    Route::post('/checkout/voucher/remove', [CheckoutController::class, 'removeVoucher'])->name('client.checkout.voucher.remove');
+
+
+    // tài khoản
+     Route::prefix('tai-khoan')->name('client.account.')->group(function () {
+        Route::get('/', [AccountController::class, 'index'])->name('index');
+        Route::get('/thong-tin', [AccountController::class, 'detail'])->name('detail');
+        Route::post('/cap-nhat', [AccountController::class, 'update'])->name('update');
+    });
+     //đơn hàng
+    Route::prefix('tai-khoan/don-hang')->name('client.orders.')->group(function () {
+        Route::get('/', [ClientOrderController::class, 'index'])->name('index');
+        Route::get('/{id}', [ClientOrderController::class, 'show'])->name('show');
+        Route::post('/{id}/cancel', [ClientOrderController::class, 'cancel'])->name('cancel');
+    });
+    // địa chỉ
+    Route::prefix('tai-khoan/so-dia-chi')->name('client.addresses.')->group(function () {
+        Route::get('/', [AddressController::class, 'index'])->name('index');
+        Route::post('/store', [AddressController::class, 'store'])->name('store');
+        Route::put('/{id}', [AddressController::class, 'update'])->name('update');
+        Route::delete('/{id}', [AddressController::class, 'destroy'])->name('destroy');
+        Route::post('/{id}/default', [AddressController::class, 'setDefault'])->name('default');
+    });
 });
+
+// VNPay callback routes: để ngoài auth
+    Route::get('/checkout/vnpay/return', [CheckoutController::class, 'paymentReturn'])->name('client.checkout.vnpay-return');
+    Route::get('/checkout/vnpay/ipn', [CheckoutController::class, 'paymentIpn'])->name('client.checkout.vnpay-ipn');
 //
 // LOGIN
 //
@@ -119,13 +155,14 @@ Route::middleware(['auth'])->group(function () {
         // COLOR
         Route::prefix('listColor')->name('listColor.')->group(function () {
             Route::get('/', [AdminColorController::class, 'index'])->name('list');
-            Route::get('/detail/{id}', [AdminColorController::class, 'show'])->name('detailColor');
-            Route::get('/add', [AdminColorController::class, 'create'])->name('addColor');
-            Route::post('/store', [AdminColorController::class, 'store'])->name('storeColor');
-            Route::get('/edit/{id}', [AdminColorController::class, 'edit'])->name('editColor');
-            Route::put('/update/{id}', [AdminColorController::class, 'update'])->name('updateColor');
-            Route::delete('/delete/{id}', [AdminColorController::class, 'destroy'])->name('deleteColor');
+            Route::get('/detail/{id}', [AdminColorController::class, 'show'])->name('detail');
+            Route::get('/add', [AdminColorController::class, 'create'])->name('add');
+            Route::post('/store', [AdminColorController::class, 'store'])->name('store');
+            Route::get('/edit/{id}', [AdminColorController::class, 'edit'])->name('edit');
+            Route::put('/update/{id}', [AdminColorController::class, 'update'])->name('update');
+            Route::delete('/delete/{id}', [AdminColorController::class, 'destroy'])->name('delete');
             Route::get('/search', [AdminColorController::class, 'search'])->name('searchColor');
+            Route::get('/bin', [AdminColorController::class, 'bin'])->name('bin');
         });
 
         // SIZE

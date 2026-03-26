@@ -7,22 +7,15 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
 class Kernel extends ConsoleKernel
 {
-    /**
-     * Define the application's command schedule.
-     */
     protected function schedule(Schedule $schedule): void
     {
-        // Cập nhật trạng thái voucher hết hạn mỗi ngày lúc 00:01
         $schedule->command('voucher:update-expired')->dailyAt('00:01');
+        $schedule->command('orders:expire-pending-vnpay')->everyMinute();
     }
 
-    /**
-     * Register the commands for the application.
-     */
     protected function commands(): void
     {
-        $this->load(__DIR__.'/Commands');
-
+        $this->load(__DIR__ . '/Commands');
         require base_path('routes/console.php');
     }
 }

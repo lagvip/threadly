@@ -1,6 +1,12 @@
 @extends('client.layouts.master')
 
 @section('content')
+@php
+    $selectedCartItemIds = old('selected_items', $selectedCartItemIds ?? ($cartItems->pluck('id')->map(fn ($id) => (int) $id)->toArray()));
+    $selectedCartItemIds = collect($selectedCartItemIds)->map(fn ($id) => (int) $id)->toArray();
+    $selectedSubtotal = 0;
+@endphp
+
 <div class="container py-5">
     <div class="row g-5">
         <div class="col-lg-8">
@@ -12,14 +18,24 @@
                 <div class="alert alert-danger">{{ session('error') }}</div>
             @endif
 
-            <div class="row fw-bold border-bottom pb-2 mb-3 d-none d-md-flex cart-header-row">
-                <div class="col-md-5">Sản Phẩm</div>
+            <div class="row fw-bold border-bottom pb-2 mb-3 d-none d-md-flex cart-header-row align-items-center">
+                <div class="col-md-1 text-center">
+                    <div class="form-check d-inline-flex align-items-center justify-content-center mb-0">
+                        <input
+                            type="checkbox"
+                            class="form-check-input cart-check-input"
+                            id="select-all-items"
+                            {{ count($selectedCartItemIds) === $cartItems->count() && $cartItems->count() > 0 ? 'checked' : '' }}
+                        >
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-center gap-2">
+                    <span>Chọn tất cả</span>
+                </div>
                 <div class="col-md-2 text-center">Giá</div>
                 <div class="col-md-3 text-center">Số Lượng</div>
                 <div class="col-md-2 text-end">Tổng Tiền</div>
             </div>
-
-            @php $subtotal = 0; @endphp
 
             @if($cartItems->isNotEmpty())
                 <form action="{{ route('client.cart.update') }}" method="POST" id="cart-update-form">
@@ -31,7 +47,11 @@
                             $qty = $item->quantity ?? 1;
                             $stock = $item->variant->quantity ?? 0;
                             $totalItem = $price * $qty;
-                            $subtotal += $totalItem;
+                            $isChecked = in_array((int) $item->id, $selectedCartItemIds, true);
+
+                            if ($isChecked) {
+                                $selectedSubtotal += $totalItem;
+                            }
 
                             if (!empty($item->variant->image)) {
                                 $image = asset('storage/' . $item->variant->image);
@@ -42,8 +62,19 @@
                             }
                         @endphp
 
-                        <div class="row align-items-center border-bottom py-4 g-3 cart-item-row">
-                            <div class="col-12 col-md-5">
+                        <div class="row align-items-center border-bottom py-4 g-3 cart-item-row" data-item-id="{{ $item->id }}">
+                            <div class="col-12 col-md-1 text-center">
+                                <div class="form-check d-inline-flex align-items-center justify-content-center mb-0">
+                                    <input
+                                        type="checkbox"
+                                        class="form-check-input cart-check-input checkout-item-checkbox"
+                                        value="{{ $item->id }}"
+                                        {{ $isChecked ? 'checked' : '' }}
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-4">
                                 <div class="d-flex align-items-center">
                                     <a href="{{ route('client.product.detail', $item->variant->product->id) }}">
                                         <img
@@ -124,6 +155,11 @@
                     </div>
                 </form>
 
+                <form id="checkout-selected-form" action="{{ route('client.checkout.selectItems') }}" method="POST" class="d-none">
+                    @csrf
+                    <div id="selected-items-container"></div>
+                </form>
+
                 @foreach($cartItems as $item)
                     <form id="remove-cart-item-{{ $item->id }}"
                           action="{{ route('client.cart.remove', $item->id) }}"
@@ -146,44 +182,18 @@
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
                             Tạm Tính
-                            <span id="subtotal-value">{{ number_format($subtotal ?? 0, 0, ',', '.') }} ₫</span>
+                            <span id="subtotal-value">{{ number_format($selectedSubtotal ?? 0, 0, ',', '.') }} ₫</span>
                         </li>
-
-                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
-                            Giảm Giá
-                            <span>0 ₫</span>
-                        </li>
-
-                        <li class="list-group-item px-0 bg-transparent">
-                            <p class="mb-2">Vận Chuyển</p>
-
-                            <div class="form-check d-flex justify-content-between mb-2">
-                                <div>
-                                    <input class="form-check-input shipping-radio" type="radio" name="shipping" id="free" value="0" checked>
-                                    <label class="form-check-label ms-2" for="free">Miễn Phí Vận Chuyển</label>
-                                </div>
-                                <span>0 ₫</span>
-                            </div>
-
-                            <div class="form-check d-flex justify-content-between">
-                                <div>
-                                    <input class="form-check-input shipping-radio" type="radio" name="shipping" id="local" value="30000">
-                                    <label class="form-check-label ms-2" for="local">Vận Chuyển Nội Địa</label>
-                                </div>
-                                <span>30.000 ₫</span>
-                            </div>
-                        </li>
-
                         <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent fw-bold">
                             Tổng
-                            <span id="grand-total-value">{{ number_format($subtotal ?? 0, 0, ',', '.') }} ₫</span>
+                            <span id="grand-total-value">{{ number_format($selectedSubtotal ?? 0, 0, ',', '.') }} ₫</span>
                         </li>
                     </ul>
 
                     <div class="d-grid mt-4">
-                        <a href="{{ route('client.checkout.index') }}" class="btn cart-theme-btn w-100">
+                        <button type="button" id="checkout-selected-btn" class="btn cart-theme-btn w-100">
                             Tiến Hành Thanh Toán
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -280,6 +290,12 @@
         color: #0da487 !important;
     }
 
+    .cart-check-input {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
     @media (max-width: 767.98px) {
         .cart-qty-box {
             margin-left: 0 !important;
@@ -296,6 +312,11 @@
         const shippingRadios = document.querySelectorAll('.shipping-radio');
         const subtotalEl = document.getElementById('subtotal-value');
         const grandTotalEl = document.getElementById('grand-total-value');
+        const selectAllCheckbox = document.getElementById('select-all-items');
+        const itemCheckboxes = document.querySelectorAll('.checkout-item-checkbox');
+        const checkoutBtn = document.getElementById('checkout-selected-btn');
+        const checkoutForm = document.getElementById('checkout-selected-form');
+        const selectedItemsContainer = document.getElementById('selected-items-container');
 
         function formatMoney(number) {
             return new Intl.NumberFormat('vi-VN').format(number || 0) + ' ₫';
@@ -306,6 +327,16 @@
             return checked ? parseInt(checked.value || 0, 10) : 0;
         }
 
+        function updateSelectAllState() {
+            if (!selectAllCheckbox) return;
+
+            const total = itemCheckboxes.length;
+            const checked = document.querySelectorAll('.checkout-item-checkbox:checked').length;
+
+            selectAllCheckbox.checked = total > 0 && checked === total;
+            selectAllCheckbox.indeterminate = checked > 0 && checked < total;
+        }
+
         function recalcCart() {
             let subtotal = 0;
 
@@ -313,6 +344,7 @@
                 const qtyInput = row.querySelector('.quantity-product');
                 const totalEl = row.querySelector('.item-total-price');
                 const priceEl = row.querySelector('.item-price');
+                const checkbox = row.querySelector('.checkout-item-checkbox');
 
                 let price = parseInt(priceEl?.dataset.price || 0, 10);
                 let qty = parseInt(qtyInput?.value || 1, 10);
@@ -325,10 +357,13 @@
                 qtyInput.value = qty;
 
                 const lineTotal = price * qty;
-                subtotal += lineTotal;
 
                 if (totalEl) {
                     totalEl.textContent = formatMoney(lineTotal);
+                }
+
+                if (checkbox && checkbox.checked) {
+                    subtotal += lineTotal;
                 }
             });
 
@@ -337,6 +372,8 @@
 
             if (subtotalEl) subtotalEl.textContent = formatMoney(subtotal);
             if (grandTotalEl) grandTotalEl.textContent = formatMoney(grandTotal);
+
+            updateSelectAllState();
         }
 
         document.querySelectorAll('.btn-decrease').forEach(btn => {
@@ -382,8 +419,41 @@
             });
         });
 
+        itemCheckboxes.forEach(cb => {
+            cb.addEventListener('change', recalcCart);
+        });
+
+        selectAllCheckbox?.addEventListener('change', function () {
+            itemCheckboxes.forEach(cb => {
+                cb.checked = this.checked;
+            });
+
+            recalcCart();
+        });
+
         shippingRadios.forEach(radio => {
             radio.addEventListener('change', recalcCart);
+        });
+
+        checkoutBtn?.addEventListener('click', function () {
+            const checkedItems = document.querySelectorAll('.checkout-item-checkbox:checked');
+
+            if (!checkedItems.length) {
+                alert('Vui lòng chọn ít nhất 1 sản phẩm để thanh toán.');
+                return;
+            }
+
+            selectedItemsContainer.innerHTML = '';
+
+            checkedItems.forEach(item => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selected_items[]';
+                input.value = item.value;
+                selectedItemsContainer.appendChild(input);
+            });
+
+            checkoutForm.submit();
         });
 
         cartForm?.addEventListener('submit', function () {

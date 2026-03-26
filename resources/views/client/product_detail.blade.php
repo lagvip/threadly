@@ -187,9 +187,19 @@
                                             </div>
                                         </div>
 
-                                        <button type="submit" class="btn btn-md bg-dark cart-button text-white w-100">
-                                            Thêm vào giỏ hàng
-                                        </button>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit"
+                                                    formaction="{{ route('client.cart.add') }}"
+                                                    class="btn btn-md bg-dark cart-button text-white w-100">
+                                                Thêm vào giỏ hàng
+                                            </button>
+
+                                            <button type="submit"
+                                                    formaction="{{ route('client.checkout.buyNow') }}"
+                                                    class="btn btn-md theme-bg-color text-white w-100">
+                                                Mua ngay
+                                            </button>
+                                        </div>
                                     </form>
                                 </div>
 
@@ -544,16 +554,6 @@
 @endphp
 
 @push('scripts')
-     <script>
-        window.productVariants = @json($productVariantsJson);
-    </script>
-    <script src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/js/slick/slick.js') }}"></script>
-    <script src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/js/slick/custom_slick.js') }}"></script>
-    <script src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/js/jquery.elevatezoom.js') }}"></script>
-    <script src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/js/zoom-filter.js') }}"></script>
-    <script src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/js/sticky-cart-bottom.js') }}"></script>
-
-   @push('scripts')
 <script>
     window.productVariants = @json($productVariantsJson);
 </script>
@@ -565,275 +565,303 @@
 <script src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/js/sticky-cart-bottom.js') }}"></script>
 
 <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const variants = window.productVariants || [];
+document.addEventListener('DOMContentLoaded', function () {
+    const variants = window.productVariants || [];
 
-            let selectedColorId = null;
-            let selectedSizeId = null;
-            let currentVariant = null;
+    let selectedColorId = null;
+    let selectedSizeId = null;
+    let currentVariant = null;
 
-            const priceEl = document.getElementById('product-price');
-            const priceTableEl = document.getElementById('product-price-table');
-            const stockEl = document.getElementById('product-stock');
-            const stockTextEl = document.getElementById('product-stock-text');
-            const stockTableEl = document.getElementById('product-quantity-table');
-            const skuEl = document.getElementById('product-sku');
-            const stockBarEl = document.getElementById('product-stock-bar');
-            const qtyInput = document.getElementById('product-quantity-input');
-            const selectedVariantLabel = document.getElementById('selected-variant-label');
-            const selectedVariantInput = document.getElementById('selected-variant-id');
-            const addToCartForm = document.getElementById('add-to-cart-form');
+    const priceEl = document.getElementById('product-price');
+    const priceTableEl = document.getElementById('product-price-table');
+    const stockEl = document.getElementById('product-stock');
+    const stockTextEl = document.getElementById('product-stock-text');
+    const stockTableEl = document.getElementById('product-quantity-table');
+    const skuEl = document.getElementById('product-sku');
+    const stockBarEl = document.getElementById('product-stock-bar');
+    const qtyInput = document.getElementById('product-quantity-input');
+    const selectedVariantLabel = document.getElementById('selected-variant-label');
+    const selectedVariantInput = document.getElementById('selected-variant-id');
+    const addToCartForm = document.getElementById('add-to-cart-form');
 
-            const btnMinus = document.querySelector('.my-qty-minus');
-            const btnPlus = document.querySelector('.my-qty-plus');
+    const btnMinus = document.querySelector('.my-qty-minus');
+    const btnPlus = document.querySelector('.my-qty-plus');
 
-            const $mainSlider = $('#product-main-slider');
-            const $thumbSlider = $('#variant-thumbs');
+    const $mainSlider = $('#product-main-slider');
+    const $thumbSlider = $('#variant-thumbs');
 
-            function formatPrice(number) {
-                return new Intl.NumberFormat('vi-VN').format(number || 0) + ' đ';
-            }
+    function formatPrice(number) {
+        return new Intl.NumberFormat('vi-VN').format(number || 0) + ' đ';
+    }
 
-            function getColorTextById(colorId) {
-                const el = document.querySelector('.color-option[data-color-id="' + colorId + '"]');
-                return el ? el.textContent.trim() : 'Chưa chọn màu';
-            }
+    function getColorTextById(colorId) {
+        const el = document.querySelector('.color-option[data-color-id="' + colorId + '"]');
+        return el ? el.textContent.trim() : 'Chưa chọn màu';
+    }
 
-            function getSizeTextById(sizeId) {
-                const el = document.querySelector('.size-option[data-size-id="' + sizeId + '"]');
-                return el ? el.textContent.trim() : 'Chưa chọn kích thước';
-            }
+    function getSizeTextById(sizeId) {
+        const el = document.querySelector('.size-option[data-size-id="' + sizeId + '"]');
+        return el ? el.textContent.trim() : 'Chưa chọn kích thước';
+    }
 
-            function updateSelectedLabel() {
-                const colorText = selectedColorId ? getColorTextById(selectedColorId) : 'Chưa chọn màu';
-                const sizeText = selectedSizeId ? getSizeTextById(selectedSizeId) : 'Chưa chọn kích thước';
+    function updateSelectedLabel() {
+        const colorText = selectedColorId ? getColorTextById(selectedColorId) : 'Chưa chọn màu';
+        const sizeText = selectedSizeId ? getSizeTextById(selectedSizeId) : 'Chưa chọn kích thước';
 
-                if (selectedVariantLabel) {
-                    selectedVariantLabel.textContent = 'Bạn đã chọn: ' + colorText + ' / ' + sizeText;
-                }
-            }
+        if (selectedVariantLabel) {
+            selectedVariantLabel.textContent = 'Bạn đã chọn: ' + colorText + ' / ' + sizeText;
+        }
+    }
 
-            function updateStockUI(quantity) {
-                const qty = Number(quantity || 0);
+    function updateStockUI(quantity) {
+        const qty = Number(quantity || 0);
 
-                if (stockEl) stockEl.textContent = 'Tồn kho: ' + qty;
-                if (stockTextEl) stockTextEl.textContent = qty + ' sản phẩm';
-                if (stockTableEl) stockTableEl.textContent = qty;
+        if (stockEl) stockEl.textContent = 'Tồn kho: ' + qty;
+        if (stockTextEl) stockTextEl.textContent = qty + ' sản phẩm';
+        if (stockTableEl) stockTableEl.textContent = qty;
 
-                if (stockBarEl) {
-                    const width = Math.min(qty, 100);
-                    stockBarEl.style.width = width + '%';
-                    stockBarEl.setAttribute('aria-valuenow', width);
-                }
+        if (stockBarEl) {
+            const width = Math.min(qty, 100);
+            stockBarEl.style.width = width + '%';
+            stockBarEl.setAttribute('aria-valuenow', width);
+        }
 
-                if (qtyInput) {
-                    qtyInput.setAttribute('max', qty > 0 ? qty : 1);
+        if (qtyInput) {
+            qtyInput.setAttribute('max', qty > 0 ? qty : 1);
 
-                    let currentQtyValue = parseInt(qtyInput.value || 1, 10);
-                    if (isNaN(currentQtyValue) || currentQtyValue < 1) currentQtyValue = 1;
-                    if (qty > 0 && currentQtyValue > qty) currentQtyValue = qty;
+            let currentQtyValue = parseInt(qtyInput.value || 1, 10);
+            if (isNaN(currentQtyValue) || currentQtyValue < 1) currentQtyValue = 1;
+            if (qty > 0 && currentQtyValue > qty) currentQtyValue = qty;
 
-                    qtyInput.value = currentQtyValue;
-                }
-            }
+            qtyInput.value = currentQtyValue;
+        }
+    }
 
-            function findExactVariant() {
-                if (!selectedColorId || !selectedSizeId) return null;
+    function findExactVariant() {
+        if (!selectedColorId || !selectedSizeId) return null;
 
-                return variants.find(v =>
-                    String(v.color_id) === String(selectedColorId) &&
-                    String(v.size_id) === String(selectedSizeId)
-                ) || null;
-            }
+        return variants.find(v =>
+            String(v.color_id) === String(selectedColorId) &&
+            String(v.size_id) === String(selectedSizeId) &&
+            Number(v.quantity) > 0
+        ) || null;
+    }
 
-            function slideToVariant(variant) {
-                if (!variant) return;
+    function slideToVariant(variant) {
+        if (!variant) return;
 
-                const slideIndex = Number(variant.slide_index || 0);
+        const slideIndex = Number(variant.slide_index || 0);
 
-                if ($mainSlider.length && $mainSlider.hasClass('slick-initialized')) {
-                    $mainSlider.slick('slickGoTo', slideIndex);
-                }
+        if ($mainSlider.length && $mainSlider.hasClass('slick-initialized')) {
+            $mainSlider.slick('slickGoTo', slideIndex);
+        }
 
-                if ($thumbSlider.length && $thumbSlider.hasClass('slick-initialized')) {
-                    $thumbSlider.slick('slickGoTo', slideIndex);
-                }
-            }
+        if ($thumbSlider.length && $thumbSlider.hasClass('slick-initialized')) {
+            $thumbSlider.slick('slickGoTo', slideIndex);
+        }
+    }
 
-            function updateVariantUI(variant) {
-                if (!variant) return;
+    function updateVariantUI(variant) {
+        if (!variant) return;
 
-                currentVariant = variant;
+        currentVariant = variant;
 
-                if (selectedVariantInput) {
-                    selectedVariantInput.value = variant.id;
-                }
+        if (selectedVariantInput) {
+            selectedVariantInput.value = variant.id;
+        }
 
-                if (priceEl) priceEl.textContent = formatPrice(variant.price);
-                if (priceTableEl) priceTableEl.textContent = formatPrice(variant.price);
-                if (skuEl) skuEl.textContent = variant.sku || '';
-                updateStockUI(variant.quantity);
-                slideToVariant(variant);
-            }
+        if (priceEl) priceEl.textContent = formatPrice(variant.price);
+        if (priceTableEl) priceTableEl.textContent = formatPrice(variant.price);
+        if (skuEl) skuEl.textContent = variant.sku || '';
+        updateStockUI(variant.quantity);
+        slideToVariant(variant);
+    }
 
-            function renderSelectedState() {
-                document.querySelectorAll('.color-option').forEach(el => {
-                    const isSelected = String(el.dataset.colorId) === String(selectedColorId);
-                    el.classList.toggle('active', isSelected);
-                    el.classList.toggle('is-selected', isSelected);
-                    el.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
-                });
+    function resetVariantUI() {
+        currentVariant = null;
 
-                document.querySelectorAll('.size-option').forEach(el => {
-                    const isSelected = String(el.dataset.sizeId) === String(selectedSizeId);
-                    el.classList.toggle('active', isSelected);
-                    el.classList.toggle('is-selected', isSelected);
-                    el.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
-                });
-            }
+        if (selectedVariantInput) {
+            selectedVariantInput.value = '';
+        }
 
-            function refreshAvailableOptions() {
-                document.querySelectorAll('.size-option').forEach(el => {
-                    const sizeId = el.dataset.sizeId;
+        if (qtyInput) {
+            qtyInput.value = 1;
+            qtyInput.setAttribute('max', 1);
+        }
+    }
 
-                    const exists = !selectedColorId || variants.some(v =>
-                        String(v.color_id) === String(selectedColorId) &&
-                        String(v.size_id) === String(sizeId)
-                    );
-
-                    el.classList.toggle('disabled', !exists);
-                    el.style.pointerEvents = exists ? 'auto' : 'none';
-                    el.style.opacity = exists ? '1' : '0.45';
-                });
-
-                document.querySelectorAll('.color-option').forEach(el => {
-                    const colorId = el.dataset.colorId;
-
-                    const exists = !selectedSizeId || variants.some(v =>
-                        String(v.size_id) === String(selectedSizeId) &&
-                        String(v.color_id) === String(colorId)
-                    );
-
-                    el.classList.toggle('disabled', !exists);
-                    el.style.pointerEvents = exists ? 'auto' : 'none';
-                    el.style.opacity = exists ? '1' : '0.45';
-                });
-            }
-
-            function syncUI() {
-                refreshAvailableOptions();
-                renderSelectedState();
-                updateSelectedLabel();
-
-                const matched = findExactVariant();
-                if (matched) {
-                    updateVariantUI(matched);
-                }
-            }
-
-            document.querySelectorAll('.color-option').forEach(el => {
-                el.addEventListener('click', function (e) {
-                    e.preventDefault();
-
-                    if (this.classList.contains('disabled')) return;
-
-                    selectedColorId = this.dataset.colorId;
-                    syncUI();
-                });
-            });
-
-            document.querySelectorAll('.size-option').forEach(el => {
-                el.addEventListener('click', function (e) {
-                    e.preventDefault();
-
-                    if (this.classList.contains('disabled')) return;
-
-                    selectedSizeId = this.dataset.sizeId;
-                    syncUI();
-                });
-            });
-
-            btnMinus?.addEventListener('click', function (e) {
-                e.preventDefault();
-
-                if (!qtyInput) return;
-
-                let value = parseInt(qtyInput.value || 1, 10);
-                if (isNaN(value) || value <= 1) value = 1;
-                else value -= 1;
-
-                qtyInput.value = value;
-            });
-
-            btnPlus?.addEventListener('click', function (e) {
-                e.preventDefault();
-
-                if (!qtyInput) return;
-
-                let value = parseInt(qtyInput.value || 1, 10);
-                let max = parseInt(qtyInput.getAttribute('max') || 1, 10);
-
-                if (isNaN(value) || value < 1) value = 1;
-                if (isNaN(max) || max < 1) max = 1;
-
-                if (value < max) {
-                    value += 1;
-                }
-
-                qtyInput.value = value;
-            });
-
-            qtyInput?.addEventListener('input', function () {
-                let value = parseInt(this.value || 1, 10);
-                let max = parseInt(this.getAttribute('max') || 1, 10);
-
-                if (isNaN(value) || value < 1) value = 1;
-                if (isNaN(max) || max < 1) max = 1;
-                if (value > max) value = max;
-
-                this.value = value;
-            });
-
-            addToCartForm?.addEventListener('submit', function (e) {
-                if (!selectedVariantInput || !selectedVariantInput.value) {
-                    e.preventDefault();
-                    alert('Vui lòng chọn màu và kích thước.');
-                    return;
-                }
-
-                const qty = parseInt(qtyInput?.value || 1, 10);
-                const max = parseInt(qtyInput?.getAttribute('max') || 1, 10);
-
-                if (isNaN(qty) || qty < 1) {
-                    e.preventDefault();
-                    alert('Số lượng không hợp lệ.');
-                    return;
-                }
-
-                if (qty > max) {
-                    e.preventDefault();
-                    alert('Số lượng vượt quá tồn kho.');
-                }
-            });
-
-            if (variants.length > 0) {
-                const firstVariant = variants[0];
-
-                if (firstVariant.color_id) {
-                    selectedColorId = String(firstVariant.color_id);
-                }
-
-                if (firstVariant.size_id) {
-                    selectedSizeId = String(firstVariant.size_id);
-                }
-
-                syncUI();
-            } else {
-                updateSelectedLabel();
-            }
+    function renderSelectedState() {
+        document.querySelectorAll('.color-option').forEach(el => {
+            const isSelected = String(el.dataset.colorId) === String(selectedColorId);
+            el.classList.toggle('active', isSelected);
+            el.classList.toggle('is-selected', isSelected);
+            el.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
         });
-        </script>
-        @endpush
+
+        document.querySelectorAll('.size-option').forEach(el => {
+            const isSelected = String(el.dataset.sizeId) === String(selectedSizeId);
+            el.classList.toggle('active', isSelected);
+            el.classList.toggle('is-selected', isSelected);
+            el.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+        });
+    }
+
+    function refreshAvailableOptions() {
+    document.querySelectorAll('.size-option').forEach(el => {
+        const sizeId = el.dataset.sizeId;
+
+        const exists = variants.some(v =>
+            String(v.size_id) === String(sizeId) &&
+            Number(v.quantity) > 0 &&
+            (!selectedColorId || String(v.color_id) === String(selectedColorId))
+        );
+
+        el.classList.toggle('disabled', !exists);
+        el.style.pointerEvents = exists ? 'auto' : 'none';
+        el.style.opacity = exists ? '1' : '0.45';
+    });
+
+    document.querySelectorAll('.color-option').forEach(el => {
+        const colorId = el.dataset.colorId;
+
+        const exists = variants.some(v =>
+            String(v.color_id) === String(colorId) &&
+            Number(v.quantity) > 0
+        );
+
+        el.classList.toggle('disabled', !exists);
+        el.style.pointerEvents = exists ? 'auto' : 'none';
+        el.style.opacity = exists ? '1' : '0.45';
+    });
+    }
+
+    function syncUI() {
+        refreshAvailableOptions();
+        renderSelectedState();
+        updateSelectedLabel();
+
+        const matched = findExactVariant();
+
+        if (matched) {
+            updateVariantUI(matched);
+        } else {
+            resetVariantUI();
+        }
+    }
+
+    document.querySelectorAll('.color-option').forEach(el => {
+        el.addEventListener('click', function (e) {
+            e.preventDefault();
+
+            if (this.classList.contains('disabled')) return;
+
+            selectedColorId = this.dataset.colorId;
+
+            const stillValid = variants.some(v =>
+                String(v.color_id) === String(selectedColorId) &&
+                String(v.size_id) === String(selectedSizeId) &&
+                Number(v.quantity) > 0
+            );
+
+            if (!stillValid) {
+                selectedSizeId = null;
+            }
+
+            syncUI();
+        });
+    });
+
+    document.querySelectorAll('.size-option').forEach(el => {
+        el.addEventListener('click', function (e) {
+            e.preventDefault();
+
+            if (this.classList.contains('disabled')) return;
+
+            selectedSizeId = this.dataset.sizeId;
+
+            const stillValid = variants.some(v =>
+                String(v.color_id) === String(selectedColorId) &&
+                String(v.size_id) === String(selectedSizeId) &&
+                Number(v.quantity) > 0
+            );
+
+            if (!stillValid) {
+                selectedColorId = null;
+            }
+
+            syncUI();
+        });
+    });
+
+    btnMinus?.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        if (!qtyInput) return;
+
+        let value = parseInt(qtyInput.value || 1, 10);
+        if (isNaN(value) || value <= 1) value = 1;
+        else value -= 1;
+
+        qtyInput.value = value;
+    });
+
+    btnPlus?.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        if (!qtyInput) return;
+
+        let value = parseInt(qtyInput.value || 1, 10);
+        let max = parseInt(qtyInput.getAttribute('max') || 1, 10);
+
+        if (isNaN(value) || value < 1) value = 1;
+        if (isNaN(max) || max < 1) max = 1;
+
+        if (value < max) {
+            value += 1;
+        }
+
+        qtyInput.value = value;
+    });
+
+    qtyInput?.addEventListener('input', function () {
+        let value = parseInt(this.value || 1, 10);
+        let max = parseInt(this.getAttribute('max') || 1, 10);
+
+        if (isNaN(value) || value < 1) value = 1;
+        if (isNaN(max) || max < 1) max = 1;
+        if (value > max) value = max;
+
+        this.value = value;
+    });
+
+    addToCartForm?.addEventListener('submit', function (e) {
+        if (!selectedVariantInput || !selectedVariantInput.value) {
+            e.preventDefault();
+            alert('Vui lòng chọn màu và kích thước.');
+            return;
+        }
+
+        const qty = parseInt(qtyInput?.value || 1, 10);
+        const max = parseInt(qtyInput?.getAttribute('max') || 1, 10);
+
+        if (isNaN(qty) || qty < 1) {
+            e.preventDefault();
+            alert('Số lượng không hợp lệ.');
+            return;
+        }
+
+        if (qty > max) {
+            e.preventDefault();
+            alert('Số lượng vượt quá tồn kho.');
+        }
+    });
+
+    // KHÔNG auto chọn sẵn cả màu + size
+    updateSelectedLabel();
+    refreshAvailableOptions();
+    renderSelectedState();
+});
+</script>
 @endpush
 
 @push('styles')

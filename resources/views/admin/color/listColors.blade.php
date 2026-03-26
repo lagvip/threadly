@@ -6,7 +6,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center gap-1">
                     <h4 class="card-title flex-grow-1">All Colors List</h4>
-                    <form action="{{ route('listColor.search') }}" method="GET">
+                    <form action="{{ route('listColor.searchColor') }}" method="GET">
                         <div class="search-bar">
                             <span><i class="bx bx-search-alt"></i></span>
                             <input name="search" type="search" class="form-control" id="search" placeholder="Search task...">
