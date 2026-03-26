@@ -12,7 +12,7 @@
                 </div>
                 <div>
                     <div class="text-muted small">Tổng Doanh Thu</div>
-                    <div class="fw-bold fs-5">125,450,000 đ</div>
+                    <div class="fw-bold fs-5">{{ number_format((float)($kpi['net_revenue'] ?? 0), 0, ',', '.') }} đ</div>
                 </div>
             </div>
         </div>
@@ -23,7 +23,7 @@
                 </div>
                 <div>
                     <div class="text-muted small">Tổng Đơn Hàng</div>
-                    <div class="fw-bold fs-5">342</div>
+                    <div class="fw-bold fs-5">{{ number_format((int)($kpi['total_orders'] ?? 0), 0, ',', '.') }}</div>
                 </div>
             </div>
         </div>
@@ -34,7 +34,7 @@
                 </div>
                 <div>
                     <div class="text-muted small">Tổng Sản Phẩm</div>
-                    <div class="fw-bold fs-5">156</div>
+                    <div class="fw-bold fs-5">{{ number_format((int)($kpi['total_products'] ?? 0), 0, ',', '.') }}</div>
                 </div>
             </div>
         </div>
@@ -45,7 +45,7 @@
                 </div>
                 <div>
                     <div class="text-muted small">Tồn Kho</div>
-                    <div class="fw-bold fs-5">2,847</div>
+                    <div class="fw-bold fs-5">{{ number_format((int)($kpi['total_stock'] ?? 0), 0, ',', '.') }}</div>
                 </div>
             </div>
         </div>
@@ -68,7 +68,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="row">
         <div class="col-lg-6 mb-4">
             <div class="card h-100 shadow-sm">
@@ -86,41 +86,19 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>Áo thun nam cao cấp</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-info rounded-pill">245</span>
-                                    </td>
-                                    <td class="text-end">24,500,000 đ</td>
-                                </tr>
-                                <tr>
-                                    <td>Quần jean nữ skinny</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-info rounded-pill">198</span>
-                                    </td>
-                                    <td class="text-end">19,800,000 đ</td>
-                                </tr>
-                                <tr>
-                                    <td>Giày thể thao nam</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-info rounded-pill">176</span>
-                                    </td>
-                                    <td class="text-end">17,600,000 đ</td>
-                                </tr>
-                                <tr>
-                                    <td>Túi xách nữ da thật</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-info rounded-pill">154</span>
-                                    </td>
-                                    <td class="text-end">15,400,000 đ</td>
-                                </tr>
-                                <tr>
-                                    <td>Đồng hồ nam thời trang</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-info rounded-pill">132</span>
-                                    </td>
-                                    <td class="text-end">13,200,000 đ</td>
-                                </tr>
+                                @forelse(($topProducts ?? []) as $item)
+                                    <tr>
+                                        <td>{{ $item->product_name }}</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-info rounded-pill">{{ number_format((int)$item->sold_qty, 0, ',', '.') }}</span>
+                                        </td>
+                                        <td class="text-end">{{ number_format((float)$item->revenue, 0, ',', '.') }} đ</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted py-3">Chưa có dữ liệu</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -144,34 +122,19 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>Thời trang nam</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-info rounded-pill">456</span>
-                                    </td>
-                                    <td class="text-end fw-medium">45,600,000 đ</td>
-                                </tr>
-                                <tr>
-                                    <td>Thời trang nữ</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-info rounded-pill">389</span>
-                                    </td>
-                                    <td class="text-end fw-medium">38,900,000 đ</td>
-                                </tr>
-                                <tr>
-                                    <td>Giày dép</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-info rounded-pill">267</span>
-                                    </td>
-                                    <td class="text-end fw-medium">26,700,000 đ</td>
-                                </tr>
-                                <tr>
-                                    <td>Phụ kiện</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-info rounded-pill">198</span>
-                                    </td>
-                                    <td class="text-end fw-medium">19,800,000 đ</td>
-                                </tr>
+                                @forelse(($categoryStats ?? []) as $item)
+                                    <tr>
+                                        <td>{{ $item->category_name }}</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-info rounded-pill">{{ number_format((int)$item->sold_qty, 0, ',', '.') }}</span>
+                                        </td>
+                                        <td class="text-end fw-medium">{{ number_format((float)$item->revenue, 0, ',', '.') }} đ</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted py-3">Chưa có dữ liệu</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -196,24 +159,18 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>Áo khoác denim vintage</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-danger fw-bold">3</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Giày sneaker trắng</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-danger fw-bold">5</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Túi đeo chéo mini</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-danger fw-bold">2</span>
-                                    </td>
-                                </tr>
+                                @forelse(($lowStockVariants ?? []) as $variant)
+                                    <tr>
+                                        <td>{{ $variant->product->name ?? 'N/A' }}</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-danger fw-bold">{{ number_format((int)$variant->quantity, 0, ',', '.') }}</span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="2" class="text-center text-muted py-3">Không có sản phẩm sắp hết hàng</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -237,24 +194,9 @@
 document.addEventListener("DOMContentLoaded", function() {
     let mainRevenueChart;
 
-    const chartData30Days = {
-        labels: ['Ngày 1', 'Ngày 2', 'Ngày 3', 'Ngày 4', 'Ngày 5', 'Ngày 6', 'Ngày 7', 'Ngày 8', 'Ngày 9', 'Ngày 10',
-                 'Ngày 11', 'Ngày 12', 'Ngày 13', 'Ngày 14', 'Ngày 15', 'Ngày 16', 'Ngày 17', 'Ngày 18', 'Ngày 19', 'Ngày 20',
-                 'Ngày 21', 'Ngày 22', 'Ngày 23', 'Ngày 24', 'Ngày 25', 'Ngày 26', 'Ngày 27', 'Ngày 28', 'Ngày 29', 'Ngày 30'],
-        data: [3200000, 4100000, 3800000, 4500000, 5200000, 4800000, 3900000, 4200000, 4700000, 5100000,
-               4300000, 3700000, 4900000, 5300000, 4600000, 3500000, 4400000, 5000000, 4100000, 3800000,
-               4800000, 5200000, 4500000, 3900000, 4300000, 5100000, 4700000, 4000000, 4600000, 5400000]
-    };
-
-    const chartData7Days = {
-        labels: ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'],
-        data: [4200000, 4500000, 5100000, 4800000, 5300000, 4900000, 3800000]
-    };
-
-    const chartData12Months = {
-        labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'],
-        data: [95000000, 102000000, 118000000, 125000000, 135000000, 128000000, 142000000, 138000000, 145000000, 152000000, 148000000, 156000000]
-    };
+    const chartData30Days = @json($chartData30Days ?? ['labels' => [], 'data' => []]);
+    const chartData7Days = @json($chartData7Days ?? ['labels' => [], 'data' => []]);
+    const chartData12Months = @json($chartData12Months ?? ['labels' => [], 'data' => []]);
 
     const defaultLineOptions = {
         responsive: true,
@@ -289,11 +231,11 @@ document.addEventListener("DOMContentLoaded", function() {
         const gradient = ctx.createLinearGradient(0, 0, 0, 350);
         gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
         gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
-        
+
         if (mainRevenueChart) {
             mainRevenueChart.destroy();
         }
-        
+
         mainRevenueChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -319,10 +261,10 @@ document.addEventListener("DOMContentLoaded", function() {
         if (e.target.tagName === 'BUTTON' && !e.target.classList.contains('active')) {
             e.currentTarget.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
             e.target.classList.add('active');
-            
+
             const period = e.target.dataset.period;
             let selectedData;
-            
+
             if (period === '7d') {
                 selectedData = chartData7Days;
             } else if (period === '30d') {
@@ -330,7 +272,7 @@ document.addEventListener("DOMContentLoaded", function() {
             } else if (period === '12m') {
                 selectedData = chartData12Months;
             }
-            
+
             initMainRevenueChart(selectedData);
         }
     });
