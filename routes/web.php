@@ -6,7 +6,7 @@ use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\BannerController;
-use App\Http\Controllers\Admin\ColorController as AdminColorController;
+use App\Http\Controllers\Admin\ColorController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SizeController;
 use App\Http\Controllers\Admin\VoucherController;
@@ -25,16 +25,18 @@ use App\Http\Controllers\Client\AccountController;
 use App\Http\Controllers\Client\ClientOrderController;
 use App\Http\Controllers\Client\AddressController;
 
-
+// =======================================================
+// CLIENT
+// =======================================================
 
 // Redirect
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/admin', fn () => redirect('/admin/dashboard'));
-//client giao diện
+
+// Client giao diện
 Route::get('/san-pham/{id}', [ProductController::class, 'show'])->name('client.product.detail');
 
-//client cần đăng nhập
-// giỏ hàng
+// Client cần đăng nhập - giỏ hàng
 Route::middleware('auth')->group(function () {
     Route::get('/gio-hang', [CartController::class, 'index'])->name('client.cart.index');
     Route::post('/gio-hang/them', [CartController::class, 'add'])->name('client.cart.add');
@@ -42,7 +44,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/gio-hang/xoa/{id}', [CartController::class, 'remove'])->name('client.cart.remove');
     Route::post('/checkout/select-items', [CheckoutController::class, 'selectItems'])->name('client.checkout.selectItems');
 });
-// thanh toán
+
+
 Route::middleware(['auth'])->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('client.checkout.index');
     Route::post('/checkout/shipping-fee', [CheckoutController::class, 'getShippingFee'])->name('client.checkout.shipping-fee');
@@ -59,20 +62,25 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/checkout/voucher/apply', [CheckoutController::class, 'applyVoucher'])->name('client.checkout.voucher.apply');
     Route::post('/checkout/voucher/remove', [CheckoutController::class, 'removeVoucher'])->name('client.checkout.voucher.remove');
 
-
-    // tài khoản
-     Route::prefix('tai-khoan')->name('client.account.')->group(function () {
+    // Tài khoản
+    Route::prefix('tai-khoan')->name('client.account.')->group(function () {
         Route::get('/', [AccountController::class, 'index'])->name('index');
         Route::get('/thong-tin', [AccountController::class, 'detail'])->name('detail');
         Route::post('/cap-nhat', [AccountController::class, 'update'])->name('update');
     });
-     //đơn hàng
+
+    // Đơn hàng
     Route::prefix('tai-khoan/don-hang')->name('client.orders.')->group(function () {
         Route::get('/', [ClientOrderController::class, 'index'])->name('index');
         Route::get('/{id}', [ClientOrderController::class, 'show'])->name('show');
         Route::post('/{id}/cancel', [ClientOrderController::class, 'cancel'])->name('cancel');
+        Route::post('/{id}/reviews/{productId}', [ClientOrderController::class, 'submitReview'])
+            ->whereNumber('id')
+            ->whereNumber('productId')
+            ->name('reviews.submit');
     });
-    // địa chỉ
+
+    // Địa chỉ
     Route::prefix('tai-khoan/so-dia-chi')->name('client.addresses.')->group(function () {
         Route::get('/', [AddressController::class, 'index'])->name('index');
         Route::post('/store', [AddressController::class, 'store'])->name('store');
@@ -83,11 +91,13 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // VNPay callback routes: để ngoài auth
-    Route::get('/checkout/vnpay/return', [CheckoutController::class, 'paymentReturn'])->name('client.checkout.vnpay-return');
-    Route::get('/checkout/vnpay/ipn', [CheckoutController::class, 'paymentIpn'])->name('client.checkout.vnpay-ipn');
-//
-// LOGIN
-//
+Route::get('/checkout/vnpay/return', [CheckoutController::class, 'paymentReturn'])->name('client.checkout.vnpay-return');
+Route::get('/checkout/vnpay/ipn', [CheckoutController::class, 'paymentIpn'])->name('client.checkout.vnpay-ipn');
+
+
+// =======================================================
+// AUTH
+// =======================================================
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -105,42 +115,45 @@ Route::middleware('auth')->group(function () {
     Route::get('/change-password', [AuthController::class, 'showChangePasswordForm'])->name('password.change.form');
     Route::post('/change-password', [AuthController::class, 'changePassword'])->name('password.change');
 });
+
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
 
 
-
-
-//
+// =======================================================
 // TẤT CẢ ROUTE CẦN ĐĂNG NHẬP
-//
+// =======================================================
+
 Route::middleware(['auth'])->group(function () {
 
     // =======================================================
     // NHÓM ADMIN + MANAGER
+    // - Được vào admin panel
+    // - Được CRUD thường
+    // - Được xóa mềm / khôi phục
+    // - KHÔNG được xóa cứng
     // =======================================================
-        Route::middleware(['role:admin,manager'])->group(function () {
+    Route::middleware(['role:admin,manager'])->group(function () {
 
-            // DASHBOARD
-            Route::prefix('admin')->name('admin.')->group(function () {
-                Route::get('/dashboard', [AdminController::class, 'homeAdmin'])->name('homeAdmin');
-            });
+        // DASHBOARD
+        Route::prefix('admin')->name('admin.')->group(function () {
+            Route::get('/dashboard', [AdminController::class, 'homeAdmin'])->name('homeAdmin');
+        });
 
-            // CATEGORY
-           Route::prefix('listCategory')->name('listCategory.')->group(function () {
-                Route::get('/trash', [AdminCategoryController::class, 'trash'])->name('trash');
-                Route::get('/restore/{id}', [AdminCategoryController::class, 'restore'])->name('restore');
-                Route::delete('/force-delete/{id}', [AdminCategoryController::class, 'forceDelete'])->name('forceDelete');
+        // CATEGORY
+        Route::prefix('listCategory')->name('listCategory.')->group(function () {
+            Route::get('/trash', [AdminCategoryController::class, 'trash'])->name('trash');
+            Route::get('/restore/{id}', [AdminCategoryController::class, 'restore'])->name('restore');
 
-                Route::get('/', [AdminCategoryController::class, 'index'])->name('list');
-                Route::get('/add', [AdminCategoryController::class, 'create'])->name('addCategory');
-                Route::post('/store', [AdminCategoryController::class, 'store'])->name('storeCategory');
-                Route::get('/detail/{id}', [AdminCategoryController::class, 'show'])->name('detailCategory');
-                Route::get('/edit/{id}', [AdminCategoryController::class, 'edit'])->name('editCategory');
-                Route::put('/update/{id}', [AdminCategoryController::class, 'update'])->name('updateCategory');
-                Route::delete('/delete/{id}', [AdminCategoryController::class, 'destroy'])->name('deleteCategory'); // Đây sẽ là Xóa mềm
-                Route::get('/search', [AdminCategoryController::class, 'search'])->name('searchCategory');
-            });
+            Route::get('/', [AdminCategoryController::class, 'index'])->name('list');
+            Route::get('/add', [AdminCategoryController::class, 'create'])->name('addCategory');
+            Route::post('/store', [AdminCategoryController::class, 'store'])->name('storeCategory');
+            Route::get('/detail/{id}', [AdminCategoryController::class, 'show'])->name('detailCategory');
+            Route::get('/edit/{id}', [AdminCategoryController::class, 'edit'])->name('editCategory');
+            Route::put('/update/{id}', [AdminCategoryController::class, 'update'])->name('updateCategory');
+            Route::delete('/delete/{id}', [AdminCategoryController::class, 'destroy'])->name('deleteCategory'); // Xóa mềm
+            Route::get('/search', [AdminCategoryController::class, 'search'])->name('searchCategory');
+        });
 
         // BANNER
         Route::prefix('listBanner')->name('listBanner.')->group(function () {
@@ -158,15 +171,16 @@ Route::middleware(['auth'])->group(function () {
 
         // COLOR
         Route::prefix('listColor')->name('listColor.')->group(function () {
-            Route::get('/', [AdminColorController::class, 'index'])->name('list');
-            Route::get('/detail/{id}', [AdminColorController::class, 'show'])->name('detail');
-            Route::get('/add', [AdminColorController::class, 'create'])->name('add');
-            Route::post('/store', [AdminColorController::class, 'store'])->name('store');
-            Route::get('/edit/{id}', [AdminColorController::class, 'edit'])->name('edit');
-            Route::put('/update/{id}', [AdminColorController::class, 'update'])->name('update');
-            Route::delete('/delete/{id}', [AdminColorController::class, 'destroy'])->name('delete');
-            Route::get('/search', [AdminColorController::class, 'search'])->name('searchColor');
-            Route::get('/bin', [AdminColorController::class, 'bin'])->name('bin');
+            Route::get('/', [ColorController::class, 'index'])->name('list');
+            Route::get('/bin', [ColorController::class, 'bin'])->name('bin');
+            Route::get('/detail/{id}', [ColorController::class, 'show'])->name('detail');
+            Route::get('/add', [ColorController::class, 'create'])->name('add');
+            Route::post('/store', [ColorController::class, 'store'])->name('store');
+            Route::get('/edit/{id}', [ColorController::class, 'edit'])->name('edit');
+            Route::put('/update/{id}', [ColorController::class, 'update'])->name('update');
+            Route::delete('/delete/{id}', [ColorController::class, 'destroy'])->name('delete');
+            Route::get('/restore/{id}', [ColorController::class, 'restore'])->name('restore');
+            Route::get('/search', [ColorController::class, 'search'])->name('search');
         });
 
         // SIZE
@@ -183,17 +197,15 @@ Route::middleware(['auth'])->group(function () {
 
         // VOUCHER
         Route::prefix('admin')->group(function () {
-        Route::resource('vouchers', VoucherController::class);
-        Route::get('vouchers-trashed', [VoucherController::class, 'trashed'])->name('vouchers.trashed');
-        Route::post('vouchers/{voucher}/restore', [VoucherController::class, 'restore'])->name('vouchers.restore');
-        Route::delete('vouchers/{voucher}/force-delete', [VoucherController::class, 'forceDelete'])->name('vouchers.forceDelete');
+            Route::resource('vouchers', VoucherController::class);
+            Route::get('vouchers-trashed', [VoucherController::class, 'trashed'])->name('vouchers.trashed');
+            Route::post('vouchers/{voucher}/restore', [VoucherController::class, 'restore'])->name('vouchers.restore');
         });
 
         // BRAND
         Route::prefix('brands')->name('brands.')->group(function () {
             Route::get('/trash', [BrandController::class, 'trash'])->name('trash');
             Route::get('/restore/{id}', [BrandController::class, 'restore'])->name('restore');
-            Route::delete('/force-delete/{id}', [BrandController::class, 'forceDelete'])->name('forceDelete');
 
             Route::get('/', [BrandController::class, 'index'])->name('index');
             Route::get('/create', [BrandController::class, 'create'])->name('create');
@@ -212,18 +224,18 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/update/{id}', [AdminProductController::class, 'postEdit'])->name('postEdit');
             Route::get('/detail/{id}', [AdminProductController::class, 'detail'])->name('detail');
             Route::get('/show/{id}', [AdminProductController::class, 'show'])->name('show');
-            Route::get('/delete/{id}', [AdminProductController::class, 'destroy'])->name('destroy');
+            Route::get('/delete/{id}', [AdminProductController::class, 'destroy'])->name('destroy'); // Xóa mềm
             Route::get('/trash', [AdminProductController::class, 'trash'])->name('trash');
             Route::get('/restore/{id}', [AdminProductController::class, 'restore'])->name('restore');
-            Route::get('/force-delete/{id}', [AdminProductController::class, 'forceDelete'])->name('forceDelete');
             Route::post('/bulk-delete', [AdminProductController::class, 'bulkDelete'])->name('bulkDelete');
             Route::post('/bulk-restore', [AdminProductController::class, 'bulkRestore'])->name('bulkRestore');
             Route::get('/search', [AdminProductController::class, 'search'])->name('search');
 
-            // biến thể
             Route::get('/variant-trash', [AdminProductController::class, 'variantTrash'])->name('variant.trash');
             Route::post('/variant-restore', [AdminProductController::class, 'variantRestore'])->name('variant.restore');
-            Route::post('/variant-force-delete', [AdminProductController::class, 'variantForceDelete'])->name('variant.forceDelete');
+
+            Route::post('/{id}/toggle-status', [AdminProductController::class, 'toggleStatus'])->name('toggleStatus');
+            Route::post('/variants/{id}/toggle-status', [AdminProductController::class, 'toggleVariantStatus'])->name('variant.toggleStatus');
         });
 
         // ORDER
@@ -238,7 +250,6 @@ Route::middleware(['auth'])->group(function () {
         Route::prefix('deleted')->name('deleted.')->group(function () {
             Route::get('/', [OrderController::class, 'trash'])->name('index');
             Route::post('/restore', [OrderController::class, 'restore'])->name('restore');
-            Route::post('/force-delete', [OrderController::class, 'forceDelete'])->name('forceDelete');
         });
 
         // REVIEW
@@ -246,12 +257,14 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/', [ReviewController::class, 'index'])->name('index');
             Route::get('/{review}/edit', [ReviewController::class, 'edit'])->name('edit');
             Route::put('/{review}', [ReviewController::class, 'update'])->name('update');
-            Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
         });
     });
 
     // =======================================================
     // NHÓM CHỈ ADMIN
+    // - Quản lý user
+    // - Quản lý role
+    // - Tất cả thao tác xóa cứng
     // =======================================================
     Route::middleware(['role:admin'])->group(function () {
 
@@ -283,6 +296,41 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/delete/{id}', [RoleController::class, 'destroy'])->name('delete');
             Route::get('/restore/{id}', [RoleController::class, 'restore'])->name('restore');
             Route::delete('/force-delete/{id}', [RoleController::class, 'forceDelete'])->name('forceDelete');
+        });
+
+        // CATEGORY - FORCE DELETE
+        Route::prefix('listCategory')->name('listCategory.')->group(function () {
+            Route::delete('/force-delete/{id}', [AdminCategoryController::class, 'forceDelete'])->name('forceDelete');
+        });
+
+        // COLOR - FORCE DELETE
+        Route::prefix('listColor')->name('listColor.')->group(function () {
+            Route::delete('/force-delete/{id}', [ColorController::class, 'forceDelete'])->name('forceDelete');
+            Route::delete('/force-delete-all', [ColorController::class, 'forceDeleteAll'])->name('forceDeleteAll');
+        });
+
+        // VOUCHER - FORCE DELETE
+        Route::prefix('admin')->group(function () {
+            Route::delete('vouchers/{voucher}/force-delete', [VoucherController::class, 'forceDelete'])->name('vouchers.forceDelete');
+        });
+
+        // BRAND - FORCE DELETE
+        Route::prefix('brands')->name('brands.')->group(function () {
+            Route::delete('/force-delete/{id}', [BrandController::class, 'forceDelete'])->name('forceDelete');
+        });
+
+        // PRODUCT - FORCE DELETE
+        Route::prefix('product')->name('product.')->group(function () {
+            Route::get('/force-delete/{id}', [AdminProductController::class, 'forceDelete'])->name('forceDelete');
+            Route::post('/variant-force-delete', [AdminProductController::class, 'variantForceDelete'])->name('variant.forceDelete');
+        });
+
+        // ORDER - FORCE DELETE
+        Route::prefix('deleted')->name('deleted.')->group(function () {
+            Route::post('/force-delete', [OrderController::class, 'forceDelete'])->name('forceDelete');
+        });
+         Route::prefix('reviews')->name('reviews.')->group(function () {
+            Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
         });
     });
 });

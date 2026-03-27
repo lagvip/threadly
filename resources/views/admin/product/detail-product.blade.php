@@ -1,13 +1,37 @@
 @extends('admin.layouts.layout')
 
+<style>
+    .status-switch-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .status-switch-wrap .form-check {
+        margin-bottom: 0;
+    }
+
+    .status-switch-wrap .form-check-input {
+        width: 3rem;
+        height: 1.5rem;
+    }
+
+    .status-toggle-text {
+        font-weight: 600;
+        font-size: 13px;
+        color: #198754;
+    }
+
+    .status-toggle-text.inactive {
+        color: #dc3545;
+    }
+</style>
+
 @section('content')
 <div class="container-fluid">
     <div class="row">
         <div class="col-xl-12">
-            <form action="{{ route('product.postEdit', $product->id) }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                @method('POST')
-
+            <form action="#" method="POST">
                 <div class="card">
                     <div class="card-header">
                         <h4 class="card-title">Ảnh sản phẩm</h4>
@@ -23,12 +47,6 @@
                                 <span class="text-muted">Chưa có ảnh sản phẩm</span>
                             @endif
                         </div>
-
-                        <div class="dz-message needsclick">
-                            @error('image_primary')
-                                <span class="text-danger">{{ $message }}</span>
-                            @enderror
-                        </div>
                     </div>
                 </div>
 
@@ -40,33 +58,15 @@
                         <div class="row">
                             <div class="col-lg-6">
                                 <div class="mb-3">
-                                    <label for="name" class="form-label">Tên sản phẩm</label>
-                                    <input type="text"
-                                        name="name"
-                                        id="name"
-                                        class="form-control"
-                                        value="{{ old('name', $product->name) }}">
-                                    @error('name')
-                                        <span class="text-danger">{{ $message }}</span>
-                                    @enderror
+                                    <label class="form-label">Tên sản phẩm</label>
+                                    <input type="text" class="form-control" value="{{ $product->name }}" disabled>
                                 </div>
                             </div>
 
                             <div class="col-lg-6">
                                 <div class="mb-3">
-                                    <label for="id_category" class="form-label">Danh Mục</label>
-                                    <select name="id_category" id="id_category" class="form-control">
-                                        <option value="">-- Vui lòng chọn danh mục --</option>
-                                        @foreach ($categories as $category)
-                                            <option value="{{ $category->id }}"
-                                                {{ old('id_category', $product->id_category) == $category->id ? 'selected' : '' }}>
-                                                {{ $category->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('id_category')
-                                        <span class="text-danger">{{ $message }}</span>
-                                    @enderror
+                                    <label class="form-label">Danh Mục</label>
+                                    <input type="text" class="form-control" value="{{ $product->category->name ?? 'N/A' }}" disabled>
                                 </div>
                             </div>
                         </div>
@@ -74,38 +74,26 @@
                         <div class="row">
                             <div class="col-lg-4">
                                 <div class="mb-3">
-                                    <label for="id_brand" class="form-label">Thương Hiệu</label>
-                                    <select name="id_brand" id="id_brand" class="form-control">
-                                        <option value="">-- Vui lòng chọn thương hiệu --</option>
-                                        @foreach ($brands as $brand)
-                                            <option value="{{ $brand->id }}"
-                                                {{ old('id_brand', $product->id_brand) == $brand->id ? 'selected' : '' }}>
-                                                {{ $brand->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('id_brand')
-                                        <span class="text-danger">{{ $message }}</span>
-                                    @enderror
+                                    <label class="form-label">Thương Hiệu</label>
+                                    <input type="text" class="form-control" value="{{ $product->brand->name ?? 'N/A' }}" disabled>
                                 </div>
                             </div>
 
                             <div class="col-lg-4">
                                 <div class="mb-3">
-                                    <label for="status" class="form-label">Trạng Thái</label>
-                                    <select name="status" id="status" class="form-control">
-                                        <option value="active"
-                                            {{ old('status', $product->status) == 'active' ? 'selected' : '' }}>
-                                            Hoạt Động
-                                        </option>
-                                        <option value="inactive"
-                                            {{ old('status', $product->status) == 'inactive' ? 'selected' : '' }}>
-                                            Không Hoạt Động
-                                        </option>
-                                    </select>
-                                    @error('status')
-                                        <span class="text-danger">{{ $message }}</span>
-                                    @enderror
+                                    <label class="form-label d-block">Trạng Thái</label>
+                                    <div class="status-switch-wrap">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input"
+                                                   type="checkbox"
+                                                   role="switch"
+                                                   disabled
+                                                   {{ $product->status === 'active' ? 'checked' : '' }}>
+                                        </div>
+                                        <span class="status-toggle-text {{ $product->status === 'active' ? '' : 'inactive' }}">
+                                            {{ $product->status === 'active' ? 'Hoạt động' : 'Không hoạt động' }}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -115,19 +103,16 @@
                         <div class="row">
                             <div class="col-lg-12">
                                 <div class="mb-3">
-                                    <label for="description" class="form-label">Mô Tả</label>
-                                    <textarea name="description" id="description" class="form-control" rows="4">{{ old('description', $product->description) }}</textarea>
-                                    @error('description')
-                                        <span class="text-danger">{{ $message }}</span>
-                                    @enderror
+                                    <label class="form-label">Mô Tả</label>
+                                    <textarea class="form-control" rows="4" disabled>{{ $product->description }}</textarea>
                                 </div>
                             </div>
                         </div>
 
                         <div class="p-3 bg-light mb-3 rounded">
                             <div class="row justify-content-end g-2">
-                                <div class="col-lg-1">
-                                    <a href="{{ route('product.listProduct') }}" class="btn btn-primary w-100">Cancel</a>
+                                <div class="col-lg-2">
+                                    <a href="{{ route('product.listProduct') }}" class="btn btn-primary w-100">Quay lại</a>
                                 </div>
                             </div>
                         </div>
@@ -151,35 +136,35 @@
 
                                 <div class="col-md-2">
                                     <label class="form-label">Kích cỡ</label>
-                                    <input type="text"
-                                        class="form-control"
-                                        value="{{ $variant->size->name ?? 'Không xác định' }}"
-                                        disabled>
+                                    <input type="text" class="form-control" value="{{ $variant->size->name ?? 'Không xác định' }}" disabled>
                                 </div>
 
                                 <div class="col-md-2">
                                     <label class="form-label">Giá</label>
-                                    <input type="text"
-                                        class="form-control"
-                                        value="{{ number_format($variant->price ?? 0, 0, ',', '.') }} đ"
-                                        disabled>
+                                    <input type="text" class="form-control" value="{{ number_format($variant->price ?? 0, 0, ',', '.') }} đ" disabled>
                                 </div>
 
                                 <div class="col-md-2">
                                     <label class="form-label">Số lượng</label>
-                                    <input type="text"
-                                        class="form-control"
-                                        value="{{ $variant->quantity ?? 0 }}"
-                                        disabled>
+                                    <input type="text" class="form-control" value="{{ $variant->quantity ?? 0 }}" disabled>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label class="form-label d-block">Trạng thái</label>
+                                    <div class="status-switch-wrap">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" role="switch" disabled {{ $variant->status === 'active' ? 'checked' : '' }}>
+                                        </div>
+                                        <span class="status-toggle-text {{ $variant->status === 'active' ? '' : 'inactive' }}">
+                                            {{ $variant->status === 'active' ? 'Hoạt động' : 'Không hoạt động' }}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <div class="col-md-2">
                                     <label class="form-label">Ảnh biến thể</label><br>
                                     @if ($variant->image)
-                                        <img src="{{ asset('storage/' . $variant->image) }}"
-                                            alt="Ảnh biến thể"
-                                            width="80"
-                                            class="img-thumbnail">
+                                        <img src="{{ asset('storage/' . $variant->image) }}" alt="Ảnh biến thể" width="80" class="img-thumbnail">
                                     @else
                                         <span class="text-muted">Chưa có ảnh</span>
                                     @endif

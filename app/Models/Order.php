@@ -42,11 +42,11 @@ class Order extends Model
         'can_cancel',
         'can_repay',
         'cancel_action_type',
+        'can_review',
+        'pending_review_count',
+        'has_pending_review',
     ];
 
-    // =========================
-    // Constants
-    // =========================
     public const PAYMENT_METHOD_VNPAY = 'vnpay';
     public const PAYMENT_METHOD_COD   = 'cod';
 
@@ -64,9 +64,6 @@ class Order extends Model
     public const STATUS_CANCELLED                = 'cancelled';
     public const STATUS_WAITING_FOR_CANCELLATION = 'waiting_for_cancellation';
 
-    // =========================
-    // Relationships
-    // =========================
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -84,12 +81,19 @@ class Order extends Model
 
     public function review()
     {
-        return $this->hasOne(Review::class);
+        return $this->hasOne(Review::class)->latestOfMany();
     }
 
-    // =========================
-    // Labels
-    // =========================
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'order_id');
+    }
+
+    public function voucher()
+    {
+        return $this->belongsTo(Voucher::class, 'voucher_id');
+    }
+
     public function getPaymentStatusLabelAttribute(): string
     {
         return match ($this->payment_status) {
@@ -142,13 +146,6 @@ class Order extends Model
         };
     }
 
-    // =========================
-    // Core business rules
-    // =========================
-
-    /**
-     * Hủy trực tiếp được hay không
-     */
     public function canCustomerCancelDirectly(): bool
     {
         if ($this->order_status !== self::STATUS_PENDING) {
@@ -170,10 +167,6 @@ class Order extends Model
         return false;
     }
 
-    /**
-     * Chỉ được gửi yêu cầu hủy (không hủy thẳng)
-     * Áp dụng khi VNPay đã thanh toán nhưng chưa có hoàn tiền
-     */
     public function canCustomerRequestCancellation(): bool
     {
         if (in_array($this->order_status, [
@@ -193,9 +186,6 @@ class Order extends Model
             ], true);
     }
 
-    /**
-     * Chỉ nhận diện case hết hạn thanh toán VNPay tự động
-     */
     public function isAutoExpiredVnpay(): bool
     {
         return $this->payment_method === self::PAYMENT_METHOD_VNPAY
@@ -206,9 +196,6 @@ class Order extends Model
             ], true);
     }
 
-    /**
-     * Cho phép thanh toán lại
-     */
     public function canRepayVnpay(): bool
     {
         if ($this->payment_method !== self::PAYMENT_METHOD_VNPAY) {
@@ -223,12 +210,10 @@ class Order extends Model
             return false;
         }
 
-        // Case đơn hết hạn thanh toán
         if ($this->isAutoExpiredVnpay()) {
             return true;
         }
 
-        // Case đơn đang chờ thanh toán
         return $this->order_status === self::STATUS_PENDING
             && in_array($this->payment_status, [
                 self::PAYMENT_UNPAID,
@@ -237,25 +222,18 @@ class Order extends Model
             ], true);
     }
 
-    // =========================
-    // Accessors for frontend
-    // =========================
+    public function canReviewProducts(): bool
+    {
+        return $this->order_status === self::STATUS_DELIVERED
+            && $this->payment_status === self::PAYMENT_PAID;
+    }
 
-    /**
-     * Frontend chỉ cần biết có hiện nút "Hủy đơn" hay không
-     */
     public function getCanCancelAttribute(): bool
     {
         return $this->canCustomerCancelDirectly()
             || $this->canCustomerRequestCancellation();
     }
 
-    /**
-     * Trả về kiểu hành động hủy để frontend/backend xử lý đúng:
-     * - direct: hủy ngay
-     * - request: gửi yêu cầu hủy
-     * - none: không được hủy
-     */
     public function getCancelActionTypeAttribute(): string
     {
         if ($this->canCustomerCancelDirectly()) {
@@ -273,8 +251,31 @@ class Order extends Model
     {
         return $this->canRepayVnpay();
     }
-    public function voucher()
+
+    public function getCanReviewAttribute(): bool
     {
-        return $this->belongsTo(Voucher::class, 'voucher_id');
+        return $this->canReviewProducts();
+    }
+
+    public function getPendingReviewCountAttribute(): int
+    {
+        $productIds = $this->relationLoaded('details')
+            ? $this->details->pluck('product_id')->filter()->unique()->values()
+            : $this->details()->pluck('product_id')->filter()->unique()->values();
+
+        if ($productIds->isEmpty()) {
+            return 0;
+        }
+
+        $reviewedIds = $this->relationLoaded('reviews')
+            ? $this->reviews->pluck('product_id')->filter()->unique()->values()
+            : $this->reviews()->pluck('product_id')->filter()->unique()->values();
+
+        return $productIds->diff($reviewedIds)->count();
+    }
+
+    public function getHasPendingReviewAttribute(): bool
+    {
+        return $this->pending_review_count > 0;
     }
 }

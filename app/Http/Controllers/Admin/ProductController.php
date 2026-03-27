@@ -13,7 +13,6 @@ use App\Services\ProductVariantService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-use App\Models\ProductVariant;
 
 class ProductController extends Controller
 {
@@ -59,6 +58,7 @@ class ProductController extends Controller
             'variants.*.id_size' => 'required|exists:sizes,id',
             'variants.*.price' => 'nullable|numeric|min:0',
             'variants.*.quantity' => 'nullable|integer|min:0',
+            'variants.*.status' => 'nullable|in:active,inactive',
             'variants.*.image' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
         ]);
 
@@ -144,6 +144,7 @@ class ProductController extends Controller
             'variants.*.id_size' => 'required|exists:sizes,id',
             'variants.*.price' => 'nullable|numeric|min:0',
             'variants.*.quantity' => 'nullable|integer|min:0',
+            'variants.*.status' => 'nullable|in:active,inactive',
             'variants.*.image' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
             'variants.*.delete' => 'nullable|in:0,1',
 
@@ -152,6 +153,7 @@ class ProductController extends Controller
             'variants_new.*.id_size' => 'required|exists:sizes,id',
             'variants_new.*.price' => 'nullable|numeric|min:0',
             'variants_new.*.quantity' => 'nullable|integer|min:0',
+            'variants_new.*.status' => 'nullable|in:active,inactive',
             'variants_new.*.image' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
         ]);
 
@@ -175,6 +177,39 @@ class ProductController extends Controller
             ->whereNotNull('id_parent')
             ->get();
         return view('admin.product.detail-product', compact('product', 'brands', 'categories'));
+    }
+
+    public function toggleStatus(Request $request, $id)
+    {
+        $status = $request->boolean('status') ? 'active' : 'inactive';
+
+        if ($this->productService->updateStatus($id, $status)) {
+            return redirect()->back()->with(
+                'success',
+                $status === 'active' ? 'Đã bật sản phẩm' : 'Đã tắt sản phẩm'
+            );
+        }
+
+        return redirect()->back()->with('error', 'Cập nhật trạng thái sản phẩm thất bại');
+    }
+
+    public function toggleVariantStatus(Request $request, $id)
+    {
+        $status = $request->boolean('status') ? 'active' : 'inactive';
+
+        if ($this->productVariantService->updateStatus($id, $status)) {
+            return redirect()->back()->with(
+                'success',
+                $status === 'active' ? 'Đã bật biến thể' : 'Đã tắt biến thể'
+            );
+        }
+
+        return redirect()->back()->with(
+            'error',
+            $status === 'active'
+                ? 'Không thể bật biến thể khi sản phẩm cha đang không hoạt động'
+                : 'Cập nhật trạng thái biến thể thất bại'
+        );
     }
 
     public function trash()

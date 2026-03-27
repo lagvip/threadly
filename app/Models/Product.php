@@ -67,11 +67,19 @@ class Product extends Model
         )->distinct();
     }
     public function albums()
-{
-    return $this->hasMany(ProductAlbum::class, 'id_product');
-}
-  public function reviews()
+    {
+        return $this->hasMany(ProductAlbum::class, 'id_product');
+    }
+    public function reviews()
     {
         return $this->hasMany(Review::class);
     }
+    public function scopeAvailable($query)
+    {
+        return $query->where('status', 'active')
+            ->whereHas('variants', function ($q) {
+                $q->where('status', 'active');
+            });
+    }
+
 }

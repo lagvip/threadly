@@ -1,8 +1,34 @@
 @extends('admin.layouts.layout')
-@section('content')
-    <!-- Start Container Fluid -->
-    <div class="container-fluid">
+<style>
+    .table-status-switch {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
 
+    .table-status-switch .form-check {
+        margin-bottom: 0;
+    }
+
+    .table-status-switch .form-check-input {
+        width: 2.75rem;
+        height: 1.35rem;
+        cursor: pointer;
+    }
+
+    .table-status-text {
+        font-size: 13px;
+        font-weight: 600;
+        color: #198754;
+        min-width: 88px;
+    }
+
+    .table-status-text.inactive {
+        color: #dc3545;
+    }
+</style>
+@section('content')
+    <div class="container-fluid">
         <div class="row">
             <div class="col-xl-12">
                 <div class="card">
@@ -15,8 +41,8 @@
 
                         <a href="{{ route('product.trash') }}" class="btn btn-soft-danger btn-sm">Đã Xóa</a>
                         <a href="{{ route('product.variant.trash') }}" class="btn btn-soft-danger btn-sm">
-                                    Biến thể đã xoá
-                                </a>
+                            Biến thể đã xoá
+                        </a>
 
                         <div class="dropdown">
                             <a href="#" class="dropdown-toggle btn btn-sm btn-outline-light" data-bs-toggle="dropdown"
@@ -24,11 +50,8 @@
                                 This Month
                             </a>
                             <div class="dropdown-menu dropdown-menu-end">
-                                <!-- item-->
                                 <a href="#!" class="dropdown-item">Download</a>
-                                <!-- item-->
                                 <a href="#!" class="dropdown-item">Export</a>
-                                <!-- item-->
                                 <a href="#!" class="dropdown-item">Import</a>
                             </div>
                         </div>
@@ -63,25 +86,38 @@
                                                     <label class="form-check-label"> </label>
                                                 </div>
                                             </td>
-                                            <td>{{ $loop->iteration }}</td>
+                                            <td>{{ $loop->iteration + ($products->currentPage() - 1) * $products->perPage() }}</td>
                                             <td>
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <div
-                                                        class="rounded bg-light avatar-md d-flex align-items-center justify-content-center">
+                                                    <div class="rounded bg-light avatar-md d-flex align-items-center justify-content-center">
                                                         <img src="{{ asset('storage/' . $product->image_primary) }}"
                                                             alt="" class="avatar-md">
                                                     </div>
                                                     <div>
                                                         {{ $product->name }}
-                                                        {{-- <a href="#!" class="text-dark fw-medium fs-15">Black T-shirt</a>
-                                                                <p class="text-muted mb-0 mt-1 fs-13"><span>Size : </span>S , M , L , Xl </p> --}}
                                                     </div>
                                                 </div>
 
                                             </td>
                                             <td>{{ $product->brand->name ?? 'N/A' }}</td>
                                             <td>{{ $product->category->name ?? 'N/A' }}</td>
-                                            <td>{{ $product->status }}</td>
+                                            <td>
+                                                <form action="{{ route('product.toggleStatus', $product->id) }}" method="POST" class="table-status-switch">
+                                                    @csrf
+                                                    <input type="hidden" name="status" value="0">
+                                                    <div class="form-check form-switch">
+                                                        <input type="checkbox"
+                                                            class="form-check-input product-status-switch"
+                                                            name="status"
+                                                            value="1"
+                                                            {{ $product->status === 'active' ? 'checked' : '' }}
+                                                            onchange="this.form.submit()">
+                                                    </div>
+                                                    <span class="table-status-text {{ $product->status === 'active' ? '' : 'inactive' }}">
+                                                        {{ $product->status === 'active' ? 'Hoạt động' : 'Không hoạt động' }}
+                                                    </span>
+                                                </form>
+                                            </td>
                                             <td>{{ $product->created_at }}</td>
                                             <td>
                                                 <div class="d-flex gap-2">

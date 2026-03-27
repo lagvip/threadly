@@ -100,8 +100,26 @@
         color: #fff !important;
     }
 
+    .order-btn-review {
+        background: #0ea5e9 !important;
+        border: 1px solid #0ea5e9 !important;
+        color: #fff !important;
+    }
+
+    .order-btn-review:hover {
+        background: #0284c7 !important;
+        border-color: #0284c7 !important;
+        color: #fff !important;
+    }
+
     .order-total {
         color: #ee4d2d;
+    }
+
+    .order-review-hint {
+        color: #0ea5e9;
+        font-size: 13px;
+        font-weight: 600;
     }
 </style>
 
@@ -110,9 +128,17 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
             <div>
                 <h4 class="mb-1">Đơn hàng của tôi</h4>
-                <p class="text-muted mb-0">Theo dõi trạng thái, mua lại hoặc thanh toán lại đơn VNPay.</p>
+                <p class="text-muted mb-0">Theo dõi trạng thái, mua lại, thanh toán lại và bình luận sau khi đơn đã giao thành công.</p>
             </div>
         </div>
+
+        @if(session('success'))
+            <div class="alert alert-success rounded-4">{{ session('success') }}</div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert alert-danger rounded-4">{{ session('error') }}</div>
+        @endif
 
         @if($orders->isEmpty())
             <div class="text-muted">Bạn chưa có đơn hàng nào.</div>
@@ -142,6 +168,15 @@
                                     <div class="text-muted small">
                                         Phương thức: {{ strtoupper($order->payment_method) }}
                                     </div>
+                                    @if($order->can_review)
+                                        <div class="order-review-hint mt-1">
+                                            @if($order->has_pending_review)
+                                                Chờ bình luận {{ $order->pending_review_count }} sản phẩm
+                                            @else
+                                                Bạn đã bình luận hết sản phẩm trong đơn này
+                                            @endif
+                                        </div>
+                                    @endif
                                 </div>
 
                                 <div class="text-end">
@@ -207,6 +242,13 @@
                                     </button>
                                 </form>
 
+                                @if($order->can_review)
+                                    <a href="{{ route('client.orders.show', $order->id) }}#review-section"
+                                       class="btn order-btn-review btn-sm rounded-pill px-3">
+                                        {{ $order->has_pending_review ? 'Bình luận' : 'Xem bình luận' }}
+                                    </a>
+                                @endif
+
                                 @if($order->can_repay)
                                     <form action="{{ route('client.orders.repay-vnpay', $order->id) }}" method="POST">
                                         @csrf
@@ -239,6 +281,7 @@
         @endif
     </div>
 </div>
+
 <div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 18px; overflow: hidden;">
@@ -255,8 +298,7 @@
                         Mã đơn: <strong id="cancelOrderCode"></strong>
                     </div>
 
-                    <div id="cancelOrderNote" class="alert alert-warning py-2 small d-none mb-3">
-                    </div>
+                    <div id="cancelOrderNote" class="alert alert-warning py-2 small d-none mb-3"></div>
 
                     <div class="mb-3">
                         <label for="cancel_reason_select" class="form-label fw-semibold">
@@ -299,6 +341,7 @@
         </div>
     </div>
 </div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const cancelModal = document.getElementById('cancelOrderModal');

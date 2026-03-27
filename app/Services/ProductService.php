@@ -47,7 +47,6 @@ class ProductService
         try {
             $product = Product::findOrFail($id);
 
-            // hỗ trợ cả Request lẫn array
             $payload = $data instanceof Request ? $data->all() : $data;
             $request = $data instanceof Request ? $data : request();
 
@@ -60,7 +59,6 @@ class ProductService
                 unset($payload['image_primary']);
             }
 
-            // không update trực tiếp các mảng biến thể vào bảng products
             unset($payload['variants'], $payload['variants_new']);
 
             $product->update($payload);
@@ -68,7 +66,6 @@ class ProductService
             $variantService = app(ProductVariantService::class);
             $usedCombinations = [];
 
-            // 1. cập nhật / xóa biến thể cũ
             if (!empty($request->input('variants')) && is_array($request->input('variants'))) {
                 foreach ($request->input('variants') as $index => $variantData) {
                     if (empty($variantData['id'])) {
@@ -103,6 +100,7 @@ class ProductService
                         'id_size' => $variantData['id_size'],
                         'price' => $variantData['price'] ?? 0,
                         'quantity' => $variantData['quantity'] ?? 0,
+                        'status' => $variantData['status'] ?? ($variant->status ?? 'active'),
                     ];
 
                     if ($request->hasFile("variants.$index.image")) {
@@ -117,7 +115,6 @@ class ProductService
                 }
             }
 
-            // 2. tạo biến thể mới
             if (!empty($request->input('variants_new')) && is_array($request->input('variants_new'))) {
                 foreach ($request->input('variants_new') as $index => $variantNew) {
                     $key = $variantNew['id_color'] . '-' . $variantNew['id_size'];
@@ -126,7 +123,6 @@ class ProductService
                         throw new \Exception('Biến thể mới bị trùng màu sắc và kích cỡ.');
                     }
 
-                    // chống trùng với dữ liệu DB chưa bị xóa
                     $exists = ProductVariant::where('id_product', $product->id)
                         ->where('id_color', $variantNew['id_color'])
                         ->where('id_size', $variantNew['id_size'])
@@ -165,6 +161,20 @@ class ProductService
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Lỗi khi cập nhật sản phẩm: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function updateStatus($id, $status)
+    {
+        try {
+            $product = Product::findOrFail($id);
+            $product->status = $status;
+            $product->save();
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Lỗi khi cập nhật trạng thái sản phẩm: ' . $e->getMessage());
             return false;
         }
     }
@@ -258,7 +268,8 @@ class ProductService
             ->where('id_category', $categoryId)
             ->where('status', 'active')
             ->whereHas('variants', function ($query) {
-                $query->where('price', '>', 0);
+                $query->where('price', '>', 0)
+                    ->where('status', 'active');
             });
     }
 }

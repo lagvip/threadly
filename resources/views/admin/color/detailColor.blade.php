@@ -1,34 +1,24 @@
 @extends('admin.layouts.layout')
+
 @section('content')
-<!-- Start Container Fluid -->
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header">
+            <h4>Chi tiết màu</h4>
+        </div>
+        <div class="card-body">
+            <p><strong>ID:</strong> {{ $color->id }}</p>
+            <p><strong>Tên:</strong> {{ $color->name }}</p>
+            <p><strong>Mã màu:</strong> {{ $color->code }}</p>
+            <p>
+                <strong>Xem nhanh:</strong>
+                <span class="d-inline-block rounded border align-middle ms-2" style="width: 28px; height: 28px; background: {{ $color->code }};"></span>
+            </p>
+            <p><strong>Ngày tạo:</strong> {{ optional($color->created_at)->format('d/m/Y H:i') }}</p>
+            <p><strong>Ngày cập nhật:</strong> {{ optional($color->updated_at)->format('d/m/Y H:i') }}</p>
 
-<div class="container-xxl">
-
-    <div class="row">
-        <div class="">
-            <div class="card">
-                <div class="card-body">
-                    <div class="mt-3">
-
-                        <div class="row">
-                            <div class="col-lg-4 col-4">
-                                <p class="mb-1 mt-2">Name:</p>
-                                <h3 class="mb-0">{{ $color['name'] }}</h3>
-                            </div>
-                            <div class="col-lg-4 col-4">
-                                <p class="mb-1 mt-2">Color code</p>
-                                <h3 class="mb-0">{{ $color['code'] }}</h3>
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <a href="{{ route('listColor.list') }}" class="btn btn-secondary">Quay lại</a>
         </div>
     </div>
-
 </div>
-
-
-<!-- End Container Fluid -->
 @endsection
