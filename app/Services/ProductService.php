@@ -3,28 +3,21 @@
 namespace App\Services;
 
 use App\Models\Product;
-
+use App\Models\OrderDetail;
+use App\Models\ProductVariant;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use App\Models\OrderDetail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Http\Request;
 
 class ProductService
 {
-
-
-
     public function getAllProducts()
     {
         return Product::with(['brand', 'category'])->paginate(10);
     }
 
-
-    // public function getProductById($id) //lấy sản phẩm theo id
-    // {
-    //     return Product::with(['brand', 'category'])->findOrFail($id);
-    // }
     public function getProductById($id)
     {
         return Product::with(['brand', 'category', 'variants.color', 'variants.size'])
@@ -32,78 +25,143 @@ class ProductService
     }
 
     public function createProduct($data)
-        {
-            try {
-                if (isset($data['image_primary'])) {
-                    $data['image_primary'] = $data['image_primary']->store('products', 'public');
-                }
-
-                $product = Product::create($data);
-
-                if (isset($data['variants'])) {
-                    foreach ($data['variants'] as $variant) {
-                        $variant['product_id'] = $product->id;
-                        app(ProductVariantService::class)->createProductVariant($variant);
-                    }
-                }
-
-                return $product;
-            } catch (\Exception $e) {
-                Log::error('Lỗi khi tạo sản phẩm: ' . $e->getMessage());
-                return false;
+    {
+        try {
+            if (isset($data['image_primary']) && $data['image_primary'] instanceof UploadedFile) {
+                $data['image_primary'] = $data['image_primary']->store('products', 'public');
             }
+
+            unset($data['variants']);
+
+            return Product::create($data);
+        } catch (\Exception $e) {
+            Log::error('Lỗi khi tạo sản phẩm: ' . $e->getMessage());
+            return false;
         }
+    }
 
-
-    /**
-     * Cập nhật sản phẩm.
-     */
-  public function updateProduct($data, $id)
+    public function updateProduct($data, $id)
     {
         DB::beginTransaction();
+
         try {
             $product = Product::findOrFail($id);
 
-            // 1) Ảnh chính: chỉ xử lý khi có file upload mới
-            if (isset($data['image_primary']) && $data['image_primary'] instanceof UploadedFile) {
+            // hỗ trợ cả Request lẫn array
+            $payload = $data instanceof Request ? $data->all() : $data;
+            $request = $data instanceof Request ? $data : request();
+
+            if (isset($payload['image_primary']) && $payload['image_primary'] instanceof UploadedFile) {
                 if ($product->image_primary) {
                     Storage::disk('public')->delete($product->image_primary);
                 }
-                $data['image_primary'] = $data['image_primary']->store('products', 'public');
+                $payload['image_primary'] = $payload['image_primary']->store('products', 'public');
             } else {
-                unset($data['image_primary']); // tránh overwrite null
+                unset($payload['image_primary']);
             }
 
-            // 2) Cập nhật thông tin sản phẩm
-            $product->update($data);
+            // không update trực tiếp các mảng biến thể vào bảng products
+            unset($payload['variants'], $payload['variants_new']);
 
-            // 3) Cập nhật hoặc xoá biến thể hiện có
-            if (!empty($data['variants']) && is_array($data['variants'])) {
-                foreach ($data['variants'] as $variantData) {
-                    if (empty($variantData['id'])) continue;
+            $product->update($payload);
 
-                    // Nếu tick "xóa"
-                    if (!empty($variantData['delete']) && (int)$variantData['delete'] === 1) {
-                        app(ProductVariantService::class)->deleteProductVariant($variantData['id']);
+            $variantService = app(ProductVariantService::class);
+            $usedCombinations = [];
+
+            // 1. cập nhật / xóa biến thể cũ
+            if (!empty($request->input('variants')) && is_array($request->input('variants'))) {
+                foreach ($request->input('variants') as $index => $variantData) {
+                    if (empty($variantData['id'])) {
                         continue;
                     }
 
-                    // Update biến thể
-                    app(ProductVariantService::class)->updateProductVariant($variantData, $variantData['id']);
+                    $variant = ProductVariant::where('id', $variantData['id'])
+                        ->where('id_product', $product->id)
+                        ->first();
+
+                    if (!$variant) {
+                        continue;
+                    }
+
+                    $delete = (int)($variantData['delete'] ?? 0);
+
+                    if ($delete === 1) {
+                        $variantService->deleteProductVariant($variant->id);
+                        continue;
+                    }
+
+                    $key = $variantData['id_color'] . '-' . $variantData['id_size'];
+
+                    if (in_array($key, $usedCombinations)) {
+                        throw new \Exception('Biến thể bị trùng màu sắc và kích cỡ.');
+                    }
+
+                    $usedCombinations[] = $key;
+
+                    $updateData = [
+                        'id_color' => $variantData['id_color'],
+                        'id_size' => $variantData['id_size'],
+                        'price' => $variantData['price'] ?? 0,
+                        'quantity' => $variantData['quantity'] ?? 0,
+                    ];
+
+                    if ($request->hasFile("variants.$index.image")) {
+                        $updateData['image'] = $request->file("variants.$index.image");
+                    }
+
+                    $updated = $variantService->updateProductVariant($updateData, $variant->id);
+
+                    if (!$updated) {
+                        throw new \Exception('Không thể cập nhật biến thể sản phẩm.');
+                    }
                 }
             }
 
-            // 4) Thêm mới biến thể
-            if (!empty($data['variants_new']) && is_array($data['variants_new'])) {
-                foreach ($data['variants_new'] as $variantNew) {
-                    $variantNew['product_id'] = $product->id;
-                    app(ProductVariantService::class)->createProductVariant($variantNew);
+            // 2. tạo biến thể mới
+            if (!empty($request->input('variants_new')) && is_array($request->input('variants_new'))) {
+                foreach ($request->input('variants_new') as $index => $variantNew) {
+                    $key = $variantNew['id_color'] . '-' . $variantNew['id_size'];
+
+                    if (in_array($key, $usedCombinations)) {
+                        throw new \Exception('Biến thể mới bị trùng màu sắc và kích cỡ.');
+                    }
+
+                    // chống trùng với dữ liệu DB chưa bị xóa
+                    $exists = ProductVariant::where('id_product', $product->id)
+                        ->where('id_color', $variantNew['id_color'])
+                        ->where('id_size', $variantNew['id_size'])
+                        ->whereNull('deleted_at')
+                        ->exists();
+
+                    if ($exists) {
+                        throw new \Exception('Biến thể mới đã tồn tại.');
+                    }
+
+                    $usedCombinations[] = $key;
+
+                    $newData = [
+                        'id_product' => $product->id,
+                        'id_color' => $variantNew['id_color'],
+                        'id_size' => $variantNew['id_size'],
+                        'price' => $variantNew['price'] ?? 0,
+                        'quantity' => $variantNew['quantity'] ?? 0,
+                        'status' => $variantNew['status'] ?? 'active',
+                    ];
+
+                    if ($request->hasFile("variants_new.$index.image")) {
+                        $newData['image'] = $request->file("variants_new.$index.image");
+                    }
+
+                    $created = $variantService->createProductVariant($newData);
+
+                    if (!$created) {
+                        throw new \Exception('Không thể tạo biến thể mới.');
+                    }
                 }
             }
 
             DB::commit();
             return $product;
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Lỗi khi cập nhật sản phẩm: ' . $e->getMessage());
@@ -111,36 +169,30 @@ class ProductService
         }
     }
 
-
     public function deleteProduct($id)
-{
-    try {
-        $product = Product::findOrFail($id);
+    {
+        try {
+            $product = Product::findOrFail($id);
 
-        // Nếu đã tồn tại trong OrderDetail thì KHÔNG xoá cứng
-        if (OrderDetail::where('product_id', $id)->exists()) {
-            // Chỉ cho phép soft delete
+            if (OrderDetail::where('product_id', $id)->exists()) {
+                $product->delete();
+                return true;
+            }
+
             $product->delete();
             return true;
+        } catch (\Exception $e) {
+            Log::error('Lỗi khi xoá sản phẩm: ' . $e->getMessage());
+            return false;
         }
-
-        // Nếu chưa có trong đơn hàng -> vẫn soft delete bình thường
-        $product->delete();
-        return true;
-    } catch (\Exception $e) {
-        Log::error('Lỗi khi xoá sản phẩm: ' . $e->getMessage());
-        return false;
     }
-}
 
-
-
-    public function getTrashedProducts() //danh sách đã xóa
+    public function getTrashedProducts()
     {
         return Product::onlyTrashed()->with(['brand', 'category'])->get();
     }
 
-    public function restoreProduct($id) //khôi phục sản phẩm đã xóa
+    public function restoreProduct($id)
     {
         try {
             $product = Product::onlyTrashed()->findOrFail($id);
@@ -152,13 +204,11 @@ class ProductService
         }
     }
 
-
-    public function delete($id) // xóa vĩnh viễn
+    public function delete($id)
     {
         try {
             $product = Product::onlyTrashed()->findOrFail($id);
 
-            // Nếu sản phẩm đã có trong OrderDetail → KHÔNG được xoá vĩnh viễn
             if (OrderDetail::where('product_id', $id)->exists()) {
                 return false;
             }
@@ -175,20 +225,13 @@ class ProductService
         }
     }
 
-
-
     public function bulkDelete(array $ids)
     {
         try {
             foreach ($ids as $id) {
                 $product = Product::find($id);
                 if ($product) {
-                    // Nếu có trong đơn hàng → chỉ soft delete
-                    if (OrderDetail::where('product_id', $id)->exists()) {
-                        $product->delete();
-                    } else {
-                        $product->delete(); // vẫn chỉ soft delete
-                    }
+                    $product->delete();
                 }
             }
             return true;
@@ -198,9 +241,7 @@ class ProductService
         }
     }
 
-
-
-    public function bulkRestore(array $ids) //khôi phục nhiều bản ghi
+    public function bulkRestore(array $ids)
     {
         try {
             Product::onlyTrashed()->whereIn('id', $ids)->restore();
@@ -210,7 +251,6 @@ class ProductService
             return false;
         }
     }
-
 
     public function getProductsByCategory($categoryId)
     {

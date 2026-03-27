@@ -11,7 +11,7 @@ class ProductVariant extends Model
     use HasFactory, SoftDeletes;
 
     protected $dates = ['deleted_at'];
-     protected $table = 'product_variants';
+    protected $table = 'product_variants';
 
     protected $fillable = [
         'id_product',
@@ -24,10 +24,6 @@ class ProductVariant extends Model
     ];
 
     public function product()
-    {
-        return $this->belongsTo(Product::class, 'id_product');
-    }
-    public function productAlbum()
     {
         return $this->belongsTo(Product::class, 'id_product');
     }
@@ -44,6 +40,6 @@ class ProductVariant extends Model
 
     public function orderDetails()
     {
-        return $this->hasMany(OrderDetail::class, 'id_variant');
+        return $this->hasMany(OrderDetail::class, 'variant_id');
     }
 }
