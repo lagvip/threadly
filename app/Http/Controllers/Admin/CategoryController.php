@@ -163,31 +163,25 @@ class CategoryController extends Controller
     }
 
     public function destroy(string $id)
-    {
-        $category = Category::findOrFail($id);
+{
+    $category = Category::findOrFail($id);
 
-        if ($category->children()->exists()) {
-            return redirect()
-                ->route('listCategory.list')
-                ->with('error', 'Không thể xoá danh mục đang có danh mục con.');
-        }
-
-        if ($category->products()->exists()) {
-            return redirect()
-                ->route('listCategory.list')
-                ->with('error', 'Không thể xoá danh mục đang có sản phẩm.');
-        }
-
-        $imagePath = $category->image;
-
-        if ($imagePath && Storage::disk('public')->exists($imagePath)) {
-            Storage::disk('public')->delete($imagePath);
-        }
-
-        $category->delete();
-
-        return redirect()->route('listCategory.list')->with('success', 'Xóa thành công');
+    if ($category->children()->exists()) {
+        return redirect()
+            ->route('listCategory.list')
+            ->with('error', 'Không thể xoá danh mục đang có danh mục con.');
     }
+
+    if ($category->products()->exists()) {
+        return redirect()
+            ->route('listCategory.list')
+            ->with('error', 'Không thể xoá danh mục đang có sản phẩm.');
+    }
+
+    $category->delete();
+
+    return redirect()->route('listCategory.list')->with('success', 'Đã chuyển danh mục vào thùng rác');
+}
 
     public function search(Request $request)
     {
@@ -200,4 +194,35 @@ class CategoryController extends Controller
 
         return view('admin.category.listCategories', compact('category'));
     }
+    // Hiển thị danh sách thùng rác
+public function trash()
+{
+    $category = Category::onlyTrashed()->latest()->paginate(10);
+    
+    return view('admin.category.trash', compact('category'));
+}
+
+// Khôi phục danh mục
+public function restore($id)
+{
+    $category = Category::withTrashed()->findOrFail($id);
+    $category->restore();
+
+    return redirect()->route('listCategory.trash')->with('success', 'Khôi phục danh mục thành công!');
+}
+
+// Xóa vĩnh viễn
+public function forceDelete($id)
+{
+    $category = Category::withTrashed()->findOrFail($id);
+    
+    // Nếu có ảnh, xóa ảnh vật lý để tiết kiệm bộ nhớ
+    if ($category->image) {
+        \Storage::disk('public')->delete($category->image);
+    }
+
+    $category->forceDelete();
+
+    return redirect()->route('listCategory.trash')->with('success', 'Đã xóa vĩnh viễn danh mục!');
+}
 }

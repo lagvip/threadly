@@ -299,7 +299,7 @@
                         </div>
 
                         <div class="col-12">
-                            <div class="product-section-box m-0">
+                            <div class="product-section-box m-0 product-tab-wrapper">
                                 <ul class="nav nav-tabs custom-nav" id="myTab" role="tablist">
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link active" id="description-tab" data-bs-toggle="tab"
@@ -312,13 +312,6 @@
                                         <button class="nav-link" id="info-tab" data-bs-toggle="tab"
                                                 data-bs-target="#info" type="button" role="tab">
                                             Thông tin thêm
-                                        </button>
-                                    </li>
-
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="care-tab" data-bs-toggle="tab"
-                                                data-bs-target="#care" type="button" role="tab">
-                                            Hướng dẫn bảo quản
                                         </button>
                                     </li>
 
@@ -379,8 +372,118 @@
                                     </div>
 
                                     <div class="tab-pane fade" id="review" role="tabpanel">
-                                        <div class="review-box">
-                                            <p>Chức năng đánh giá đang được cập nhật.</p>
+                                        <div class="review-box review-tab-box">
+                                            <div class="row g-4">
+                                                <div class="col-xl-5">
+                                                    <div class="product-rating-box sticky-top">
+                                                        <div class="row g-3">
+                                                            <div class="col-12">
+                                                                <div class="product-main-rating">
+                                                                    <h2>
+                                                                        {{ number_format($averageRating, 1) }}
+                                                                        <i data-feather="star"></i>
+                                                                    </h2>
+                                                                    <h5>{{ $reviewCount }} đánh giá cho sản phẩm này</h5>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="col-12">
+                                                                <ul class="product-rating-list">
+                                                                    @foreach(range(5, 1) as $star)
+                                                                        @php
+                                                                            $summary = $ratingSummary[$star] ?? ['count' => 0, 'percent' => 0];
+                                                                        @endphp
+                                                                        <li>
+                                                                            <div class="rating-product">
+                                                                                <h5>{{ $star }}<i data-feather="star"></i></h5>
+                                                                                <div class="progress">
+                                                                                    <div class="progress-bar" style="width: {{ $summary['percent'] }}%;"></div>
+                                                                                </div>
+                                                                                <h5 class="total">{{ $summary['count'] }}</h5>
+                                                                            </div>
+                                                                        </li>
+                                                                    @endforeach
+                                                                </ul>
+
+                                                                <div class="review-title-2 border-0 pb-0">
+                                                                    <h4 class="fw-bold">Bình luận từ khách hàng</h4>
+                                                                    <p>Chỉ hiển thị các đánh giá đã được gửi sau khi khách mua và nhận hàng.</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-xl-7">
+                                                    <div class="review-people">
+                                                        <ul class="review-list">
+                                                            @forelse($reviews as $review)
+                                                                @php
+                                                                    $avatar = optional($review->user)->avatar;
+                                                                    $avatarUrl = $avatar
+                                                                        ? (\Illuminate\Support\Str::startsWith($avatar, ['http://', 'https://']) ? $avatar : asset('storage/' . $avatar))
+                                                                        : asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/review/1.jpg');
+                                                                @endphp
+                                                                <li>
+                                                                    <div class="people-box">
+                                                                        <div>
+                                                                            <div class="people-image people-text">
+                                                                                <img alt="{{ optional($review->user)->name ?? 'Khách hàng' }}"
+                                                                                     class="img-fluid"
+                                                                                     src="{{ $avatarUrl }}">
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="people-comment">
+                                                                            <div class="people-name">
+                                                                                <a href="javascript:void(0)" class="name">
+                                                                                    {{ optional($review->user)->name ?? 'Khách hàng' }}
+                                                                                </a>
+                                                                                <div class="date-time">
+                                                                                    <h6 class="text-content">
+                                                                                        {{ optional($review->created_at)->format('d/m/Y H:i') }}
+                                                                                    </h6>
+                                                                                    <div class="product-rating">
+                                                                                        <ul class="rating">
+                                                                                            @for($i = 1; $i <= 5; $i++)
+                                                                                                <li>
+                                                                                                    <i data-feather="star" class="{{ $i <= (int) $review->rating ? 'fill' : '' }}"></i>
+                                                                                                </li>
+                                                                                            @endfor
+                                                                                        </ul>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="reply">
+                                                                                <p>{{ $review->comment }}</p>
+                                                                            </div>
+
+                                                                            @if(!empty($review->admin_reply))
+                                                                                <div class="admin-reply-box mt-3">
+                                                                                    <h6>Phản hồi từ shop</h6>
+                                                                                    <p class="mb-0">{{ $review->admin_reply }}</p>
+                                                                                </div>
+                                                                            @endif
+                                                                        </div>
+                                                                    </div>
+                                                                </li>
+                                                            @empty
+                                                                <li>
+                                                                    <div class="people-box empty-review-box">
+                                                                        <div class="people-comment">
+                                                                            <div class="people-name">
+                                                                                <a href="javascript:void(0)" class="name">Chưa có bình luận</a>
+                                                                            </div>
+                                                                            <div class="reply">
+                                                                                <p>Sản phẩm này chưa có đánh giá nào. Khi khách mua hàng, nhận hàng và gửi bình luận, nội dung sẽ hiển thị tại đây.</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </li>
+                                                            @endforelse
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -453,7 +556,7 @@
             </div>
         </div>
 
-        <div class="container-fluid-lg">
+        <div class="container-fluid-lg related-product-section">
             <div class="title">
                 <h2>Sản phẩm liên quan</h2>
             </div>
@@ -552,6 +655,116 @@
         ];
     })->values()->toArray();
 @endphp
+
+
+@push('styles')
+<style>
+    .product-tab-wrapper {
+        margin-bottom: 42px;
+    }
+
+    .related-product-section {
+        padding-top: 20px;
+    }
+
+    .review-tab-box {
+        padding-top: 6px;
+    }
+
+    .review-tab-box .product-main-rating h2 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .review-tab-box .product-main-rating h2 svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .review-tab-box .product-rating-box {
+        border: 1px solid rgba(34, 34, 34, 0.08);
+        border-radius: 12px;
+        padding: 24px;
+        background-color: #fff;
+        top: 20px;
+    }
+
+    .review-tab-box .review-list {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .review-tab-box .people-box {
+        padding: 22px;
+        border: 1px solid rgba(34, 34, 34, 0.08);
+        border-radius: 12px;
+        background-color: #fff;
+    }
+
+    .review-tab-box .people-image img {
+        width: 58px;
+        height: 58px;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    .review-tab-box .people-name .name {
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .review-tab-box .date-time {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 14px;
+        margin-top: 6px;
+    }
+
+    .review-tab-box .reply p {
+        margin-bottom: 0;
+        color: #4a5568;
+        line-height: 1.7;
+    }
+
+    .admin-reply-box {
+        padding: 14px 16px;
+        border-radius: 10px;
+        background: #f8f9fa;
+        border-left: 3px solid var(--theme-color);
+    }
+
+    .admin-reply-box h6 {
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .empty-review-box {
+        justify-content: center;
+    }
+
+    .empty-review-box .people-comment {
+        width: 100%;
+    }
+
+    @media (max-width: 991px) {
+        .product-tab-wrapper {
+            margin-bottom: 32px;
+        }
+
+        .related-product-section {
+            padding-top: 8px;
+        }
+
+        .review-tab-box .product-rating-box,
+        .review-tab-box .people-box {
+            padding: 18px;
+        }
+    }
+</style>
+@endpush
 
 @push('scripts')
 <script>

@@ -49,7 +49,11 @@ class ProductVariantService
     public function updateProductVariant($data, $id)
     {
         try {
-            $variant = ProductVariant::findOrFail($id);
+            $variant = ProductVariant::with('product')->findOrFail($id);
+
+            if (isset($data['status']) && $data['status'] === 'active' && $variant->product && $variant->product->status !== 'active') {
+                throw new \Exception('Không thể kích hoạt biến thể khi sản phẩm cha đang không hoạt động.');
+            }
 
             if (isset($data['image']) && $data['image'] instanceof UploadedFile && $data['image']->isValid()) {
                 if ($variant->image) {
@@ -78,6 +82,25 @@ class ProductVariantService
             return $variant;
         } catch (\Exception $e) {
             Log::error('Lỗi khi cập nhật biến thể sản phẩm: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function updateStatus($id, $status)
+    {
+        try {
+            $variant = ProductVariant::with('product')->findOrFail($id);
+
+            if ($status === 'active' && $variant->product && $variant->product->status !== 'active') {
+                return false;
+            }
+
+            $variant->status = $status;
+            $variant->save();
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Lỗi khi cập nhật trạng thái biến thể sản phẩm: ' . $e->getMessage());
             return false;
         }
     }

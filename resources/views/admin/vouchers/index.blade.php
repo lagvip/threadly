@@ -1,130 +1,211 @@
 @extends('admin.layouts.layout')
 
 @section('content')
-<div class="container">
-    <h2>Quản lý Voucher</h2>
+<div class="container-xxl">
+    <div class="row">
+        <div class="col-xl-12">
 
-    <a href="{{ route('vouchers.create') }}" class="btn btn-primary mb-3">
-        Thêm Voucher
-    </a>
+            <div class="card">
 
-    <!-- Search Form -->
-    <div class="card mb-3">
-        <div class="card-body">
-            <form action="{{ route('vouchers.index') }}" method="GET" class="row g-3">
-                <div class="col-md-4">
-                    <label for="search" class="form-label">Tìm kiếm theo mã</label>
-                    <input type="text" class="form-control" id="search" name="search" 
-                           placeholder="Nhập mã voucher..." value="{{ request('search') }}">
+              
+                <div class="card-header d-flex justify-content-between align-items-center gap-1">
+
+                    <h4 class="card-title flex-grow-1">Danh sách Voucher</h4>
+
+                  
+                    <a href="{{ route('vouchers.create') }}" class="btn btn-sm btn-primary">
+                        Thêm Voucher
+                    </a>
+
+                    <a href="{{ route('vouchers.trashed') }}" class="btn btn-sm btn-outline-danger">
+                        Đã xóa
+                    </a>
+
+                 
+                    <form action="{{ route('vouchers.index') }}" method="GET">
+                        <div class="search-bar">
+                            <span><i class="bx bx-search-alt"></i></span>
+                            <input name="search" type="search"
+                                   class="form-control"
+                                   placeholder="Tìm kiếm voucher..."
+                                   value="{{ request('search') }}">
+                        </div>
+                    </form>
+
                 </div>
-                <div class="col-md-3">
-                    <label for="type" class="form-label">Loại voucher</label>
-                    <select class="form-select" id="type" name="type">
-                        <option value="">-- Tất cả --</option>
-                        <option value="percent" {{ request('type') == 'percent' ? 'selected' : '' }}>Giảm %</option>
-                        <option value="fixed" {{ request('type') == 'fixed' ? 'selected' : '' }}>Trừ tiền</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="status" class="form-label">Trạng thái</label>
-                    <select class="form-select" id="status" name="status">
-                        <option value="">-- Tất cả --</option>
-                        <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Hoạt động</option>
-                        <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Tắt</option>
-                        <option value="expired" {{ request('status') == 'expired' ? 'selected' : '' }}>Hết hạn</option>
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex align-items-end gap-2">
-                    <button type="submit" class="btn btn-info w-100">Tìm kiếm</button>
-                    <a href="{{ route('vouchers.index') }}" class="btn btn-secondary">Xóa bộ lọc</a>
-                </div>
-            </form>
-        </div>
-    </div>
 
-    <table class="table table-bordered">
-        <thead>
-        <tr>
-            <th>Mã</th>
-            <th>Loại</th>
-            <th>Giá trị</th>
-            <th>Giảm tối đa</th>
-            <th>Thời gian bắt đầu - Kết thúc</th>
-            <th>Số lượt</th>
-            <th>Trạng thái</th>
-            <th>Hành động</th>
-        </tr>
-        </thead>
-        <tbody>
-        @if($vouchers->count() == 0)
-            <tr>
-                <td colspan="8" class="text-center text-muted py-4">
-                    <em>Không tìm thấy voucher nào</em>
-                </td>
-            </tr>
-        @else
-        @foreach($vouchers as $v)
-        <tr>
-            <td><strong>{{ $v->code }}</strong></td>
-            <td>
-                @if($v->type == 'percent')
-                    <span class="badge bg-info">Giảm {{ $v->value }}%</span>
-                @else
-                    <span class="badge bg-warning">Trừ {{ number_format($v->value, 0, ',', '.') }}đ</span>
-                @endif
-            </td>
-            <td>
-                @if($v->type == 'percent')
-                    {{ $v->value }}%
-                @else
-                    {{ number_format($v->value, 0, ',', '.') }}đ
-                @endif
-            </td>
-            <td>
-                @if($v->max_discount && $v->type == 'percent')
-                    {{ number_format($v->max_discount, 0, ',', '.') }}đ
-                @else
-                    <em class="text-muted">-</em>
-                @endif
-            </td>
-            <td>
-                <small>
-                    {{ $v->start_date->format('d/m/Y H:i') }} <br>
-                    <strong>→</strong> {{ $v->end_date->format('d/m/Y H:i') }}
-                </small>
-            </td>
-            <td>{{ $v->quantity }}</td>
-            <td>
-                @if($v->actual_status == 'active')
-                    <span class="badge bg-success">Hoạt động</span>
-                @elseif($v->actual_status == 'inactive')
-                    <span class="badge bg-warning">Tắt</span>
-                @else
-                    <span class="badge bg-danger">Hết hạn</span>
-                @endif
-            </td>
-            <td>
-                <a href="{{ route('vouchers.edit',$v) }}" class="btn btn-sm btn-warning">Sửa</a>
+           
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0 table-hover table-centered">
 
-                <form action="{{ route('vouchers.destroy',$v) }}" method="POST" style="display:inline">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa voucher này không?')">Xóa</button>
-                </form>
-            </td>
-        </tr>
-        @endforeach
-        @endif
-        </tbody>
-    </table>
+                        <thead class="bg-light-subtle">
+                            <tr>
+                                <th style="width: 20px;">
+                                    <input type="checkbox" class="form-check-input">
+                                </th>
+                                <th>Mã</th>
+                                <th>Loại</th>
+                                <th>Giá trị</th>
+                                <th>Giảm tối đa</th>
+                                <th>Thời gian</th>
+                                <th>Số lượng</th>
+                                <th>Số lần sử dụng tối đa cho mỗi tài khoản</th>
+                                <th>Số lần sử dụng tối đa cho mỗi đơn hàng</th>
+                                 <th>Trạng thái</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
 
-    <!-- Pagination Info -->
-    <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
-        <div class="text-muted">
-            Hiển thị {{ $vouchers->count() }} / {{ $vouchers->total() }} voucher
-        </div>
-        <div>
-            {{ $vouchers->links() }}
+                        <tbody>
+                        @forelse($vouchers as $v)
+                            <tr>
+
+                                <td>
+                                    <input type="checkbox" class="form-check-input">
+                                </td>
+
+                             
+                                <td class="fw-medium">{{ $v->code }}</td>
+
+                           
+                                <td>
+                                    @if($v->type == 'percent')
+                                        <span class="badge bg-info">%</span>
+                                    @else
+                                        <span class="badge bg-warning text-dark">₫</span>
+                                    @endif
+                                </td>
+
+                                <td>
+                                    {{ $v->type == 'percent'
+                                        ? $v->value.'%'
+                                        : number_format($v->value,0,',','.') . 'đ' }}
+                                </td>
+
+                               
+                                <td>
+                                    {{ $v->max_discount
+                                        ? number_format($v->max_discount,0,',','.') . 'đ'
+                                        : '-' }}
+                                </td>
+
+                                <td style="font-size:13px">
+                                    {{ $v->start_date->format('d/m/Y') }} <br>
+                                    <span class="text-muted">
+                                        → {{ $v->end_date->format('d/m/Y') }}
+                                    </span>
+                                    @if($v->actual_status == 'active')
+                                        <br>
+                                        <span class="badge bg-danger countdown-timer" 
+                                              data-end-date="{{ $v->end_date->format('Y-m-d H:i:s') }}">
+                                            Đang tải...
+                                        </span>
+                                    @endif
+                                </td>
+
+                                <td>{{ $v->quantity }}</td>
+
+                                <td>{{ $v->max_uses_per_user }}</td>
+
+                                <td>{{ $v->max_uses_per_order }}</td>
+
+                                <td>
+                                    @if($v->actual_status == 'active')
+                                        <span class="badge bg-success">Hoạt động</span>
+                                    @elseif($v->actual_status == 'inactive')
+                                        <span class="badge bg-warning">Tắt</span>
+                                    @else
+                                        <span class="badge bg-danger">Hết hạn</span>
+                                    @endif
+                                </td>
+
+                                <td>
+                                    <div class="d-flex gap-2">
+
+                                     
+                                        
+
+                                        <!-- SỬA -->
+                                        <a href="{{ route('vouchers.edit',$v) }}"
+                                           class="btn btn-soft-primary btn-sm">
+                                            <iconify-icon icon="solar:pen-2-broken"
+                                                class="align-middle fs-18"></iconify-icon>
+                                        </a>
+
+                                        <!-- XOÁ -->
+                                        <form action="{{ route('vouchers.destroy',$v) }}"
+                                              method="POST">
+                                            @csrf
+                                            @method('DELETE')
+
+                                            <button type="submit"
+                                                onclick="return confirm('Bạn có chắc muốn xoá không?')"
+                                                class="btn btn-soft-danger btn-sm">
+                                                <iconify-icon icon="solar:trash-bin-minimalistic-2-broken"
+                                                    class="align-middle fs-18"></iconify-icon>
+                                            </button>
+                                        </form>
+
+                                    </div>
+                                </td>
+
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="11" class="text-center py-4 text-muted">
+                                    Không có voucher
+                                </td>
+                            </tr>
+                        @endforelse
+                        </tbody>
+
+                    </table>
+                </div>
+
+                <!-- FOOTER -->
+                <div class="card-footer border-top d-flex justify-content-between">
+                    <div class="text-muted">
+                        Hiển thị {{ $vouchers->count() }} / {{ $vouchers->total() }} voucher
+                    </div>
+
+                    {{ $vouchers->links() }}
+                </div>
+
+            </div>
+
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Countdown timer cho các voucher đang hoạt động
+    const countdownElements = document.querySelectorAll('.countdown-timer');
+    
+    countdownElements.forEach(function(element) {
+        const endDate = new Date(element.getAttribute('data-end-date')).getTime();
+        
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const distance = endDate - now;
+            
+            if (distance > 0) {
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                
+                element.textContent = `${days} ngày ${hours}:${minutes}:${seconds}`;
+            } else {
+                element.textContent = 'Đã hết hạn';
+                element.classList.remove('bg-danger');
+                element.classList.add('bg-secondary');
+            }
+        }
+        
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    });
+});
+</script>
 @endsection

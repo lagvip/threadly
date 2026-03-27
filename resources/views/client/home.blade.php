@@ -306,295 +306,81 @@
                     </div>
 
                     <div class="row row-cols-xxl-5 row-cols-md-4 row-cols-sm-3 row-cols-2 g-sm-4 g-3 no-arrow">
-                        <div>
-                            <div class="product-box product-white-bg wow fadeIn">
-                                <div class="product-image">
-                                    <a href="product-left-thumbnail.html">
-                                        <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/13.png') }}" class="img-fluid blur-up lazyload"
-                                            alt="">
-                                    </a>
-                                    <ul class="product-option">
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="View">
-                                            <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#view">
-                                                <i data-feather="eye"></i>
-                                            </a>
-                                        </li>
+                        @forelse($kitchenProducts as $product)
+                            @php
+                                $variant = $product->variants->first();
+                            @endphp
 
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="Compare">
-                                            <a href="compare.html">
-                                                <i data-feather="refresh-cw"></i>
-                                            </a>
-                                        </li>
+                            <div>
+                                <div class="product-box product-white-bg wow fadeIn">
+                                    <div class="product-image">
+                                        <a href="{{ route('client.product.detail', $product->id) }}">
+                                            <img src="{{ asset('storage/' . $product->image_primary) }}" class="img-fluid blur-up lazyload"
+                                                alt="{{ $product->name }}">
+                                        </a>
+                                        <ul class="product-option">
+                                            <li data-bs-toggle="tooltip" data-bs-placement="top" title="View">
+                                                <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#view">
+                                                    <i data-feather="eye"></i>
+                                                </a>
+                                            </li>
 
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="Wishlist">
-                                            <a href="wishlist.html" class="notifi-wishlist">
-                                                <i data-feather="heart"></i>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div class="product-detail position-relative">
-                                    <a href="product-left-thumbnail.html">
-                                        <h6 class="name">Bộ chén đĩa tròn bóng Elama cao cấp</h6>
-                                    </a>
+                                            <li data-bs-toggle="tooltip" data-bs-placement="top" title="Compare">
+                                                <a href="#">
+                                                    <i data-feather="refresh-cw"></i>
+                                                </a>
+                                            </li>
 
-                                    <h6 class="sold weight text-content fw-normal">1 KG</h6>
+                                            <li data-bs-toggle="tooltip" data-bs-placement="top" title="Wishlist">
+                                                <a href="#" class="notifi-wishlist">
+                                                    <i data-feather="heart"></i>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div class="product-detail position-relative">
+                                        <a href="{{ route('client.product.detail', $product->id) }}">
+                                            <h6 class="name">{{ $product->name }}</h6>
+                                        </a>
 
-                                    <h6 class="price theme-color">$ 80.00</h6>
+                                        <h6 class="sold weight text-content fw-normal">
+                                            Tồn kho: {{ $variant->quantity ?? 0 }}
+                                        </h6>
 
-                                    <div class="add-to-cart-btn-2 addtocart_btn">
-                                        <button class="btn addcart-button btn buy-button"><i
-                                                class="fa-solid fa-plus"></i></button>
-                                        <div class="cart_qty qty-box-2">
-                                            <div class="input-group">
-                                                <button type="button" class="qty-left-minus" data-type="minus"
-                                                    data-field="">
-                                                    <i class="fa fa-minus"></i>
-                                                </button>
-                                                <input class="form-control input-number qty-input" type="text"
-                                                    name="quantity" value="1">
-                                                <button type="button" class="qty-right-plus" data-type="plus"
-                                                    data-field="">
-                                                    <i class="fa fa-plus"></i>
-                                                </button>
+                                        <h6 class="price theme-color">
+                                            {{ number_format($variant->price ?? 0, 0, ',', '.') }} đ
+                                        </h6>
+
+                                        <div class="add-to-cart-btn-2 addtocart_btn">
+                                            <button class="btn addcart-button btn buy-button">
+                                                <i class="fa-solid fa-plus"></i>
+                                            </button>
+
+                                            <div class="cart_qty qty-box-2">
+                                                <div class="input-group">
+                                                    <button type="button" class="qty-left-minus">
+                                                        <i class="fa fa-minus"></i>
+                                                    </button>
+
+                                                    <input class="form-control input-number qty-input"
+                                                        type="text"
+                                                        name="quantity"
+                                                        value="1">
+
+                                                    <button type="button" class="qty-right-plus">
+                                                        <i class="fa fa-plus"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <div>
-                            <div class="product-box product-white-bg wow fadeIn" data-wow-delay="0.1s">
-                                <div class="product-image">
-                                    <a href="product-left-thumbnail.html">
-                                        <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/8.png') }}" class="img-fluid blur-up lazyload"
-                                            alt="">
-                                    </a>
-                                    <ul class="product-option">
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="View">
-                                            <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#view">
-                                                <i data-feather="eye"></i>
-                                            </a>
-                                        </li>
-
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="Compare">
-                                            <a href="compare.html">
-                                                <i data-feather="refresh-cw"></i>
-                                            </a>
-                                        </li>
-
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="Wishlist">
-                                            <a href="wishlist.html" class="notifi-wishlist">
-                                                <i data-feather="heart"></i>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div class="product-detail position-relative">
-                                    <a href="product-left-thumbnail.html">
-                                        <h6 class="name">Đĩa tiệc lục giác vân đá sang trọng</h6>
-                                    </a>
-
-                                    <h6 class="sold weight text-content fw-normal">1 KG</h6>
-
-                                    <h6 class="price theme-color">$ 80.00</h6>
-
-                                    <div class="add-to-cart-btn-2 addtocart_btn">
-                                        <button class="btn addcart-button btn buy-button"><i
-                                                class="fa-solid fa-plus"></i></button>
-                                        <div class="cart_qty qty-box-2">
-                                            <div class="input-group">
-                                                <button type="button" class="qty-left-minus" data-type="minus"
-                                                    data-field="">
-                                                    <i class="fa fa-minus"></i>
-                                                </button>
-                                                <input class="form-control input-number qty-input" type="text"
-                                                    name="quantity" value="1">
-                                                <button type="button" class="qty-right-plus" data-type="plus"
-                                                    data-field="">
-                                                    <i class="fa fa-plus"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                        @empty
+                            <div class="col-12">
+                                <p class="text-content">Chưa có sản phẩm để hiển thị.</p>
                             </div>
-                        </div>
-
-                        <div>
-                            <div class="product-box product-white-bg wow fadeIn">
-                                <div class="product-image">
-                                    <a href="product-left-thumbnail.html">
-                                        <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/10.png') }}" class="img-fluid blur-up lazyload"
-                                            alt="">
-                                    </a>
-                                    <ul class="product-option">
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="View">
-                                            <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#view">
-                                                <i data-feather="eye"></i>
-                                            </a>
-                                        </li>
-
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="Compare">
-                                            <a href="compare.html">
-                                                <i data-feather="refresh-cw"></i>
-                                            </a>
-                                        </li>
-
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="Wishlist">
-                                            <a href="wishlist.html" class="notifi-wishlist">
-                                                <i data-feather="heart"></i>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div class="product-detail position-relative">
-                                    <a href="product-left-thumbnail.html">
-                                        <h6 class="name">Giỏ mây tròn chịu lực tốt</h6>
-                                    </a>
-
-                                    <h6 class="sold weight text-content fw-normal">1 KG</h6>
-
-                                    <h6 class="price theme-color">$ 80.00</h6>
-
-                                    <div class="add-to-cart-btn-2 addtocart_btn">
-                                        <button class="btn addcart-button btn buy-button"><i
-                                                class="fa-solid fa-plus"></i></button>
-                                        <div class="cart_qty qty-box-2">
-                                            <div class="input-group">
-                                                <button type="button" class="qty-left-minus" data-type="minus"
-                                                    data-field="">
-                                                    <i class="fa fa-minus"></i>
-                                                </button>
-                                                <input class="form-control input-number qty-input" type="text"
-                                                    name="quantity" value="1">
-                                                <button type="button" class="qty-right-plus" data-type="plus"
-                                                    data-field="">
-                                                    <i class="fa fa-plus"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div class="product-box product-white-bg wow fadeIn" data-wow-delay="0.1s">
-                                <div class="product-image">
-                                    <a href="product-left-thumbnail.html">
-                                        <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/6.png') }}" class="img-fluid blur-up lazyload"
-                                            alt="">
-                                    </a>
-                                    <ul class="product-option">
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="View">
-                                            <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#view">
-                                                <i data-feather="eye"></i>
-                                            </a>
-                                        </li>
-
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="Compare">
-                                            <a href="compare.html">
-                                                <i data-feather="refresh-cw"></i>
-                                            </a>
-                                        </li>
-
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="Wishlist">
-                                            <a href="wishlist.html" class="notifi-wishlist">
-                                                <i data-feather="heart"></i>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div class="product-detail position-relative">
-                                    <a href="product-left-thumbnail.html">
-                                        <h6 class="name">Chăn cũi dệt len Merino cho bé</h6>
-                                    </a>
-
-                                    <h6 class="sold weight text-content fw-normal">1 KG</h6>
-
-                                    <h6 class="price theme-color">$ 80.00</h6>
-
-                                    <div class="add-to-cart-btn-2 addtocart_btn">
-                                        <button class="btn addcart-button btn buy-button"><i
-                                                class="fa-solid fa-plus"></i></button>
-                                        <div class="cart_qty qty-box-2">
-                                            <div class="input-group">
-                                                <button type="button" class="qty-left-minus" data-type="minus"
-                                                    data-field="">
-                                                    <i class="fa fa-minus"></i>
-                                                </button>
-                                                <input class="form-control input-number qty-input" type="text"
-                                                    name="quantity" value="1">
-                                                <button type="button" class="qty-right-plus" data-type="plus"
-                                                    data-field="">
-                                                    <i class="fa fa-plus"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div class="product-box product-white-bg wow fadeIn">
-                                <div class="product-image">
-                                    <a href="product-left-thumbnail.html">
-                                        <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/4.png') }}" class="img-fluid blur-up lazyload"
-                                            alt="">
-                                    </a>
-                                    <ul class="product-option">
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="View">
-                                            <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#view">
-                                                <i data-feather="eye"></i>
-                                            </a>
-                                        </li>
-
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="Compare">
-                                            <a href="compare.html">
-                                                <i data-feather="refresh-cw"></i>
-                                            </a>
-                                        </li>
-
-                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="Wishlist">
-                                            <a href="wishlist.html" class="notifi-wishlist">
-                                                <i data-feather="heart"></i>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div class="product-detail position-relative">
-                                    <a href="product-left-thumbnail.html">
-                                        <h6 class="name">Khăn tắm ELSTONE HOME màu trắng</h6>
-                                    </a>
-
-                                    <h6 class="sold weight text-content fw-normal">1 KG</h6>
-
-                                    <h6 class="price theme-color">$ 80.00</h6>
-
-                                    <div class="add-to-cart-btn-2 addtocart_btn">
-                                        <button class="btn addcart-button btn buy-button"><i
-                                                class="fa-solid fa-plus"></i></button>
-                                        <div class="cart_qty qty-box-2">
-                                            <div class="input-group">
-                                                <button type="button" class="qty-left-minus" data-type="minus"
-                                                    data-field="">
-                                                    <i class="fa fa-minus"></i>
-                                                </button>
-                                                <input class="form-control input-number qty-input" type="text"
-                                                    name="quantity" value="1">
-                                                <button type="button" class="qty-right-plus" data-type="plus"
-                                                    data-field="">
-                                                    <i class="fa fa-plus"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        @endforelse
                     </div>
                 </div>
 
@@ -602,166 +388,77 @@
                     <div class="p-sticky">
                         <div class="category-menu">
                             <h3>Mua sắm theo sản phẩm</h3>
-                            <ul class="border-bottom-0">
-                                <li>
-                                    <div class="category-list">
-                                        <img src="https://themes.pixelstrap.com/fastkart/assets/images/furniture/icon/decorations.svg"
-                                            class="blur-up lazyload" alt="">
-                                        <h5>
-                                            <a href="shop-left-sidebar.html">Đồ trang trí</a>
-                                        </h5>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="category-list">
-                                        <img src="https://themes.pixelstrap.com/fastkart/assets/images/furniture/icon/pillows.svg" class="blur-up lazyload"
-                                            alt="">
-                                        <h5>
-                                            <a href="shop-left-sidebar.html">Chăn ga gối</a>
-                                        </h5>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="category-list">
-                                        <img src="https://themes.pixelstrap.com/fastkart/assets/images/furniture/icon/cushions.svg" class="blur-up lazyload"
-                                            alt="">
-                                        <h5>
-                                            <a href="shop-left-sidebar.html">Gối tựa</a>
-                                        </h5>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="category-list">
-                                        <img src="https://themes.pixelstrap.com/fastkart/assets/images/furniture/icon/blankets.svg" class="blur-up lazyload"
-                                            alt="">
-                                        <h5>
-                                            <a href="shop-left-sidebar.html">Chăn mền</a>
-                                        </h5>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="category-list">
-                                        <img src="https://themes.pixelstrap.com/fastkart/assets/images/furniture/icon/gift.svg" class="blur-up lazyload"
-                                            alt="">
-                                        <h5>
-                                            <a href="shop-left-sidebar.html">Gói quà</a>
-                                        </h5>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="category-list">
-                                        <img src="https://themes.pixelstrap.com/fastkart/assets/images/furniture/icon/sleepware.svg"
-                                            class="blur-up lazyload" alt="">
-                                        <h5>
-                                            <a href="shop-left-sidebar.html">Đồ ngủ</a>
-                                        </h5>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="category-list">
-                                        <img src="https://themes.pixelstrap.com/fastkart/assets/images/furniture/icon/bakeware.svg" class="blur-up lazyload"
-                                            alt="">
-                                        <h5>
-                                            <a href="shop-left-sidebar.html">Đồ nấu nướng & làm bánh</a>
-                                        </h5>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="category-list">
-                                        <img src="https://themes.pixelstrap.com/fastkart/assets/images/furniture/icon/room-fragrance.svg"
-                                            class="blur-up lazyload" alt="">
-                                        <h5>
-                                            <a href="shop-left-sidebar.html">Hương thơm phòng</a>
-                                        </h5>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="category-list">
-                                        <img src="https://themes.pixelstrap.com/fastkart/assets/images/furniture/icon/tableware.svg"
-                                            class="blur-up lazyload" alt="">
-                                        <h5>
-                                            <a href="shop-left-sidebar.html">Đồ dùng bàn ăn</a>
-                                        </h5>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="category-list">
-                                        <img src="https://themes.pixelstrap.com/fastkart/assets/images/furniture/icon/shower.svg" class="blur-up lazyload"
-                                            alt="">
-                                        <h5>
-                                            <a href="shop-left-sidebar.html">Tắm & vòi sen</a>
-                                        </h5>
-                                    </div>
-                                </li>
+
+                            <ul class="product-list border-0 p-0 d-block">
+                                @forelse($shoppingProducts as $product)
+                                    @php
+                                        $variant = $product->variants->first();
+                                    @endphp
+                                    <li>
+                                        <div class="offer-product">
+                                            <a href="{{ route('client.product.detail', $product->id) }}" class="offer-image">
+                                                <img src="{{ asset('storage/' . $product->image_primary) }}" class="blur-up lazyload"
+                                                    alt="{{ $product->name }}">
+                                            </a>
+
+                                            <div class="offer-detail">
+                                                <div>
+                                                    <a href="{{ route('client.product.detail', $product->id) }}" class="text-title">
+                                                        <h6 class="name">{{ $product->name }}</h6>
+                                                    </a>
+                                                    <span>Tồn kho: {{ $variant->quantity ?? 0 }}</span>
+                                                    <h6 class="price theme-color">
+                                                        {{ number_format($variant->price ?? 0, 0, ',', '.') }} đ
+                                                    </h6>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                @empty
+                                    <li>
+                                        <p class="text-content mb-0">Chưa có sản phẩm để hiển thị.</p>
+                                    </li>
+                                @endforelse
                             </ul>
                         </div>
-
-                       
 
                         <div class="section-t-space">
                             <div class="category-menu">
                                 <h3>Sản phẩm xu hướng</h3>
 
                                 <ul class="product-list border-0 p-0 d-block">
-                                    <li>
-                                        <div class="offer-product">
-                                            <a href="product-left-thumbnail.html" class="offer-image">
-                                                <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/2.png') }}" class="blur-up lazyload"
-                                                    alt="">
-                                            </a>
+                                    @forelse($trendingProducts as $product)
+                                        @php
+                                            $variant = $product->variants->first();
+                                        @endphp
+                                        <li class="{{ $loop->last ? 'mb-0' : '' }}">
+                                            <div class="offer-product">
+                                                <a href="{{ route('client.product.detail', $product->id) }}" class="offer-image">
+                                                    <img src="{{ asset('storage/' . $product->image_primary) }}" class="blur-up lazyload"
+                                                        alt="{{ $product->name }}">
+                                                </a>
 
-                                            <div class="offer-detail">
-                                                <div>
-                                                    <a href="product-left-thumbnail.html" class="text-title">
-                                                        <h6 class="name">Cà ri dê cao cấp Meatigo</h6>
-                                                    </a>
-                                                    <span>450 G</span>
-                                                    <h6 class="price theme-color">$ 70.00</h6>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </li>
-
-                                    <li>
-                                        <div class="offer-product">
-                                            <a href="product-left-thumbnail.html" class="offer-image">
-                                                <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/3.png') }}" class="blur-up lazyload"
-                                                    alt="">
-                                            </a>
-
-                                            <div class="offer-detail">
-                                                <div>
-                                                    <a href="product-left-thumbnail.html" class="text-title">
-                                                        <h6 class="name">Ghế lười Coral</h6>
-                                                    </a>
-                                                    <span>450 G</span>
-                                                    <h6 class="price theme-color">$ 40.00</h6>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </li>
-
-                                    <li class="mb-0">
-                                        <div class="offer-product">
-                                            <a href="product-left-thumbnail.html" class="offer-image">
-                                                <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/5.png') }}" class="blur-up lazyload"
-                                                    alt="">
-                                            </a>
-
-                                            <div class="offer-detail">
-                                                <div>
-                                                    <a href="product-left-thumbnail.html" class="text-title">
-                                                        <h6 class="name">Lợi ích của việc sử dụng sàn đá tự nhiên
+                                                <div class="offer-detail">
+                                                    <div>
+                                                        <a href="{{ route('client.product.detail', $product->id) }}" class="text-title">
+                                                            <h6 class="name">{{ $product->name }}</h6>
+                                                        </a>
+                                                        <span>Tồn kho: {{ $variant->quantity ?? 0 }}</span>
+                                                        <h6 class="price theme-color">
+                                                            {{ number_format($variant->price ?? 0, 0, ',', '.') }} đ
                                                         </h6>
-                                                    </a>
-                                                    <span>1 KG</span>
-                                                    <h6 class="price theme-color">$ 80.00</h6>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </li>
+                                        </li>
+                                    @empty
+                                        <li class="mb-0">
+                                            <p class="text-content mb-0">Chưa có sản phẩm xu hướng để hiển thị.</p>
+                                        </li>
+                                    @endforelse
                                 </ul>
                             </div>
+
                         </div>
                     </div>
                 </div>
@@ -794,309 +491,42 @@
                 </div>
             </div>
             <div class="banner-slider product-wrapper wow fadeInUp">
-                <div>
-                    <ul class="product-list">
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/1.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Tượng hươu may mắn hoàn thiện mờ</h6>
+                @forelse($bestSellerProducts->chunk(4) as $productChunk)
+                    <div>
+                        <ul class="product-list">
+                            @foreach($productChunk as $product)
+                                @php
+                                    $variant = $product->variants->first();
+                                @endphp
+                                <li>
+                                    <div class="offer-product">
+                                        <a href="{{ route('client.product.detail', $product->id) }}" class="offer-image">
+                                            <img src="{{ asset('storage/' . $product->image_primary) }}" class="blur-up lazyload" alt="{{ $product->name }}">
                                         </a>
-                                        <span>500 G</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
+
+                                        <div class="offer-detail">
+                                            <div>
+                                                <a href="{{ route('client.product.detail', $product->id) }}" class="text-title">
+                                                    <h6 class="name">{{ $product->name }}</h6>
+                                                </a>
+                                                <span>Tồn kho: {{ $variant->quantity ?? 0 }}</span>
+                                                <h6 class="price theme-color">{{ number_format($variant->price ?? 0, 0, ',', '.') }} đ</h6>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        </li>
-
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/2.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Khoai tây</h6>
-                                        </a>
-                                        <span>500 G</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/3.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Ghế lười Coral</h6>
-                                        </a>
-                                        <span>200 G</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/4.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Khăn tắm ELSTONE HOME màu trắng</h6>
-                                        </a>
-                                        <span>150 G</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-
-                <div>
-                    <ul class="product-list">
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/5.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Lợi ích của việc sử dụng sàn đá tự nhiên</h6>
-                                        </a>
-                                        <span>500 G</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/6.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Chăn cũi dệt len Merino cho bé</h6>
-                                        </a>
-                                        <span>1 L</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/7.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Đế lót cốc gỗ</h6>
-                                        </a>
-                                        <span>1 KG</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/8.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Đĩa lục giác vân đá</h6>
-                                        </a>
-                                        <span>150 G</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-
-                <div>
-                    <ul class="product-list">
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/9.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Khay gỗ xoài thủ công màu nâu hình vuông</h6>
-                                        </a>
-                                        <span>1 L</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/10.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Giỏ mây tròn chịu lực tốt</h6>
-                                        </a>
-                                        <span>500 G</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/11.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Bình hoa sợi cổ điển WaahKart</h6>
-                                        </a>
-                                        <span>1 KG</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/12.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Khăn bông mềm mại</h6>
-                                        </a>
-                                        <span>160 ML</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-
-                <div>
-                    <ul class="product-list">
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/13.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Bộ chén đĩa bóng đẹp</h6>
-                                        </a>
-                                        <span>500 G</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/14.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Khay tiện ích nhỏ vân đá</h6>
-                                        </a>
-                                        <span>1 L</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/5.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Lợi ích của việc sử dụng sàn đá tự nhiên</h6>
-                                        </a>
-                                        <span>1 KG</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-
-                        <li>
-                            <div class="offer-product">
-                                <a href="product-left-thumbnail.html" class="offer-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/furniture/9.png') }}" class="blur-up lazyload" alt="">
-                                </a>
-
-                                <div class="offer-detail">
-                                    <div>
-                                        <a href="product-left-thumbnail.html" class="text-title">
-                                            <h6 class="name">Khay gỗ xoài thủ công màu nâu hình vuông</h6>
-                                        </a>
-                                        <span>150 G</span>
-                                        <h6 class="price theme-color">$ 10.00</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @empty
+                    <div>
+                        <ul class="product-list">
+                            <li>
+                                <p class="text-content mb-0">Chưa có sản phẩm bán chạy để hiển thị.</p>
+                            </li>
+                        </ul>
+                    </div>
+                @endforelse
             </div>
         </div>
     </section>

@@ -13,7 +13,7 @@
                             Thêm mới thương hiệu
                         </a>
 
-                        <a href="" class="btn btn-soft-danger btn-sm">Đã Xóa</a>
+                        <a href="{{ route('brands.trash') }}" class="btn btn-soft-danger btn-sm">Đã Xóa</a>
 
 
                         <div class="dropdown">
@@ -43,6 +43,7 @@
                                             </div>
                                         </th>
                                         <th>STT</th>
+                                        <th>Ảnh thương hiệu</th>
                                         <th>Tên Thương Hiệu</th>
                                         <th>Ngày Tạo</th>
                                         <th>Action</th>
@@ -59,6 +60,13 @@
                                                 </div>
                                             </td>
                                             <td>{{ $loop->iteration }}</td>
+                                            <td>
+                                                @if($brand->image)
+                                                    <img src="{{ asset('storage/' . $brand->image) }}" width="70px" height="70px" style="object-fit: cover;">
+                                                @else
+                                                    <span class="text-muted">Không có ảnh</span>
+                                                @endif
+                                            </td>
                                             <td>{{ $brand->name }}</td>
                                             <td>
                                                 {{ $brand->updated_at->format('d/m/Y H:i') }}</td>

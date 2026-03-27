@@ -17,13 +17,17 @@ class StockController extends Controller
         $variant = ProductVariant::where('id_product', $productId)
             ->where('id_color', $colorId)
             ->where('id_size', $sizeId)
+            ->where('status', 'active')
+            ->whereHas('product', function ($query) {
+                $query->where('status', 'active');
+            })
             ->first();
 
         if (!$variant) {
             return response()->json([
                 'success' => false,
                 'quantity' => 0,
-                'message' => 'Không tìm thấy biến thể sản phẩm'
+                'message' => 'Biến thể hiện không hoạt động hoặc không tồn tại'
             ]);
         }
 

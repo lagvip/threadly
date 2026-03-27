@@ -145,7 +145,4 @@ public function getExpiredVouchers()
 {
     return Voucher::where('status', 'expired')->get();
 }
-
-
-
 }

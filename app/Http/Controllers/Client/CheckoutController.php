@@ -52,6 +52,7 @@ class CheckoutController extends Controller
         $appliedVoucher = $this->getAppliedVoucherPreview($subtotal);
         $discount = $appliedVoucher['discount'] ?? 0;
         $grandTotal = max(0, $subtotal + $shippingFee - $discount);
+        $availableVouchers = $this->getAvailableVouchersForCheckout($subtotal);
 
         return view('client.checkout.index', compact(
             'cartItems',
@@ -61,7 +62,8 @@ class CheckoutController extends Controller
             'subtotal',
             'appliedVoucher',
             'discount',
-            'grandTotal'
+            'grandTotal',
+            'availableVouchers'
         ));
     }
     public function getShippingFee(Request $request)
@@ -189,9 +191,11 @@ class CheckoutController extends Controller
                     return redirect()->back()->with('error', 'Voucher không còn tồn tại.');
                 }
 
-                if (!$voucher->isValid($subtotal)) {
+                $currentUses = $this->getUserVoucherUsage($voucher, $user->id);
+
+                if (!$voucher->isValid($subtotal, $currentUses, 1)) {
                     DB::rollBack();
-                    return redirect()->back()->with('error', 'Voucher không hợp lệ hoặc không đủ điều kiện áp dụng.');
+                    return redirect()->back()->with('error', 'Voucher không hợp lệ hoặc đã vượt giới hạn sử dụng.');
                 }
 
                 $discount = (float) $voucher->getDiscount($subtotal);
@@ -1050,7 +1054,7 @@ class CheckoutController extends Controller
     {
         $voucherId = session('checkout_voucher.voucher_id');
 
-        if (!$voucherId) {
+        if (!$voucherId || !Auth::check()) {
             return null;
         }
 
@@ -1061,16 +1065,57 @@ class CheckoutController extends Controller
             return null;
         }
 
-        if (!$voucher->isValid($subtotal)) {
+        $currentUses = $this->getUserVoucherUsage($voucher, Auth::id());
+
+        if (!$voucher->isValid($subtotal, $currentUses, 1)) {
             session()->forget('checkout_voucher');
             return null;
         }
 
+        $discount = min((float) $voucher->getDiscount($subtotal), $subtotal);
+
         return [
             'voucher_id'   => $voucher->id,
             'voucher_code' => $voucher->code,
-            'discount'     => (float) $voucher->getDiscount($subtotal),
+            'discount'     => $discount,
         ];
+    }
+
+    protected function getAvailableVouchersForCheckout(float $subtotal)
+    {
+        $userId = Auth::id();
+
+        return Voucher::query()
+            ->where('status', 'active')
+            ->where('quantity', '>', 0)
+            ->where('start_date', '<=', now())
+            ->where('end_date', '>=', now())
+            ->orderByDesc('value')
+            ->get()
+            ->filter(function ($voucher) use ($subtotal, $userId) {
+                $currentUses = $this->getUserVoucherUsage($voucher, $userId);
+                return $voucher->isValid($subtotal, $currentUses, 1);
+            })
+            ->map(function ($voucher) use ($subtotal) {
+                return [
+                    'id' => $voucher->id,
+                    'code' => $voucher->code,
+                    'type' => $voucher->type,
+                    'value' => $voucher->value,
+                    'max_discount' => $voucher->max_discount,
+                    'min_order_value' => $voucher->min_order_value,
+                    'discount_preview' => (float) $voucher->getDiscount($subtotal),
+                    'end_date' => $voucher->end_date,
+                ];
+            })
+            ->values();
+    }
+    protected function getUserVoucherUsage(Voucher $voucher, int $userId): int
+    {
+        return Order::where('user_id', $userId)
+            ->where('voucher_id', $voucher->id)
+            ->whereNotIn('order_status', ['cancelled'])
+            ->count();
     }
 
     public function applyVoucher(Request $request)
@@ -1096,14 +1141,18 @@ class CheckoutController extends Controller
 
         $subtotal = $this->calculateSubtotal($cartItems);
 
-        $voucher = Voucher::where('code', trim($request->voucher_code))->first();
+        $voucherCode = trim($request->voucher_code);
+
+        $voucher = Voucher::whereRaw('UPPER(code) = ?', [Str::upper($voucherCode)])->first();
 
         if (!$voucher) {
             return redirect()->back()->with('error', 'Mã voucher không tồn tại.');
         }
 
-        if (!$voucher->isValid($subtotal)) {
-            return redirect()->back()->with('error', 'Voucher không hợp lệ hoặc không đủ điều kiện áp dụng.');
+        $currentUses = $this->getUserVoucherUsage($voucher, $user->id);
+
+        if (!$voucher->isValid($subtotal, $currentUses, 1)) {
+            return redirect()->back()->with('error', 'Voucher không hợp lệ hoặc đã vượt giới hạn sử dụng.');
         }
 
         session([
