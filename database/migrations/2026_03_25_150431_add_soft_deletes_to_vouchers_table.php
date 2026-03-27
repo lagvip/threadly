@@ -11,12 +11,6 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('sizes') && !Schema::hasColumn('sizes', 'deleted_at')) {
-            Schema::table('sizes', function (Blueprint $table) {
-                $table->softDeletes();
-            });
-        }
-
         if (Schema::hasTable('vouchers') && !Schema::hasColumn('vouchers', 'deleted_at')) {
             Schema::table('vouchers', function (Blueprint $table) {
                 $table->softDeletes();
@@ -24,14 +18,11 @@ return new class extends Migration
         }
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
-        if (Schema::hasTable('sizes') && Schema::hasColumn('sizes', 'deleted_at')) {
-            Schema::table('sizes', function (Blueprint $table) {
-                $table->dropSoftDeletes();
-            });
-        }
-
         if (Schema::hasTable('vouchers') && Schema::hasColumn('vouchers', 'deleted_at')) {
             Schema::table('vouchers', function (Blueprint $table) {
                 $table->dropSoftDeletes();

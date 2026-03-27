@@ -182,7 +182,12 @@ Route::middleware(['auth'])->group(function () {
         });
 
         // VOUCHER
+        Route::prefix('admin')->group(function () {
         Route::resource('vouchers', VoucherController::class);
+        Route::get('vouchers-trashed', [VoucherController::class, 'trashed'])->name('vouchers.trashed');
+        Route::post('vouchers/{voucher}/restore', [VoucherController::class, 'restore'])->name('vouchers.restore');
+        Route::delete('vouchers/{voucher}/force-delete', [VoucherController::class, 'forceDelete'])->name('vouchers.forceDelete');
+        });
 
         // BRAND
         Route::prefix('brands')->name('brands.')->group(function () {
