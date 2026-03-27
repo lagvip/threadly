@@ -184,14 +184,16 @@ Route::middleware(['auth'])->group(function () {
         });
 
         // SIZE
-        Route::prefix('listSize')->name('listSize.')->group(function () {
+       Route::prefix('listSize')->name('listSize.')->group(function () {
             Route::get('/', [SizeController::class, 'index'])->name('list');
+            Route::get('/trash', [SizeController::class, 'trash'])->name('trash');
             Route::get('/detail/{id}', [SizeController::class, 'show'])->name('detailSize');
             Route::get('/add', [SizeController::class, 'create'])->name('addSize');
             Route::post('/store', [SizeController::class, 'store'])->name('storeSize');
             Route::get('/edit/{id}', [SizeController::class, 'edit'])->name('editSize');
             Route::put('/update/{id}', [SizeController::class, 'update'])->name('updateSize');
             Route::delete('/delete/{id}', [SizeController::class, 'destroy'])->name('deleteSize');
+            Route::get('/restore/{id}', [SizeController::class, 'restore'])->name('restoreSize');
             Route::get('/search', [SizeController::class, 'search'])->name('searchSize');
         });
 
@@ -329,8 +331,13 @@ Route::middleware(['auth'])->group(function () {
         Route::prefix('deleted')->name('deleted.')->group(function () {
             Route::post('/force-delete', [OrderController::class, 'forceDelete'])->name('forceDelete');
         });
+        // REVIEW - FORCE DELETE
          Route::prefix('reviews')->name('reviews.')->group(function () {
             Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
+        });
+        // SIZE - FORCE DELETE
+        Route::prefix('listSize')->name('listSize.')->group(function () {
+            Route::delete('/force-delete/{id}', [SizeController::class, 'forceDelete'])->name('forceDeleteSize');
         });
     });
 });
