@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
 {
-    public function homeAdmin()
+    public function homeAdmin(Request $request)
 {
     $successfulOrdersQuery = Order::query()
         ->where('order_status', OrderStatus::Delivered->value)
@@ -36,9 +36,17 @@ class AdminController extends Controller
 
     $netRevenue = $grossSales - $shippingCollected;
 
-    $chartData30Days = $this->buildRevenueSeriesByDay(days: 30);
-    $chartData7Days = $this->buildRevenueSeriesByDay(days: 7);
-    $chartData12Months = $this->buildRevenueSeriesByMonth(months: 12);
+    $fromInput = $request->query('from');
+    $toInput = $request->query('to');
+
+    $to = $toInput ? Carbon::createFromFormat('Y-m-d', $toInput) : Carbon::today();
+    $from = $fromInput ? Carbon::createFromFormat('Y-m-d', $fromInput) : (clone $to)->subDays(29);
+
+    if ($from->greaterThan($to)) {
+        [$from, $to] = [$to, $from];
+    }
+
+    $chartDataRange = $this->buildRevenueSeriesByDateRange($from, $to);
 
     $topProducts = OrderDetail::query()
         ->join('orders', 'orders.id', '=', 'order_details.order_id')
@@ -85,9 +93,9 @@ class AdminController extends Controller
             'total_products' => $kpiTotalProducts,
             'total_stock' => $kpiTotalStock,
         ],
-        'chartData30Days' => $chartData30Days,
-        'chartData7Days' => $chartData7Days,
-        'chartData12Months' => $chartData12Months,
+        'chartDataRange' => $chartDataRange,
+        'filterFrom' => $from->toDateString(),
+        'filterTo' => $to->toDateString(),
         'topProducts' => $topProducts,
         'categoryStats' => $categoryStats,
         'lowStockVariants' => $lowStockVariants,
@@ -149,6 +157,39 @@ class AdminController extends Controller
             $m = $start->copy()->addMonths($i);
             $key = $m->format('Y-m');
             $labels[] = 'T' . $m->format('n');
+            $data[] = $map[$key] ?? 0;
+        }
+
+        return [
+            'labels' => $labels,
+            'data' => $data,
+        ];
+    }
+
+    private function buildRevenueSeriesByDateRange(Carbon $from, Carbon $to): array
+    {
+        $fromDay = $from->copy()->startOfDay();
+        $toDay = $to->copy()->endOfDay();
+        $days = $from->copy()->startOfDay()->diffInDays($to->copy()->startOfDay()) + 1;
+
+        $rows = Order::query()
+            ->where('order_status', OrderStatus::Delivered->value)
+            ->where('payment_status', 'paid')
+            ->whereBetween('created_at', [$fromDay, $toDay])
+            ->groupBy(DB::raw('DATE(created_at)'))
+            ->orderBy(DB::raw('DATE(created_at)'))
+            ->selectRaw('DATE(created_at) as day')
+            ->selectRaw('SUM(total_price - shipping_fee) as net_revenue')
+            ->get();
+
+        $map = $rows->pluck('net_revenue', 'day')->map(fn($v) => (float) $v)->toArray();
+
+        $labels = [];
+        $data = [];
+        for ($i = 0; $i < $days; $i++) {
+            $d = $from->copy()->addDays($i);
+            $key = $d->toDateString();
+            $labels[] = $d->format('d/m');
             $data[] = $map[$key] ?? 0;
         }
 
