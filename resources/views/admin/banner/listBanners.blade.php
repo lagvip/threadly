@@ -12,6 +12,13 @@
                         <a href="{{ route('listBanner.trash') }}" class="btn btn-sm btn-light">
                             Đã xoá
                         </a>
+                        <form id="bulkDeleteForm" action="{{ route('listBanner.bulkDelete') }}" method="POST" style="display: none;">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc muốn xoá các banner đã chọn không?')">
+                                Xoá đã chọn
+                            </button>
+                        </form>
                         <form action="{{ route('listBanner.searchBanner') }}" method="GET">
                             <div class="search-bar">
                             <span><i class="bx bx-search-alt"></i></span>
@@ -26,8 +33,8 @@
                                     <tr>
                                         <th style="width: 20px;">
                                             <div class="form-check">
-                                                <input type="checkbox" class="form-check-input" id="customCheck1">
-                                                <label class="form-check-label" for="customCheck1"></label>
+                                                <input type="checkbox" class="form-check-input" id="bannerCheckAll">
+                                                <label class="form-check-label" for="bannerCheckAll"></label>
                                             </div>
                                         </th>
                                         <th>Banner</th>
@@ -42,8 +49,8 @@
                                         <tr>
                                             <td>
                                                 <div class="form-check">
-                                                    <input type="checkbox" class="form-check-input" id="customCheck2">
-                                                    <label class="form-check-label" for="customCheck2"></label>
+                                                    <input type="checkbox" class="form-check-input banner-check" value="{{ $value->id }}" id="bannerCheck{{ $value->id }}">
+                                                    <label class="form-check-label" for="bannerCheck{{ $value->id }}"></label>
                                                 </div>
                                             </td>
                                             <td>
@@ -113,4 +120,49 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const checkAll = document.getElementById('bannerCheckAll');
+            const checks = Array.from(document.querySelectorAll('.banner-check'));
+            const bulkForm = document.getElementById('bulkDeleteForm');
+
+            const syncUI = () => {
+                const checked = checks.filter(c => c.checked);
+                if (bulkForm) {
+                    bulkForm.style.display = checked.length > 0 ? 'block' : 'none';
+
+                    bulkForm.querySelectorAll('input[name="ids[]"]').forEach(el => el.remove());
+                    checked.forEach(c => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'ids[]';
+                        input.value = c.value;
+                        bulkForm.appendChild(input);
+                    });
+                }
+
+                if (checkAll) {
+                    if (checks.length === 0) {
+                        checkAll.checked = false;
+                        checkAll.indeterminate = false;
+                        return;
+                    }
+                    checkAll.checked = checked.length === checks.length;
+                    checkAll.indeterminate = checked.length > 0 && checked.length < checks.length;
+                }
+            };
+
+            if (checkAll) {
+                checkAll.addEventListener('change', function () {
+                    checks.forEach(c => c.checked = checkAll.checked);
+                    syncUI();
+                });
+            }
+
+            checks.forEach(c => c.addEventListener('change', syncUI));
+
+            syncUI();
+        });
+    </script>
 @endsection

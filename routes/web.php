@@ -165,6 +165,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/store', [BannerController::class, 'store'])->name('storeBanner');
             Route::get('/edit/{id}', [BannerController::class, 'edit'])->name('editBanner');
             Route::put('/update/{id}', [BannerController::class, 'update'])->name('updateBanner');
+            Route::delete('/bulk-delete', [BannerController::class, 'bulkDestroy'])->name('bulkDelete');
             Route::delete('/delete/{id}', [BannerController::class, 'destroy'])->name('deleteBanner');
             Route::get('/search', [BannerController::class, 'search'])->name('searchBanner');
         });
