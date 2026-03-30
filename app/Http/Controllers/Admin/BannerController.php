@@ -103,6 +103,24 @@ class BannerController extends Controller
         return redirect()->route('listBanner.list')->with('success', 'Xóa thành công');
     }
 
+    public function bulkDestroy(Request $request)
+    {
+        $ids = $request->input('ids', []);
+
+        if (!is_array($ids) || empty($ids)) {
+            return redirect()->route('listBanner.list')->with('error', 'Chưa chọn banner nào để xoá');
+        }
+
+        $ids = array_values(array_filter($ids, fn($id) => is_numeric($id)));
+        if (empty($ids)) {
+            return redirect()->route('listBanner.list')->with('error', 'Danh sách banner không hợp lệ');
+        }
+
+        Banner::whereIn('id', $ids)->delete();
+
+        return redirect()->route('listBanner.list')->with('success', 'Đã xoá các banner đã chọn');
+    }
+
     public function search(Request $request)
     {
         $search = $request->input('search');
