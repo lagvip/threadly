@@ -126,4 +126,13 @@ class Voucher extends Model
     {
         return $usesInOrder <= $this->max_uses_per_order;
     }
+
+    /**
+     * Kiểm tra xem voucher có đang áp dụng không (không thể xóa)
+     */
+    public function isInUse()
+    {
+        $now = Carbon::now();
+        return $this->actual_status === 'active' && $this->quantity > 0 && $now->between($this->start_date, $this->end_date);
+    }
 }
