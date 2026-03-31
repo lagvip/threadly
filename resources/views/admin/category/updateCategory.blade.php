@@ -9,7 +9,7 @@
                         <div class="bg-light text-center rounded bg-light">
                             {{-- Hiển thị ảnh hiện có --}}
                             @if ($category['image'])
-                                <img src="{{ Storage::url($category['image']) }}" alt="Current Image" class="avatar-xxl"
+                                <img src="{{ Storage::disk('public')->url($category['image']) }}" alt="Current Image" class="avatar-xxl"
                                     id="leftImagePreview"> {{-- Thêm ID cho ảnh bên trái --}}
                             @else
                                 <p>Không có ảnh hiện tại.</p>
@@ -54,21 +54,21 @@
                                     <span class="text-muted fs-13">
                                         1600 x 1200 (4:3) khuyến nghị. Chỉ cho phép file PNG, JPG và GIF.
                                     </span>
-                                    
+
                                     <p id="selectedFileNameUpdate" class="selected-file-name mt-2"></p>
                                     <div id="imagePreviewUpdate" class="image-preview mt-3">
                                         {{-- Hiển thị ảnh xem trước mặc định nếu có ảnh cũ --}}
                                         @if ($category['image'])
-                                            <img src="{{ Storage::url($category['image']) }}" alt="Current Image"
+                                            <img src="{{ Storage::disk('public')->url($category['image']) }}" alt="Current Image"
                                                 style="max-width: 100%; max-height: 120px; display: block; margin: 0 auto; border-radius: 4px;">
                                         @endif
                                     </div>
-                                    
+
                                 </div>
-                                
+
                             </div>
                         </div>
-                       
+
                     </div>
                     <div class="card">
                         <div class="card-header">
@@ -100,7 +100,7 @@
                                 <div class="mb-3">
                                     <label for="category-parent" class="form-label">Danh mục cha</label>
                                     <select name="id_parent" id="category-parent" class="form-control">
-                                        <option value="">-- Không có danh mục cha --</option>
+                                        <option value="">-- Danh mục cha --</option>
                                         @foreach ($allCategories as $cat)
                                             <option value="{{ $cat->id }}"
                                                 {{ $category->id_parent == $cat->id ? 'selected' : '' }}>

@@ -56,7 +56,7 @@
                             <div class="mb-3">
                                 <label for="category-parent" class="form-label">Danh mục cha</label>
                                 <select name="id_parent" id="category-parent" class="form-control">
-                                    <option value="">-- Không có danh mục cha --</option>
+                                    <option value="">-- Danh mục cha --</option>
                                     @foreach ($categories as $cat)
                                         <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                                     @endforeach
