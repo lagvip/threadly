@@ -16,8 +16,8 @@ class HomeController extends Controller
             ->orderBy('position', 'asc')
             ->get();
 
-        $categories = Category::whereNull('id_parent')
-            ->orderBy('id', 'desc')
+        $categories = Category::with('parent')
+            ->whereNotNull('id_parent')
             ->get();
 
         $activeProductsQuery = Product::with(['variants' => function ($q) {

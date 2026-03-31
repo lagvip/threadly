@@ -184,7 +184,7 @@
                     @if(isset($categories) && $categories->count() > 0)
                         @foreach($categories as $category)
                             <div>
-                                <a href="{{ route('home') }}" class="category-box category-dark">
+                                <a href="{{ route('client.category',$category->id) }}" class="category-box category-dark">
                                     <div>
                                         <img src="{{ $category->image ? asset('storage/' . $category->image) : 'https://themes.pixelstrap.com/fastkart/assets/images/furniture/icon/decorations.svg' }}"
                                             class="blur-up lazyload"

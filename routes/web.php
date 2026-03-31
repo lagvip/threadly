@@ -24,6 +24,7 @@ use App\Http\Controllers\Client\CheckoutController;
 use App\Http\Controllers\Client\AccountController;
 use App\Http\Controllers\Client\ClientOrderController;
 use App\Http\Controllers\Client\AddressController;
+use App\Http\Controllers\Client\CategoryController;
 
 // =======================================================
 // CLIENT
@@ -35,6 +36,7 @@ Route::get('/admin', fn () => redirect('/admin/dashboard'));
 
 // Client giao diện
 Route::get('/san-pham/{id}', [ProductController::class, 'show'])->name('client.product.detail');
+Route::get('/category/{id}', [CategoryController::class, 'show'])->name('client.category');
 
 // Client cần đăng nhập - giỏ hàng
 Route::middleware('auth')->group(function () {
