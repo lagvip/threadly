@@ -296,7 +296,7 @@
                     </div>
 
                     <div class="title d-block">
-                        <h2>Tủ bếp thực phẩm</h2>
+                        <h2>Sản Phẩm Xem Nhiều Nhất</h2>
                         <span class="title-leaf">
                             <svg class="icon-width">
                                 <use xlink:href="https://themes.pixelstrap.com/fastkart/assets/svg/leaf.svg#leaf"></use>
