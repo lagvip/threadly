@@ -19,6 +19,11 @@ class Category extends Model
         return $this->hasMany(Category::class, 'id_parent', 'id');
     }
 
+    public function childrenRecursive()
+    {
+        return $this->children()->with('childrenRecursive');
+    }
+
     // Quan hệ một-một (ngược lại): Một category con có một category cha
     public function parent()
     {
