@@ -16,11 +16,33 @@ class AdminController extends Controller
 {
     public function homeAdmin(Request $request)
 {
+    $fromInput = $request->query('from');
+    $toInput = $request->query('to');
+
+    try {
+        $to = $toInput ? Carbon::createFromFormat('Y-m-d', (string) $toInput) : Carbon::today();
+    } catch (\Throwable $e) {
+        $to = Carbon::today();
+    }
+
+    try {
+        $from = $fromInput ? Carbon::createFromFormat('Y-m-d', (string) $fromInput) : (clone $to)->subDays(29);
+    } catch (\Throwable $e) {
+        $from = (clone $to)->subDays(29);
+    }
+
+    if ($from->greaterThan($to)) {
+        [$from, $to] = [$to, $from];
+    }
+
+    $fromDay = $from->copy()->startOfDay();
+    $toDay = $to->copy()->endOfDay();
+
     $successfulOrdersQuery = Order::query()
         ->where('order_status', OrderStatus::Delivered->value)
-        ->where('payment_status', 'paid');
+        ->where('payment_status', 'paid')
+        ->whereBetween('created_at', [$fromDay, $toDay]);
 
-    $kpiTotalOrders = Order::count();
     $kpiTotalProducts = Product::count();
     $kpiTotalStock = (int) ProductVariant::sum('quantity');
 
@@ -33,18 +55,17 @@ class AdminController extends Controller
     $grossSales = (float) ($successfulOrdersAgg->gross_sales ?? 0);
     $shippingCollected = (float) ($successfulOrdersAgg->shipping_collected ?? 0);
     $discountTotal = (float) ($successfulOrdersAgg->discount_total ?? 0);
-
     $netRevenue = $grossSales - $shippingCollected;
 
-    $fromInput = $request->query('from');
-    $toInput = $request->query('to');
+    $kpiTotalOrders = (clone $successfulOrdersQuery)->count();
 
-    $to = $toInput ? Carbon::createFromFormat('Y-m-d', $toInput) : Carbon::today();
-    $from = $fromInput ? Carbon::createFromFormat('Y-m-d', $fromInput) : (clone $to)->subDays(29);
-
-    if ($from->greaterThan($to)) {
-        [$from, $to] = [$to, $from];
-    }
+    $kpiTotalProductsSold = (float) OrderDetail::query()
+        ->join('orders', 'orders.id', '=', 'order_details.order_id')
+        ->where('orders.order_status', OrderStatus::Delivered->value)
+        ->where('orders.payment_status', 'paid')
+        ->whereBetween('orders.created_at', [$fromDay, $toDay])
+        ->selectRaw('COALESCE(SUM(order_details.quantity), 0) as sold_qty')
+        ->value('sold_qty');
 
     $chartDataRange = $this->buildRevenueSeriesByDateRange($from, $to);
 
@@ -53,6 +74,7 @@ class AdminController extends Controller
         ->join('products', 'products.id', '=', 'order_details.product_id')
         ->where('orders.order_status', OrderStatus::Delivered->value)
         ->where('orders.payment_status', 'paid')
+        ->whereBetween('orders.created_at', [$fromDay, $toDay])
         ->groupBy('order_details.product_id', 'products.name')
         ->selectRaw('order_details.product_id as product_id')
         ->selectRaw('products.name as product_name')
@@ -68,6 +90,7 @@ class AdminController extends Controller
         ->join('categories', 'categories.id', '=', 'products.id_category')
         ->where('orders.order_status', OrderStatus::Delivered->value)
         ->where('orders.payment_status', 'paid')
+        ->whereBetween('orders.created_at', [$fromDay, $toDay])
         ->groupBy('categories.id', 'categories.name')
         ->selectRaw('categories.id as category_id')
         ->selectRaw('categories.name as category_name')
@@ -90,7 +113,7 @@ class AdminController extends Controller
             'shipping_collected' => $shippingCollected,
             'discount_total' => $discountTotal,
             'total_orders' => $kpiTotalOrders,
-            'total_products' => $kpiTotalProducts,
+            'total_products' => $kpiTotalProductsSold,
             'total_stock' => $kpiTotalStock,
         ],
         'chartDataRange' => $chartDataRange,
