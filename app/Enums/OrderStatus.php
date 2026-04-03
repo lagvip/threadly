@@ -4,17 +4,13 @@ namespace App\Enums;
 
 enum OrderStatus: string
 {
-    // Progress steps
-    case Pending    = 'pending';    // Đơn hàng đã xác nhận
-    case Processing = 'processing'; // Đơn hàng đang xử lý
-    case Shipped    = 'shipped';   // Đơn hàng đang vận chuyển
-    case Delivered  = 'delivered'; // Đơn hàng đã giao
-    case Cancelled  = 'cancelled'; // Đơn hàng đã hủy
-    case WaitingForCancellation = 'waiting_for_cancellation'; // Trạng thái yêu cầu hủy
+    case Pending = 'pending';
+    case Processing = 'processing';
+    case Shipped = 'shipped';
+    case Delivered = 'delivered';
+    case Cancelled = 'cancelled';
+    case WaitingForCancellation = 'waiting_for_cancellation'; // chỉ giữ để tương thích dữ liệu cũ
 
-    /**
-     * Những trạng thái admin được phép chỉnh (ngoại trừ delivered, cancelled, returned)
-     */
     public static function editableStatuses(): array
     {
         return [
@@ -22,14 +18,9 @@ enum OrderStatus: string
             self::Processing->value,
             self::Shipped->value,
             self::Delivered->value,
-            self::Cancelled->value,  // Đã hủy
-            self::WaitingForCancellation->value, // Thêm Waiting_for_cancellation
         ];
     }
 
-    /**
-     * 5 bước chính cho progress bar
-     */
     public static function progressSteps(): array
     {
         return [
@@ -37,30 +28,71 @@ enum OrderStatus: string
             self::Processing->value,
             self::Shipped->value,
             self::Delivered->value,
-            self::WaitingForCancellation->value, // Thêm trạng thái yêu cầu hủy vào đây
         ];
     }
 
-    /**
-     * Tất cả giá trị enum (dùng validate chung)
-     */
     public static function values(): array
     {
-        return array_map(fn(self $case) => $case->value, self::cases());
+        return array_column(self::cases(), 'value');
     }
 
-    /**
-     * Gắn nhãn cho từng trạng thái đơn hàng
-     */
     public function label(): string
     {
         return match ($this) {
-            self::Pending    => 'Đã xác nhận',
+            self::Pending => 'Chờ xử lý',
             self::Processing => 'Đang xử lý',
-            self::Shipped   => 'Đang vận chuyển',
-            self::Delivered  => 'Đã giao hàng',
-            self::Cancelled  => 'Đã hủy',
-            self::WaitingForCancellation => 'Xin huỷ đơn hàng', // Nhãn cho trạng thái "Waiting_for_cancellation"
+            self::Shipped => 'Đang giao hàng',
+            self::Delivered => 'Đã giao',
+            self::Cancelled => 'Đã hủy',
+            self::WaitingForCancellation => 'Chờ duyệt hủy',
+        };
+    }
+
+    public function isTerminal(): bool
+    {
+        return in_array($this, [
+            self::Delivered,
+            self::Cancelled,
+        ], true);
+    }
+
+    public function isCancellationRequest(): bool
+    {
+        return $this === self::WaitingForCancellation;
+    }
+
+    /**
+     * Chỉ kiểm tra luồng trạng thái chung.
+     * Rule liên quan thanh toán (vd VNPay đã thanh toán không được hủy)
+     * phải kiểm tra ở Order model / Controller.
+     */
+    public function canTransitionTo(self $next): bool
+    {
+        return match ($this) {
+            self::Pending => in_array($next, [
+                self::Processing,
+                self::Cancelled,
+            ], true),
+
+            self::Processing => in_array($next, [
+                self::Shipped,
+                self::Cancelled,
+            ], true),
+
+            self::Shipped => in_array($next, [
+                self::Delivered,
+            ], true),
+
+            // Chỉ giữ để xử lý dữ liệu cũ nếu còn tồn tại
+            self::WaitingForCancellation => in_array($next, [
+                self::Cancelled,
+                self::Pending,
+                self::Processing,
+                self::Shipped,
+            ], true),
+
+            self::Delivered,
+            self::Cancelled => false,
         };
     }
 }

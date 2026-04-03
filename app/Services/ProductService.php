@@ -13,11 +13,24 @@ use Illuminate\Http\Request;
 
 class ProductService
 {
-    public function getAllProducts()
+    public function getAllProducts(array $filters = [])
     {
-        return Product::with(['brand', 'category'])->paginate(10);
-    }
+        $query = Product::with(['brand', 'category']);
 
+        if (!empty($filters['search'])) {
+            $query->where('name', 'like', '%' . trim($filters['search']) . '%');
+        }
+
+        if (!empty($filters['brand_id'])) {
+            $query->where('id_brand', $filters['brand_id']);
+        }
+
+        if (!empty($filters['category_id'])) {
+            $query->where('id_category', $filters['category_id']);
+        }
+
+        return $query->latest('created_at')->paginate(10);
+    }
     public function getProductById($id)
     {
         return Product::with(['brand', 'category', 'variants.color', 'variants.size'])

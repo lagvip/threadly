@@ -100,6 +100,10 @@ class ClientOrderController extends Controller
     {
         $order = Order::where('user_id', Auth::id())->findOrFail($id);
 
+        if ($order->payment_method === 'vnpay' && $order->payment_status === 'paid') {
+            return back()->with('error', 'Đơn hàng đã thanh toán bằng VNPay nên không thể hủy.');
+        }
+
         $request->validate([
             'cancel_reason' => ['required', 'string', 'max:1000'],
         ], [

@@ -32,6 +32,24 @@ class Order extends Model
         'total_price',
         'previous_status',
         'cancel_reason',
+        'customer_note',
+
+        // VNPay metadata
+        'payment_request_date',
+        'payment_expire_date',
+        'payment_transaction_no',
+        'payment_bank_code',
+        'payment_response_code',
+        'payment_transaction_status',
+        'payment_pay_date',
+        'paid_at',
+    ];
+
+    protected $casts = [
+        'shipping_fee' => 'float',
+        'discount' => 'float',
+        'total_price' => 'float',
+        'paid_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -92,6 +110,11 @@ class Order extends Model
     public function voucher()
     {
         return $this->belongsTo(Voucher::class, 'voucher_id');
+    }
+
+    public function refunds()
+    {
+        return $this->hasMany(OrderRefund::class, 'order_id');
     }
 
     public function getPaymentStatusLabelAttribute(): string
@@ -169,21 +192,7 @@ class Order extends Model
 
     public function canCustomerRequestCancellation(): bool
     {
-        if (in_array($this->order_status, [
-            self::STATUS_SHIPPED,
-            self::STATUS_DELIVERED,
-            self::STATUS_CANCELLED,
-            self::STATUS_WAITING_FOR_CANCELLATION,
-        ], true)) {
-            return false;
-        }
-
-        return $this->payment_method === self::PAYMENT_METHOD_VNPAY
-            && $this->payment_status === self::PAYMENT_PAID
-            && in_array($this->order_status, [
-                self::STATUS_PENDING,
-                self::STATUS_PROCESSING,
-            ], true);
+        return false;
     }
 
     public function isAutoExpiredVnpay(): bool
@@ -238,10 +247,6 @@ class Order extends Model
     {
         if ($this->canCustomerCancelDirectly()) {
             return 'direct';
-        }
-
-        if ($this->canCustomerRequestCancellation()) {
-            return 'request';
         }
 
         return 'none';

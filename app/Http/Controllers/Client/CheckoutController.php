@@ -1,7 +1,8 @@
 <?php
 
 namespace App\Http\Controllers\Client;
-
+use App\Mail\OrderPlacedMail;
+use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\Controller;
 use App\Models\Address;
 use App\Models\Cart;
@@ -115,15 +116,22 @@ class CheckoutController extends Controller
     }
     public function store(Request $request)
     {
+        $request->merge([
+            'phone' => $this->normalizeVietnamPhone($request->phone),
+        ]);
+
         $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
+            'phone' => $this->vietnamPhoneRules(),
             'address_id' => 'required|exists:addresses,id',
-            'note' => 'nullable|string|max:1000',
+            'customer_note' => 'nullable|string|max:1000',
             'payment_method' => 'required|in:cod,vnpay',
         ], [
             'address_id.required' => 'Vui lòng chọn địa chỉ nhận hàng.',
             'payment_method.required' => 'Vui lòng chọn phương thức thanh toán.',
+            'phone.required' => 'Vui lòng nhập số điện thoại.',
+            'phone.digits' => 'Số điện thoại phải gồm đúng 10 số.',
+            'phone.regex' => 'Số điện thoại phải là số di động Việt Nam hợp lệ.',
         ]);
 
         $user = Auth::user();
@@ -215,7 +223,7 @@ class CheckoutController extends Controller
                 'phone' => $request->phone,
                 'email' => $user->email ?? null,
                 'address' => $fullAddress,
-                'note' => $request->note, // chỉ lưu được nếu DB/orders có cột note
+                'customer_note' => $request->customer_note,
                 'payment_method' => $request->payment_method,
                 'payment_status' => $paymentStatus,
                 'order_status' => 'pending',
@@ -257,6 +265,8 @@ class CheckoutController extends Controller
 
                 DB::commit();
 
+                $this->sendOrderPlacedMail($order);
+
                 return redirect()
                     ->route('client.cart.index')
                     ->with('success', 'Đặt hàng thành công. Đơn hàng của bạn đang chờ xác nhận.');
@@ -264,7 +274,7 @@ class CheckoutController extends Controller
 
             DB::commit();
 
-            return redirect($this->createVnpayUrl($order));
+            return redirect()->away($this->createVnpayUrl($order));
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('Checkout store error: ' . $e->getMessage());
@@ -304,30 +314,71 @@ class CheckoutController extends Controller
             return redirect()->route('client.cart.index')->with('error', 'Không tìm thấy đơn hàng.');
         }
 
+        if (!$this->isValidVnpayAmount($order, $request->vnp_Amount)) {
+            Log::warning('VNPay return amount mismatch', [
+                'order_id' => $order->id,
+                'order_code' => $order->order_code,
+                'expected_amount' => ((int) $order->total_price) * 100,
+                'received_amount' => (int) ($request->vnp_Amount ?? 0),
+                'response_code' => $responseCode,
+                'transaction_status' => $transactionStatus,
+            ]);
+
+            DB::beginTransaction();
+
+            try {
+                $this->updateVnpayFailureState($order, '97', $transactionStatus);
+
+                DB::commit();
+
+                return redirect()
+                    ->route('client.cart.index')
+                    ->with('error', 'Số tiền thanh toán VNPay không khớp.');
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                Log::error('VNPay return amount mismatch process error: ' . $e->getMessage());
+
+                return redirect()
+                    ->route('client.cart.index')
+                    ->with('error', 'Phát hiện sai lệch số tiền nhưng xử lý đơn hàng gặp lỗi.');
+            }
+        }
+
         DB::beginTransaction();
 
         try {
+            $shouldSendMail = false;
+
             if ($responseCode === '00' && $transactionStatus === '00') {
                 if ($order->payment_status !== 'paid') {
                     $this->decreaseStockFromOrder($order);
                     $this->clearUserCartByOrder($order);
 
-                    $order->update([
-                        'payment_status' => 'paid',
-                        'order_status' => 'pending',
-                    ]);
+                    $order->update(array_merge(
+                        [
+                            'payment_status' => 'paid',
+                            'order_status'   => 'pending',
+                        ],
+                        $this->getVnpayPaymentMeta($request)
+                    ));
+
+                    $shouldSendMail = true;
                 }
 
                 DB::commit();
                 session()->forget('buy_now_checkout');
                 session()->forget('checkout_selected_items');
 
+                if ($shouldSendMail) {
+                    $this->sendOrderPlacedMail($order);
+                }
+
                 return redirect()
                     ->route('client.cart.index')
                     ->with('success', 'Thanh toán VNPay thành công.');
             }
 
-            $this->updateVnpayFailureState($order, $responseCode);
+            $this->updateVnpayFailureState($order, $responseCode, $transactionStatus);
 
             DB::commit();
 
@@ -380,24 +431,61 @@ class CheckoutController extends Controller
             ]);
         }
 
+        if (!$this->isValidVnpayAmount($order, $request->vnp_Amount)) {
+            Log::warning('VNPay IPN amount mismatch', [
+                'order_id' => $order->id,
+                'order_code' => $order->order_code,
+                'expected_amount' => ((int) $order->total_price) * 100,
+                'received_amount' => (int) ($request->vnp_Amount ?? 0),
+                'response_code' => $responseCode,
+                'transaction_status' => $transactionStatus,
+            ]);
+
+            DB::beginTransaction();
+
+            try {
+                $this->updateVnpayFailureState($order, '97', $transactionStatus);
+                DB::commit();
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                Log::error('VNPay IPN amount mismatch process error: ' . $e->getMessage());
+            }
+
+            return response()->json([
+                'RspCode' => '04',
+                'Message' => 'Invalid amount',
+            ]);
+        }
+
         DB::beginTransaction();
 
         try {
+            $shouldSendMail = false;
+
             if ($responseCode === '00' && $transactionStatus === '00') {
                 if ($order->payment_status !== 'paid') {
                     $this->decreaseStockFromOrder($order);
                     $this->clearUserCartByOrder($order);
 
-                    $order->update([
-                        'payment_status' => 'paid',
-                        'order_status' => 'pending',
-                    ]);
+                    $order->update(array_merge(
+                        [
+                            'payment_status' => 'paid',
+                            'order_status'   => 'pending',
+                        ],
+                        $this->getVnpayPaymentMeta($request)
+                    ));
+
+                    $shouldSendMail = true;
                 }
             } else {
-                $this->updateVnpayFailureState($order, $responseCode);
+                $this->updateVnpayFailureState($order, $responseCode, $transactionStatus);
             }
 
             DB::commit();
+
+            if ($shouldSendMail) {
+                $this->sendOrderPlacedMail($order);
+            }
 
             return response()->json([
                 'RspCode' => '00',
@@ -559,30 +647,6 @@ class CheckoutController extends Controller
             ->whereIn('id', $cartDetailIds)
             ->delete();
     }
-
-    protected function clearUserCartItemsByOrder(Order $order): void
-    {
-        $cart = Cart::where('id_user', $order->user_id)->first();
-
-        if (!$cart) {
-            return;
-        }
-
-        $variantIds = $order->details()
-            ->whereNotNull('variant_id')
-            ->pluck('variant_id')
-            ->map(fn ($id) => (int) $id)
-            ->values()
-            ->toArray();
-
-        if (empty($variantIds)) {
-            return;
-        }
-
-        CartDetail::where('id_cart', $cart->id)
-            ->whereIn('id_variant', $variantIds)
-            ->delete();
-    }
     protected function calculateShippingFromCart($cartItems, Address $address): int
     {
         if (!$address->ghn_district_id || !$address->ghn_ward_code) {
@@ -661,87 +725,119 @@ class CheckoutController extends Controller
             ->whereIn('id_variant', $variantIds)
             ->delete();
     }
-    protected function updateVnpayFailureState(Order $order, string $responseCode): void
+    protected function updateVnpayFailureState(Order $order, string $responseCode, ?string $transactionStatus = null): void
     {
         if ($order->payment_status === 'paid') {
             return;
         }
 
-        // Khách thoát / hủy ở cổng VNPay: giữ đơn ở trạng thái chờ để còn thanh toán lại hoặc hủy đơn
+        if ($order->payment_status !== 'pending') {
+            return;
+        }
+
+        $this->restoreVoucherForOrder($order);
+
+        if ($responseCode === '97') {
+            $order->update([
+                'order_status'                => 'pending',
+                'payment_status'              => 'failed',
+                'cancel_reason'               => 'Sai lệch số tiền VNPay trả về',
+                'payment_response_code'       => $responseCode,
+                'payment_transaction_status'  => $transactionStatus,
+            ]);
+
+            return;
+        }
+
         if ($responseCode === '24') {
             $order->update([
-                'order_status'   => 'pending',
-                'payment_status' => 'failed',
-                'cancel_reason'  => 'Khách hủy phiên thanh toán VNPay',
+                'order_status'                => 'pending',
+                'payment_status'              => 'cancelled',
+                'cancel_reason'               => 'Khách hủy phiên thanh toán VNPay',
+                'payment_response_code'       => $responseCode,
+                'payment_transaction_status'  => $transactionStatus,
             ]);
 
             return;
         }
 
-        // Hết hạn thanh toán: đóng đơn nhưng vẫn cho phép thanh toán lại theo rule expired
         if ($responseCode === '11') {
             $order->update([
-                'previous_status' => $order->order_status,
-                'order_status'    => 'cancelled',
-                'payment_status'  => 'expired',
-                'cancel_reason'   => 'Quá hạn thanh toán VNPay',
+                'previous_status'             => $order->order_status,
+                'order_status'                => 'cancelled',
+                'payment_status'              => 'expired',
+                'cancel_reason'               => 'Quá hạn thanh toán VNPay',
+                'payment_response_code'       => $responseCode,
+                'payment_transaction_status'  => $transactionStatus,
             ]);
 
             return;
         }
 
-        // Các lỗi thanh toán khác
         $order->update([
-            'order_status'   => 'pending',
-            'payment_status' => 'failed',
+            'order_status'                => 'pending',
+            'payment_status'              => 'failed',
+            'cancel_reason'               => 'Thanh toán VNPay thất bại',
+            'payment_response_code'       => $responseCode,
+            'payment_transaction_status'  => $transactionStatus,
         ]);
     }
     protected function createVnpayUrl(Order $order): string
     {
-        $vnpUrl = config('services.vnpay.url');
-        $vnpReturnUrl = config('services.vnpay.return_url');
-        $vnpTmnCode = config('services.vnpay.tmn_code');
-        $vnpHashSecret = config('services.vnpay.hash_secret');
+        $vnpUrl = trim((string) config('services.vnpay.url'));
+        $vnpReturnUrl = trim((string) config('services.vnpay.return_url'));
+        $vnpTmnCode = trim((string) config('services.vnpay.tmn_code'));
+        $vnpHashSecret = trim((string) config('services.vnpay.hash_secret'));
 
         $vnpTxnRef = $order->order_code;
         $vnpOrderInfo = 'Thanh toan don hang ' . $order->order_code;
         $vnpOrderType = 'billpayment';
-        $vnpAmount = ((int) $order->total_price) * 100;
+        $vnpAmount = (int) round((float) $order->total_price * 100);
         $vnpLocale = 'vn';
         $vnpCurrCode = 'VND';
-        $vnpIpAddr = request()->ip();
+        $vnpIpAddr = request()->ip() ?: '127.0.0.1';
         $vnpCreateDate = now()->format('YmdHis');
         $vnpExpireDate = now()->addMinutes(15)->format('YmdHis');
 
+        $this->saveVnpayRequestMeta($order, $vnpCreateDate, $vnpExpireDate);
+
         $inputData = [
-            'vnp_Version' => '2.1.0',
-            'vnp_TmnCode' => $vnpTmnCode,
-            'vnp_Amount' => $vnpAmount,
-            'vnp_Command' => 'pay',
-            'vnp_CreateDate' => $vnpCreateDate,
-            'vnp_ExpireDate' => $vnpExpireDate,
-            'vnp_CurrCode' => $vnpCurrCode,
-            'vnp_IpAddr' => $vnpIpAddr,
-            'vnp_Locale' => $vnpLocale,
-            'vnp_OrderInfo' => $vnpOrderInfo,
-            'vnp_OrderType' => $vnpOrderType,
-            'vnp_ReturnUrl' => $vnpReturnUrl,
-            'vnp_TxnRef' => $vnpTxnRef,
+            "vnp_Version"    => "2.1.0",
+            "vnp_TmnCode"    => $vnpTmnCode,
+            "vnp_Amount"     => $vnpAmount,
+            "vnp_Command"    => "pay",
+            "vnp_CreateDate" => $vnpCreateDate,
+            "vnp_CurrCode"   => $vnpCurrCode,
+            "vnp_IpAddr"     => $vnpIpAddr,
+            "vnp_Locale"     => $vnpLocale,
+            "vnp_OrderInfo"  => $vnpOrderInfo,
+            "vnp_OrderType"  => $vnpOrderType,
+            "vnp_ReturnUrl"  => $vnpReturnUrl,
+            "vnp_TxnRef"     => $vnpTxnRef,
+            "vnp_ExpireDate" => $vnpExpireDate,
         ];
 
         ksort($inputData);
 
-        $query = [];
+        $query = "";
+        $i = 0;
+        $hashdata = "";
+
         foreach ($inputData as $key => $value) {
-            $query[] = urlencode($key) . '=' . urlencode($value);
+            if ($i == 1) {
+                $hashdata .= '&' . urlencode($key) . "=" . urlencode($value);
+            } else {
+                $hashdata .= urlencode($key) . "=" . urlencode($value);
+                $i = 1;
+            }
+            $query .= urlencode($key) . "=" . urlencode($value) . '&';
         }
 
-        $queryString = implode('&', $query);
-        $vnpSecureHash = hash_hmac('sha512', $queryString, $vnpHashSecret);
+        $vnpSecureHash = hash_hmac('sha512', $hashdata, $vnpHashSecret);
+        $vnpUrl = $vnpUrl . "?" . $query . 'vnp_SecureHash=' . $vnpSecureHash;
 
-        return $vnpUrl . '?' . $queryString . '&vnp_SecureHash=' . $vnpSecureHash;
+        return $vnpUrl;
     }
-
     protected function generateOrderCode(): string
     {
         do {
@@ -805,7 +901,19 @@ class CheckoutController extends Controller
             'items' => $this->getCheckoutCartItems($cart),
         ];
     }
+    protected function normalizeVietnamPhone(?string $phone): string
+    {
+        return preg_replace('/\D+/', '', trim((string) $phone));
+    }
 
+    protected function vietnamPhoneRules(): array
+    {
+        return [
+            'required',
+            'digits:10',
+            'regex:/^0(3|5|7|8|9)\d{8}$/',
+        ];
+    }
     public function getProvinces()
     {
         $response = Http::withHeaders([
@@ -877,9 +985,13 @@ class CheckoutController extends Controller
 
     public function storeAddress(Request $request)
     {
+        $request->merge([
+            'phone' => $this->normalizeVietnamPhone($request->phone),
+        ]);
+
         $request->validate([
             'recipient_name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
+            'phone' => $this->vietnamPhoneRules(),
             'province' => 'required|string|max:255',
             'district' => 'required|string|max:255',
             'ward' => 'required|string|max:255',
@@ -887,6 +999,10 @@ class CheckoutController extends Controller
             'ghn_province_id' => 'required|integer',
             'ghn_district_id' => 'required|integer',
             'ghn_ward_code' => 'required|string|max:50',
+        ], [
+            'phone.required' => 'Vui lòng nhập số điện thoại.',
+            'phone.digits' => 'Số điện thoại phải gồm đúng 10 số.',
+            'phone.regex' => 'Số điện thoại phải là số di động Việt Nam hợp lệ.',
         ]);
 
         $user = Auth::user();
@@ -960,7 +1076,7 @@ class CheckoutController extends Controller
                     throw new \Exception('Sản phẩm "' . ($detail->product_name ?? 'N/A') . '" không đủ tồn kho để thanh toán lại.');
                 }
             }
-
+            $this->reserveVoucherForRepay($order);
             $order->update([
                 'previous_status' => $order->order_status,
                 'order_status'    => 'pending',
@@ -970,7 +1086,7 @@ class CheckoutController extends Controller
 
             DB::commit();
 
-            return redirect($this->createVnpayUrl($order));
+            return redirect()->away($this->createVnpayUrl($order));
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('Repay VNPay error: ' . $e->getMessage());
@@ -1114,10 +1230,90 @@ class CheckoutController extends Controller
     {
         return Order::where('user_id', $userId)
             ->where('voucher_id', $voucher->id)
-            ->whereNotIn('order_status', ['cancelled'])
+            ->where('order_status', '!=', 'cancelled')
+            ->whereNotIn('payment_status', ['failed', 'expired', 'cancelled'])
             ->count();
     }
+    protected function restoreVoucherForOrder(Order $order): void
+    {
+        if (!$order->voucher_id) {
+            return;
+        }
 
+        $voucher = Voucher::lockForUpdate()->find($order->voucher_id);
+
+        if (!$voucher) {
+            return;
+        }
+
+        $voucher->increment('quantity');
+    }
+    protected function isValidVnpayAmount(Order $order, $vnpAmount): bool
+    {
+        $expectedAmount = ((int) $order->total_price) * 100;
+        $receivedAmount = (int) ($vnpAmount ?? 0);
+
+        return $receivedAmount === $expectedAmount;
+    }
+    protected function reserveVoucherForRepay(Order $order): void
+    {
+        if (!$order->voucher_id) {
+            return;
+        }
+
+        $order->loadMissing('details');
+
+        $voucher = Voucher::lockForUpdate()->find($order->voucher_id);
+
+        if (!$voucher) {
+            throw new \Exception('Voucher của đơn hàng không còn tồn tại.');
+        }
+
+        $subtotal = (float) $order->details->sum(fn ($detail) => (float) $detail->total);
+        $currentUses = $this->getUserVoucherUsage($voucher, (int) $order->user_id);
+
+        if (!$voucher->isValid($subtotal, $currentUses, 1)) {
+            throw new \Exception('Voucher của đơn hàng không còn khả dụng để thanh toán lại.');
+        }
+
+        $voucher->decreaseQuantity();
+    }
+    protected function saveVnpayRequestMeta(Order $order, string $createDate, string $expireDate): void
+    {
+        $order->update([
+            'payment_request_date' => $createDate,
+            'payment_expire_date'  => $expireDate,
+        ]);
+    }
+    protected function getVnpayPaymentMeta(Request $request): array
+    {
+        return [
+            'payment_transaction_no'     => $request->vnp_TransactionNo,
+            'payment_bank_code'          => $request->vnp_BankCode,
+            'payment_response_code'      => $request->vnp_ResponseCode,
+            'payment_transaction_status' => $request->vnp_TransactionStatus,
+            'payment_pay_date'           => $request->vnp_PayDate,
+            'paid_at'                    => now(),
+        ];
+    }
+    protected function sendOrderPlacedMail(Order $order): void
+    {
+        if (empty($order->email)) {
+            return;
+        }
+
+        try {
+            Mail::to($order->email)->send(
+                new OrderPlacedMail($order->fresh('details'))
+            );
+        } catch (\Throwable $e) {
+            Log::error('Send order mail error: ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'order_code' => $order->order_code,
+                'email' => $order->email,
+            ]);
+        }
+    }
     public function applyVoucher(Request $request)
     {
         $request->validate([

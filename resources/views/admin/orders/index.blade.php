@@ -20,7 +20,6 @@
     <div class="container py-4">
         <h3 class="fs-4 fw-semibold mb-4">Tổng quan đơn hàng</h3>
 
-        {{-- Phần thống kê đơn hàng --}}
         <div class="row g-4 mb-5">
             @php
                 $statuses = [
@@ -30,6 +29,7 @@
                     ['count' => $orderDelivered, 'label' => 'Đã giao', 'icon' => 'box-seam', 'color' => 'success'],
                 ];
             @endphp
+
             @foreach ($statuses as $item)
                 <div class="col-md-3">
                     <div class="card border-0 shadow-sm rounded-4 p-3 d-flex flex-row align-items-center justify-content-between">
@@ -45,43 +45,45 @@
             @endforeach
         </div>
 
-        <!-- Tìm kiếm và lọc đơn hàng -->
-<form method="GET" action="{{ route('orders.index') }}" class="row g-2 mb-4 align-items-center">
-    <div class="col-md-2">
-        <input type="text" name="order_code" value="{{ request('order_code') }}" class="form-control" placeholder="Mã đơn hàng">
-    </div>
-    <div class="col-md-2">
-        <input type="text" name="customer" value="{{ request('customer') }}" class="form-control" placeholder="Khách hàng">
-    </div>
-    <div class="col-md-2">
-        <select name="payment_status" class="form-control">
-            <option value="">-- Trạng thái thanh toán --</option>
-            <option value="paid" {{ request('payment_status') == 'paid' ? 'selected' : '' }}>Đã thanh toán</option>
-            <option value="unpaid" {{ request('payment_status') == 'unpaid' ? 'selected' : '' }}>Chưa thanh toán</option>
-            <option value="failed" {{ request('payment_status') == 'failed' ? 'selected' : '' }}>Thanh toán lỗi</option>
-        </select>
-    </div>
-    <div class="col-md-2">
-        <select name="order_status" class="form-control">
-            <option value="">-- Trạng thái đơn hàng --</option>
-            <option value="pending" {{ request('order_status') == 'pending' ? 'selected' : '' }}>Đang chờ</option>
-            <option value="processing" {{ request('order_status') == 'processing' ? 'selected' : '' }}>Đang xử lý</option>
-            <option value="shipped" {{ request('order_status') == 'shipped' ? 'selected' : '' }}>Đã vận chuyển</option>
-            <option value="delivered" {{ request('order_status') == 'delivered' ? 'selected' : '' }}>Đã giao</option>
-            <option value="cancelled" {{ request('order_status') == 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
-            <option value="waiting_for_cancellation" {{ request('order_status') == 'waiting_for_cancellation' ? 'selected' : '' }}>Xin huỷ đơn hàng</option>
-        </select>
-    </div>
+        <form method="GET" action="{{ route('orders.index') }}" class="row g-2 mb-4 align-items-center">
+            <div class="col-md-2">
+                <input type="text" name="order_code" value="{{ request('order_code') }}" class="form-control" placeholder="Mã đơn hàng">
+            </div>
 
-    <!-- 2 nút nằm cạnh nhau trên cùng một hàng -->
-    <div class="col-md-4 d-flex gap-2">
-        <button type="submit" class="btn btn-primary flex-fill">Tìm kiếm</button>
+            <div class="col-md-2">
+                <input type="text" name="customer" value="{{ request('customer') }}" class="form-control" placeholder="Khách hàng">
+            </div>
 
-    </div>
-</form>
+            <div class="col-md-2">
+                <select name="payment_status" class="form-select">
+                    <option value="">-- Trạng thái thanh toán --</option>
+                    <option value="paid" {{ request('payment_status') == 'paid' ? 'selected' : '' }}>Đã thanh toán</option>
+                    <option value="unpaid" {{ request('payment_status') == 'unpaid' ? 'selected' : '' }}>Chưa thanh toán</option>
+                    <option value="pending" {{ request('payment_status') == 'pending' ? 'selected' : '' }}>Đang chờ thanh toán</option>
+                    <option value="failed" {{ request('payment_status') == 'failed' ? 'selected' : '' }}>Thanh toán lỗi</option>
+                    <option value="cancelled" {{ request('payment_status') == 'cancelled' ? 'selected' : '' }}>Thanh toán đã hủy</option>
+                    <option value="expired" {{ request('payment_status') == 'expired' ? 'selected' : '' }}>Thanh toán hết hạn</option>
+                </select>
+            </div>
 
+            <div class="col-md-2">
+                <select name="order_status" class="form-select">
+                    <option value="">-- Trạng thái đơn hàng --</option>
+                    <option value="pending" {{ request('order_status') == 'pending' ? 'selected' : '' }}>Chờ xử lý</option>
+                    <option value="processing" {{ request('order_status') == 'processing' ? 'selected' : '' }}>Đang xử lý</option>
+                    <option value="shipped" {{ request('order_status') == 'shipped' ? 'selected' : '' }}>Đang giao hàng</option>
+                    <option value="delivered" {{ request('order_status') == 'delivered' ? 'selected' : '' }}>Đã giao</option>
+                    <option value="cancelled" {{ request('order_status') == 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
+                    <option value="waiting_for_cancellation" {{ request('order_status') == 'waiting_for_cancellation' ? 'selected' : '' }}>Chờ duyệt hủy</option>
+                </select>
+            </div>
 
-        {{-- Bảng đơn hàng --}}
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill">Tìm kiếm</button>
+                <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary">Đặt lại</a>
+            </div>
+        </form>
+
         <div class="card border-0 shadow-sm rounded-4">
             <div class="table-responsive p-3">
                 <table class="table table-hover table-striped align-middle text-nowrap rounded">
@@ -97,74 +99,79 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($orders as $order)
+                        @forelse ($orders as $order)
+                            @php
+                                $paymentLabels = [
+                                    'paid' => ['label' => 'Đã thanh toán', 'color' => 'bg-success'],
+                                    'unpaid' => ['label' => 'Chưa thanh toán', 'color' => 'bg-secondary'],
+                                    'pending' => ['label' => 'Đang chờ thanh toán', 'color' => 'bg-warning text-dark'],
+                                    'failed' => ['label' => 'Thanh toán thất bại', 'color' => 'bg-danger'],
+                                    'cancelled' => ['label' => 'Thanh toán đã hủy', 'color' => 'bg-dark'],
+                                    'expired' => ['label' => 'Thanh toán hết hạn', 'color' => 'bg-secondary'],
+                                ];
+
+                                $paymentInfo = $paymentLabels[$order->payment_status] ?? ['label' => ucfirst($order->payment_status), 'color' => 'bg-light text-dark'];
+
+                                $statusLabels = [
+                                    'pending' => ['label' => 'Chờ xử lý', 'color' => 'bg-warning text-dark'],
+                                    'processing' => ['label' => 'Đang xử lý', 'color' => 'bg-info'],
+                                    'shipped' => ['label' => 'Đang giao hàng', 'color' => 'bg-primary'],
+                                    'delivered' => ['label' => 'Đã giao', 'color' => 'bg-success'],
+                                    'cancelled' => ['label' => 'Đã hủy', 'color' => 'bg-danger'],
+                                    'waiting_for_cancellation' => ['label' => 'Chờ duyệt hủy', 'color' => 'bg-dark'],
+                                ];
+
+                                $statusInfo = $statusLabels[$order->order_status] ?? ['label' => ucfirst($order->order_status), 'color' => 'bg-light text-dark'];
+                            @endphp
+
                             <tr class="text-center">
                                 <td>#{{ $order->order_code }}</td>
                                 <td>{{ $order->created_at->format('d/m/Y') }}</td>
-                                <td class="text-danger fw-semibold">{{ $order->user->email }}</td>
+                                <td class="text-danger fw-semibold">{{ $order->user->email ?? $order->email ?? 'N/A' }}</td>
                                 <td class="fw-medium">{{ number_format($order->total_price, 0, ',', '.') }}₫</td>
 
                                 <td>
-                                    @php
-                                        $badgeClass = match ($order->payment_status) {
-                                            'paid' => 'bg-success',
-                                            'unpaid' => 'bg-secondary',
-                                            default => 'bg-light text-dark',
-                                        };
-                                    @endphp
-                                    <span class="badge rounded-pill px-3 py-2 {{ $badgeClass }}">
-                                     {{
-                                        ucfirst($order->payment_status) == 'Paid' ? 'Đã thanh toán' :
-                                        (ucfirst($order->payment_status) == 'Unpaid' ? 'Chưa thanh toán' : 'Thanh toán thất bại')
-                                    }}
-
+                                    <span class="badge rounded-pill px-3 py-2 {{ $paymentInfo['color'] }}">
+                                        {{ $paymentInfo['label'] }}
                                     </span>
                                 </td>
 
                                 <td>
-                                    @php
-                                        $status = ucfirst($order->order_status);
-                                        $statusLabels = [
-                                            'Pending' => ['label' => 'Đang chờ', 'color' => 'bg-warning'],
-                                            'Processing' => ['label' => 'Đang xử lý', 'color' => 'bg-info'],
-                                            'Shipped' => ['label' => 'Đã vận chuyển', 'color' => 'bg-primary'],
-                                            'Delivered' => ['label' => 'Đã giao', 'color' => 'bg-success'],
-                                            'Cancelled' => ['label' => 'Đã huỷ', 'color' => 'bg-danger'],
-                                            'Waiting_for_cancellation' => ['label' => 'Xin huỷ đơn hàng', 'color' => 'bg-dark'],
-
-                                        ];
-                                    @endphp
-
-                                    @if(isset($statusLabels[$status]))
-                                        <span class="badge rounded-pill px-3 py-2 {{ $statusLabels[$status]['color'] }}">
-                                            {{ $statusLabels[$status]['label'] }}
-                                        </span>
-                                    @else
-                                        <span class="badge rounded-pill px-3 py-2 bg-light text-dark">
-                                            {{ $status }}
-                                        </span>
-                                    @endif
+                                    <span class="badge rounded-pill px-3 py-2 {{ $statusInfo['color'] }}">
+                                        {{ $statusInfo['label'] }}
+                                    </span>
                                 </td>
 
                                 <td>
                                     <a href="{{ route('orders.show', $order->id) }}" class="btn btn-sm btn-outline-primary me-1" title="Xem chi tiết">
                                         <i class="bi bi-eye-fill"></i>
                                     </a>
-                                    <button
-                                        class="btn btn-sm btn-outline-warning me-1 btn-edit-order"
-                                        data-id="{{ $order->id }}"
-                                        data-status="{{ $order->order_status }}"
-                                        title="Chỉnh sửa">
-                                        <i class="bi bi-pencil-fill"></i>
-                                    </button>
 
-                                    <button onclick="showDeleteModal({{ $order->id }})" class="btn btn-sm btn-outline-danger" title="Xóa">
-                                        <i class="bi bi-trash-fill"></i>
-                                    </button>
+                                    @if (!in_array($order->order_status, ['delivered', 'cancelled'], true))
+                                        <button
+                                            class="btn btn-sm btn-outline-warning me-1 btn-edit-order"
+                                            data-id="{{ $order->id }}"
+                                            data-status="{{ $order->order_status }}"
+                                            data-previous-status="{{ $order->previous_status }}"
+                                            data-payment-method="{{ $order->payment_method }}"
+                                            data-payment-status="{{ $order->payment_status }}"
+                                            title="Chỉnh sửa">
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </button>
+                                    @endif
 
+                                    @if ($order->order_status === 'cancelled')
+                                        <button onclick="showDeleteModal({{ $order->id }})" class="btn btn-sm btn-outline-danger" title="Xóa">
+                                            <i class="bi bi-trash-fill"></i>
+                                        </button>
+                                    @endif
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="7" class="text-center">Không có đơn hàng nào</td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -173,59 +180,104 @@
         {{ $orders->withQueryString()->links() }}
     </div>
 
-   @push('scripts')
-<script>
-    document.querySelectorAll('.btn-edit-order').forEach(button => {
-        button.addEventListener('click', function () {
-            let orderId = this.dataset.id;
-            let orderStatus = this.dataset.status;
+    @push('scripts')
+    <script>
+        document.querySelectorAll('.btn-edit-order').forEach(button => {
+            button.addEventListener('click', function () {
+                const orderId = this.dataset.id;
+                const orderStatus = this.dataset.status;
+                const previousStatus = this.dataset.previousStatus || 'processing';
+                const paymentMethod = this.dataset.paymentMethod;
+                const paymentStatus = this.dataset.paymentStatus;
+                const isPaidVnpay = paymentMethod === 'vnpay' && paymentStatus === 'paid';
+                const form = document.getElementById('formEditOrder');
+                const select = document.getElementById('orderStatusSelect');
+                const note = document.getElementById('orderStatusNote');
+                const statusHelp = document.getElementById('statusHelp');
 
-            // Cập nhật action của form
-            document.getElementById('formEditOrder').action = '/orders/' + orderId + '/update-status';
+                form.action = '/orders/' + orderId + '/update-status';
+                note.value = '';
 
-            // Set trạng thái hiện tại
-            document.getElementById('orderStatusSelect').value = orderStatus;
+                // reset options
+                Array.from(select.options).forEach(option => option.hidden = false);
+                statusHelp.innerText = '';
 
-            // Mở modal
-            new bootstrap.Modal(document.getElementById('modalEditOrder')).show();
+                if (isPaidVnpay) {
+                    const cancelOption = Array.from(select.options).find(option => option.value === 'cancelled');
+                    if (cancelOption) {
+                        cancelOption.hidden = true;
+                    }
+                }
+
+                if (orderStatus === 'waiting_for_cancellation') {
+                    // dữ liệu cũ: nếu là VNPay đã thanh toán thì chỉ được trả về trạng thái trước đó
+                    Array.from(select.options).forEach(option => option.hidden = true);
+
+                    const allowed = isPaidVnpay ? [previousStatus] : ['cancelled', previousStatus];
+                    Array.from(select.options).forEach(option => {
+                        if (allowed.includes(option.value)) {
+                            option.hidden = false;
+                        }
+                    });
+
+                    select.value = isPaidVnpay ? previousStatus : 'cancelled';
+                    statusHelp.innerText = isPaidVnpay
+                        ? 'Đơn VNPay đã thanh toán không thể hủy vì hệ thống không hỗ trợ hoàn tiền. Bạn chỉ có thể trả đơn về trạng thái trước đó.'
+                        : 'Đơn đang chờ duyệt hủy. Bạn có thể duyệt hủy hoặc trả về trạng thái trước đó.';
+                } else {
+                    select.value = orderStatus;
+
+                    if (isPaidVnpay) {
+                        statusHelp.innerText = 'Đơn VNPay đã thanh toán không thể chuyển sang trạng thái đã hủy vì hệ thống không hỗ trợ hoàn tiền.';
+                    }
+                }
+
+                new bootstrap.Modal(document.getElementById('modalEditOrder')).show();
+            });
         });
-    });
-</script>
-@endpush
 
+        function showDeleteModal(orderId) {
+            const form = document.getElementById('formDeleteOrder');
+            form.action = '/orders/' + orderId;
+            new bootstrap.Modal(document.getElementById('modalDeleteOrder')).show();
+        }
+    </script>
+    @endpush
 
-   {{-- Modal: Chỉnh sửa trạng thái đơn hàng --}}
-<div class="modal fade" id="modalEditOrder" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <form id="formEditOrder" method="POST">
-            @csrf
-            @method('POST')
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Cập nhật trạng thái đơn hàng</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <select id="orderStatusSelect" name="order_status" class="form-select" required>
-                        <option value="pending">Đang chờ</option>
-                        <option value="processing">Đang xử lý</option>
-                        <option value="shipped">Đã vận chuyển</option>
-                        <option value="delivered">Đã giao</option>
-                        <option value="cancelled">Đã huỷ</option>
-                    </select>
+    <div class="modal fade" id="modalEditOrder" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <form id="formEditOrder" method="POST">
+                @csrf
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Cập nhật trạng thái đơn hàng</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
 
+                    <div class="modal-body">
+                        <select id="orderStatusSelect" name="order_status" class="form-select mb-2" required>
+                            <option value="pending">Chờ xử lý</option>
+                            <option value="processing">Đang xử lý</option>
+                            <option value="shipped">Đang giao hàng</option>
+                            <option value="delivered">Đã giao</option>
+                            <option value="cancelled">Đã hủy</option>
+                        </select>
+
+                        <small id="statusHelp" class="text-muted d-block mb-3"></small>
+
+                        <label for="orderStatusNote" class="form-label">Ghi chú (không bắt buộc)</label>
+                        <textarea id="orderStatusNote" name="note" rows="3" class="form-control" placeholder="Nhập ghi chú nếu cần..."></textarea>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Cập nhật</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Cập nhật</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
 
-
-    {{-- Modal: Xóa đơn hàng --}}
     <div class="modal fade" id="modalDeleteOrder" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <form id="formDeleteOrder" method="POST">
@@ -248,10 +300,3 @@
         </div>
     </div>
 @endsection
-<script>
-function showDeleteModal(orderId) {
-    let form = document.getElementById('formDeleteOrder');
-    form.action = '/orders/' + orderId;
-    new bootstrap.Modal(document.getElementById('modalDeleteOrder')).show();
-}
-</script>

@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
@@ -26,10 +25,10 @@ use App\Http\Controllers\Client\ClientOrderController;
 use App\Http\Controllers\Client\AddressController;
 use App\Http\Controllers\Client\CategoryController;
 
+
 // =======================================================
 // CLIENT
 // =======================================================
-
 // Redirect
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/admin', fn () => redirect('/admin/dashboard'));
