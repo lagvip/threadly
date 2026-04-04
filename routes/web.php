@@ -36,7 +36,7 @@ Route::get('/admin', fn () => redirect('/admin/dashboard'));
 
 // Client giao diện
 Route::get('/san-pham/{id}', [ProductController::class, 'show'])->name('client.product.detail');
-Route::get('/category/{id}', [CategoryController::class, 'show'])->name('client.category');
+Route::get('/category/{id}', [CategoryController::class, 'show'])->name('client.category.show');
 
 // Client cần đăng nhập - giỏ hàng
 Route::middleware('auth')->group(function () {

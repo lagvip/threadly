@@ -8,45 +8,46 @@
         <div class="row">
             <!-- filter  -->
             <div class="col-lg-3">
-                <div class="left-box wow fadeInUp">
-                    <div class="shop-left-sidebar">
-                        <div class="accordion custom-accordion" id="accordionExample">
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="headingOne">
-                                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                                        data-bs-target="#collapseOne">
-                                        <span>Categories</span>
-                                    </button>
-                                </h2>
-                                <div id="collapseOne" class="accordion-collapse collapse show">
-                                    <div class="accordion-body">
-                                        <div class="form-floating theme-form-floating-2 search-box">
-                                            <input type="search" class="form-control" id="search"
-                                                placeholder="Search ..">
-                                            <label for="search">Search</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                <div class="shop-left-sidebar">
+                    <form method="GET" action="{{ route('client.category.show', $category->id) }}">
 
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="headingThree">
-                                    <button class="accordion-button collapsed" type="button"
-                                        data-bs-toggle="collapse" data-bs-target="#collapseThree">
-                                        <span>Price</span>
-                                    </button>
-                                </h2>
-                                <div id="collapseThree" class="accordion-collapse collapse show">
-                                    <div class="accordion-body">
-                                        <div class="range-slider">
-                                            <input type="text" class="js-range-slider" value="1">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        <!-- GIÁ -->
+                        <h5>Khoảng giá</h5>
 
+                        <input type="range" name="min_price"
+                            min="0" max="10000000" step="200000"
+                            value="{{ request('min_price', 0) }}" id="minPrice">
+
+                        <input type="range" name="max_price"
+                            min="0" max="10000000" step="200000"
+                            value="{{ request('max_price', 10000000) }}" id="maxPrice">
+
+                        <p>
+                            <span id="minPriceValue"></span> -
+                            <span id="maxPriceValue"></span>
+                        </p>
+
+                        <!-- RATING -->
+                        <h5 class="mt-3">Đánh giá</h5>
+
+                        @for($i = 5; $i >= 1; $i--)
+                        <div>
+                            <input type="radio" name="rating" value="{{ $i }}"
+                                {{ request('rating') == $i ? 'checked' : '' }}>
+                            {{ $i }} ⭐ trở lên
                         </div>
-                    </div>
+                        @endfor
+                        <div class="d-flex gap-2 mt-2">
+                            <button class="btn btn-solid w-100">
+                                Lọc
+                            </button>
+
+                            <a href="{{ route('client.category.show', $category->id) }}"
+                                class="btn btn-outline w-100">
+                                Xóa lọc
+                            </a>
+                        </div>
+                    </form>
                 </div>
             </div>
             <!-- end filter -->
@@ -56,6 +57,13 @@
                     @foreach($products as $product)
                     @php
                     $variant = $product->variants->first();
+                    $reviews = $product->reviews;
+
+                    $reviewCount = $reviews->count();
+
+                    $averageRating = $reviewCount > 0
+                    ? round($reviews->avg('rating'), 1)
+                    : 0;
                     @endphp
                     <div class="col-lg-3 col-md-4 col-6">
                         <div class="product-box product-white-bg wow fadeIn">
@@ -89,6 +97,10 @@
                                 <a href="{{ route('client.product.detail', $product->id) }}">
                                     <h6 class="name">{{ $product->name }}</h6>
                                 </a>
+                                <h6 class="price theme-color">
+                                    {{ number_format($averageRating, 1) }}
+                                    <i data-feather="star"></i>
+                                </h6>
 
                                 <h6 class="sold weight text-content fw-normal">
                                     Tồn kho: {{ $variant->quantity ?? 0 }}
@@ -126,9 +138,33 @@
                     @endforeach
                     @endif
                 </div>
-                {{ $products->links() }}
+                <div class="d-flex justify-content-center mt-4">
+                    {{ $products->appends(request()->query())->links() }}
+                </div>
+
             </div>
         </div>
     </div>
 </section>
+<script>
+    const minInput = document.getElementById('minPrice');
+    const maxInput = document.getElementById('maxPrice');
+
+    const minText = document.getElementById('minPriceValue');
+    const maxText = document.getElementById('maxPriceValue');
+
+    function formatMoney(value) {
+        return new Intl.NumberFormat('vi-VN').format(value) + ' đ';
+    }
+
+    function updatePrice() {
+        minText.innerText = formatMoney(minInput.value);
+        maxText.innerText = formatMoney(maxInput.value);
+    }
+
+    minInput.addEventListener('input', updatePrice);
+    maxInput.addEventListener('input', updatePrice);
+
+    updatePrice();
+</script>
 @endsection
