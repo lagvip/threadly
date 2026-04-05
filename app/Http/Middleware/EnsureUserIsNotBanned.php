@@ -7,16 +7,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
-class RedirectIfAuthenticated
+class EnsureUserIsNotBanned
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
-    public function handle(Request $request, Closure $next, string ...$guards): Response
+    public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check() && $request->isMethod('get')) {
+        if (Auth::check()) {
             $user = Auth::user();
 
             if ((int)($user->status ?? 1) === 0) {
@@ -37,12 +32,6 @@ class RedirectIfAuthenticated
                             : 'Tài khoản của bạn đã bị khóa.',
                     ]);
             }
-
-            if ($user->isAdmin() || $user->isManager()) {
-                return redirect()->route('admin.homeAdmin');
-            }
-
-            return redirect()->route('home');
         }
 
         return $next($request);

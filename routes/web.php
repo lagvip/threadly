@@ -295,6 +295,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/trash', [UserController::class, 'trash'])->name('trash');
             Route::get('/restore/{id}', [UserController::class, 'restore'])->name('restore');
             Route::delete('/force-delete/{id}', [UserController::class, 'forceDelete'])->name('forceDelete');
+            Route::patch('/{id}/ban', [UserController::class, 'ban'])->name('ban');
+            Route::patch('/{id}/unban', [UserController::class, 'unban'])->name('unban');
         });
 
         // ROLE

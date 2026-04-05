@@ -26,4 +26,12 @@ class Role extends Model
         return $this->belongsToMany(User::class, 'role_users', 'role_id', 'user_id')
             ->withTimestamps();
     }
+
+    // Lấy cả user đã soft delete để check xóa role cho chặt
+    public function usersWithTrashed()
+    {
+        return $this->belongsToMany(User::class, 'role_users', 'role_id', 'user_id')
+            ->withTimestamps()
+            ->withTrashed();
+    }
 }

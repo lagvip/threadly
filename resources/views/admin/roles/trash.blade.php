@@ -24,6 +24,7 @@
                             <th>ID</th>
                             <th>Tên role</th>
                             <th>Slug</th>
+                            <th>Số user</th>
                             <th>Ngày xoá</th>
                             <th>Thao tác</th>
                         </tr>
@@ -34,6 +35,7 @@
                                 <td>{{ $role->id }}</td>
                                 <td>{{ $role->name }}</td>
                                 <td>{{ $role->slug }}</td>
+                                <td>{{ $role->users_count ?? 0 }}</td>
                                 <td>{{ $role->deleted_at }}</td>
                                 <td class="d-flex gap-2">
                                     <a href="{{ route('roles.restore', $role->id) }}"
@@ -42,19 +44,28 @@
                                         Khôi phục
                                     </a>
 
-                                    <form action="{{ route('roles.forceDelete', $role->id) }}" method="POST"
-                                          onsubmit="return confirm('Xóa vĩnh viễn role này?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-danger btn-sm">
+                                    @if(($role->users_count ?? 0) == 0)
+                                        <form action="{{ route('roles.forceDelete', $role->id) }}" method="POST"
+                                              onsubmit="return confirm('Xóa vĩnh viễn role này?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                Xóa vĩnh viễn
+                                            </button>
+                                        </form>
+                                    @else
+                                        <button type="button"
+                                                class="btn btn-secondary btn-sm"
+                                                disabled
+                                                title="Role còn user nên không thể xóa vĩnh viễn">
                                             Xóa vĩnh viễn
                                         </button>
-                                    </form>
+                                    @endif
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center">Không có role nào trong thùng rác</td>
+                                <td colspan="6" class="text-center">Không có role nào trong thùng rác</td>
                             </tr>
                         @endforelse
                     </tbody>

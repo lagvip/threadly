@@ -264,19 +264,19 @@ class Order extends Model
 
     public function getPendingReviewCountAttribute(): int
     {
-        $productIds = $this->relationLoaded('details')
-            ? $this->details->pluck('product_id')->filter()->unique()->values()
-            : $this->details()->pluck('product_id')->filter()->unique()->values();
+        $detailIds = $this->relationLoaded('details')
+            ? $this->details->pluck('id')->filter()->values()
+            : $this->details()->pluck('id')->filter()->values();
 
-        if ($productIds->isEmpty()) {
+        if ($detailIds->isEmpty()) {
             return 0;
         }
 
-        $reviewedIds = $this->relationLoaded('reviews')
-            ? $this->reviews->pluck('product_id')->filter()->unique()->values()
-            : $this->reviews()->pluck('product_id')->filter()->unique()->values();
+        $reviewedDetailIds = $this->relationLoaded('reviews')
+            ? $this->reviews->pluck('order_detail_id')->filter()->values()
+            : $this->reviews()->pluck('order_detail_id')->filter()->values();
 
-        return $productIds->diff($reviewedIds)->count();
+        return $detailIds->diff($reviewedDetailIds)->count();
     }
 
     public function getHasPendingReviewAttribute(): bool

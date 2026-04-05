@@ -13,7 +13,7 @@
     @include('client.partials.footer')
 
     @include('client.partials.ai-chat-widget')
-    
+
     @include('client.partials.scripts')
 
     @stack('scripts')
