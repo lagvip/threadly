@@ -185,7 +185,7 @@
                 $productImage = optional($item->product)->image_primary;
                 $image = $variantImage ?: $productImage;
                 $imageUrl = $image ? asset('storage/' . $image) : null;
-                $itemReview = $order->reviews->firstWhere('product_id', $item->product_id);
+                $itemReview = $order->reviews->firstWhere('order_detail_id', $item->id);
             @endphp
 
             <div class="d-flex gap-3 py-3 {{ !$loop->last ? 'border-bottom' : '' }}">
@@ -260,7 +260,7 @@
                     $existingReview = $item->existing_review;
                     $image = optional($item->variant)->image ?: optional($item->product)->image_primary;
                     $imageUrl = $image ? asset('storage/' . $image) : null;
-                    $isCurrentForm = (string) old('review_product_id') === (string) $item->product_id;
+                    $isCurrentForm = (string) old('review_detail_id') === (string) $item->id;
                 @endphp
 
                 <div class="review-item-card {{ !$loop->last ? 'mb-3' : '' }}">
@@ -295,9 +295,9 @@
                         </div>
                     </div>
 
-                    <form action="{{ route('client.orders.reviews.submit', ['id' => $order->id, 'productId' => $item->product_id]) }}" method="POST" class="mt-3">
+                    <form action="{{ route('client.orders.reviews.submit', ['id' => $order->id, 'detailId' => $item->id]) }}" method="POST" class="mt-3">
                         @csrf
-                        <input type="hidden" name="review_product_id" value="{{ $item->product_id }}">
+                        <input type="hidden" name="review_detail_id" value="{{ $item->id }}">
 
                         <div class="row g-3">
                             <div class="col-md-3">
@@ -410,3 +410,4 @@
     </div>
 </div>
 @endsection
+    

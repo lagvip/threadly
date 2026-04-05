@@ -1,30 +1,30 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AuthController;
-use App\Http\Controllers\Admin\BannerController;
-use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\ColorController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\SizeController;
+use App\Http\Controllers\Admin\VoucherController;
+use App\Http\Controllers\Admin\BrandController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\OrderDetailController;
-use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\RoleController;
-use App\Http\Controllers\Admin\SizeController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\VoucherController;
-use App\Http\Controllers\Auth\GoogleController;
-use App\Http\Controllers\Client\AccountController;
-use App\Http\Controllers\Client\AddressController;
-use App\Http\Controllers\Client\CartController;
-use App\Http\Controllers\Client\CategoryController;
-use App\Http\Controllers\Client\ChatbotController;
-use App\Http\Controllers\Client\CheckoutController;
-use App\Http\Controllers\Client\ClientOrderController;
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\ProductController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Client\CartController;
+use App\Http\Controllers\Client\CheckoutController;
+use App\Http\Controllers\Client\AccountController;
+use App\Http\Controllers\Client\ClientOrderController;
+use App\Http\Controllers\Client\AddressController;
+use App\Http\Controllers\Client\CategoryController;
+use App\Http\Controllers\Client\ChatbotController;
 
 // =======================================================
 // CLIENT
@@ -75,9 +75,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [ClientOrderController::class, 'index'])->name('index');
         Route::get('/{id}', [ClientOrderController::class, 'show'])->name('show');
         Route::post('/{id}/cancel', [ClientOrderController::class, 'cancel'])->name('cancel');
-        Route::post('/{id}/reviews/{productId}', [ClientOrderController::class, 'submitReview'])
+        Route::post('/{id}/reviews/{detailId}', [ClientOrderController::class, 'submitReview'])
             ->whereNumber('id')
-            ->whereNumber('productId')
+            ->whereNumber('detailId')
             ->name('reviews.submit');
     });
 
@@ -89,7 +89,11 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{id}', [AddressController::class, 'destroy'])->name('destroy');
         Route::post('/{id}/default', [AddressController::class, 'setDefault'])->name('default');
     });
-
+    // Trợ lý AI
+        Route::prefix('tro-ly-ai')->name('client.ai.')->group(function () {
+        Route::get('/', [ChatbotController::class, 'index'])->name('index');
+        Route::post('/hoi', [ChatbotController::class, 'ask'])->name('ask');
+    });
 });
 
 // VNPay callback routes: để ngoài auth
@@ -260,14 +264,13 @@ Route::middleware(['auth'])->group(function () {
         // REVIEW
         Route::prefix('reviews')->name('reviews.')->group(function () {
             Route::get('/', [ReviewController::class, 'index'])->name('index');
+            Route::get('/trash', [ReviewController::class, 'trash'])->name('trash');
             Route::get('/{review}/edit', [ReviewController::class, 'edit'])->name('edit');
             Route::put('/{review}', [ReviewController::class, 'update'])->name('update');
+            Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
+            Route::get('/restore/{id}', [ReviewController::class, 'restore'])->name('restore');
+            Route::post('/bulk-restore', [ReviewController::class, 'bulkRestore'])->name('bulkRestore');
         });
-        // Trợ lý AI
-        Route::prefix('tro-ly-ai')->name('client.ai.')->group(function () {
-        Route::get('/', [ChatbotController::class, 'index'])->name('index');
-        Route::post('/hoi', [ChatbotController::class, 'ask'])->name('ask');
-    });
     });
 
     // =======================================================
@@ -341,7 +344,7 @@ Route::middleware(['auth'])->group(function () {
         });
         // REVIEW - FORCE DELETE
          Route::prefix('reviews')->name('reviews.')->group(function () {
-            Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
+            Route::get('/force-delete/{id}', [ReviewController::class, 'forceDelete'])->name('forceDelete');
         });
         // SIZE - FORCE DELETE
         Route::prefix('listSize')->name('listSize.')->group(function () {
