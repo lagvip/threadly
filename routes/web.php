@@ -25,7 +25,6 @@ use App\Http\Controllers\Client\ClientOrderController;
 use App\Http\Controllers\Client\AddressController;
 use App\Http\Controllers\Client\CategoryController;
 
-
 // =======================================================
 // CLIENT
 // =======================================================
@@ -89,6 +88,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{id}', [AddressController::class, 'destroy'])->name('destroy');
         Route::post('/{id}/default', [AddressController::class, 'setDefault'])->name('default');
     });
+
 });
 
 // VNPay callback routes: để ngoài auth
@@ -262,6 +262,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/{review}/edit', [ReviewController::class, 'edit'])->name('edit');
             Route::put('/{review}', [ReviewController::class, 'update'])->name('update');
         });
+
     });
 
     // =======================================================

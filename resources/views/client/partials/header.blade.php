@@ -41,408 +41,62 @@
                                     </div>
                                     <div class="offcanvas-body">
                                         <ul class="navbar-nav">
-                                            <li class="nav-item dropdown dropdown-mega">
-                                                <a class="nav-link dropdown-toggle ps-xl-2 ps-0"
-                                                    href="javascript:void(0)" data-bs-toggle="dropdown">Trang chủ</a>
-
-                                                <ul class="dropdown-menu">
-                                                    <li>
-                                                        <a class="dropdown-item" href="index.html">Cửa hàng Kart</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="index-2.html">Cửa hàng bánh kẹo</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="index-3.html">Thực phẩm hữu cơ</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="index-4.html">Siêu cửa hàng</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="index-5.html">Cửa hàng cổ điển</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="index-6.html">Nội thất</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="index-7.html">Tập trung tìm kiếm</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="index-8.html">Tập trung danh mục</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="index-9.html">Thời trang</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="index-10.html">Sách</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="index-11.html">Kỹ thuật số</a>
-                                                    </li>
-                                                </ul>
+                                            <li class="nav-item">
+                                                <a class="nav-link ps-xl-2 ps-0" href="{{ route('home') }}">Trang chủ</a>
                                             </li>
 
-                                            <li class="nav-item dropdown">
-                                                <a class="nav-link dropdown-toggle" href="javascript:void(0)"
-                                                    data-bs-toggle="dropdown">Cửa hàng</a>
+                                            @php
+                                                $renderHeaderCategoryHtml = function ($category, $level = 0) use (&$renderHeaderCategoryHtml) {
+                                                    $children = $category->childrenRecursive ?? collect();
+                                                    $hasChildren = $children->count() > 0;
 
-                                                <ul class="dropdown-menu">
-                                                    <li>
-                                                        <a class="dropdown-item"
-                                                            href="shop-category-slider.html">Danh mục dạng trượt</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="shop-category.html">Danh mục có thanh bên</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="shop-banner.html">Banner cửa hàng</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="shop-left-sidebar.html">Thanh bên trái</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="shop-list.html">Danh sách sản phẩm</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="shop-right-sidebar.html">Thanh bên phải</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="shop-top-filter.html">Bộ lọc phía trên</a>
-                                                    </li>
-                                                </ul>
-                                            </li>
+                                                    $url = route('client.category', $category->id);
+                                                    $name = e($category->name);
 
-                                            <li class="nav-item dropdown">
-                                                <a class="nav-link dropdown-toggle" href="javascript:void(0)"
-                                                    data-bs-toggle="dropdown">Sản phẩm</a>
+                                                    if ($level === 0) {
+                                                        $liClass = $hasChildren ? 'nav-item dropdown' : 'nav-item';
+                                                        $aClass = 'nav-link';
+                                                        $toggle = $hasChildren ? ' data-bs-toggle="dropdown"' : '';
 
-                                                <div class="dropdown-menu dropdown-menu-3 dropdown-menu-2">
-                                                    <div class="row">
-                                                        <div class="col-xl-3">
-                                                            <div class="dropdown-column m-0">
-                                                                <h5 class="dropdown-header">
-                                                                    Trang sản phẩm </h5>
-                                                                <a class="dropdown-item"
-                                                                    href="product-left-thumbnail.html">Ảnh thu nhỏ sản phẩm</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-4-image.html">Hình ảnh sản phẩm</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-slider.html">Thanh trượt sản phẩm</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-sticky.html">Sản phẩm cố định</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-accordion.html">Accordion sản phẩm</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-circle.html">Tab sản phẩm</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-digital.html">Sản phẩm kỹ thuật số</a>
+                                                        $html = '<li class="' . $liClass . '">';
+                                                        $html .= '<a class="' . $aClass . '" href="' . $url . '"' . $toggle . '>' . $name . '</a>';
 
-                                                                <h5 class="custom-mt dropdown-header">Tính năng sản phẩm
-                                                                </h5>
-                                                                <a class="dropdown-item"
-                                                                    href="product-circle.html">Combo bán kèm</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-left-thumbnail.html">Tiến trình hàng hot <label class="menu-label">Mới</label>
-                                                                </a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-sold-out.html">HẾT HÀNG</a>
-                                                                <a class="dropdown-item" href="product-circle.html">
-                                                                    Đếm ngược khuyến mãi</a>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-xl-3">
-                                                            <div class="dropdown-column m-0">
-                                                                <h5 class="dropdown-header">
-                                                                    Kiểu biến thể sản phẩm </h5>
-                                                                <a class="dropdown-item"
-                                                                    href="product-rectangle.html">Biến thể hình chữ nhật</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-circle.html">Biến thể hình tròn <label
-                                                                        class="menu-label">Mới</label></a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-color-image.html">Biến thể ảnh màu</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-color.html">Biến thể màu sắc</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-radio.html">Biến thể nút chọn</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-dropdown.html">Biến thể danh sách xổ xuống</a>
-                                                                <h5 class="custom-mt dropdown-header">Tính năng sản phẩm
-                                                                </h5>
-                                                                <a class="dropdown-item"
-                                                                    href="product-left-thumbnail.html">Thanh toán cố định</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-dynamic.html">Thanh toán động</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-sticky.html">Thanh toán an toàn</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-bundle.html">Lượt xem sản phẩm đang hoạt động</a>
-                                                                <a class="dropdown-item" href="product-bundle.html">
-                                                                    Đơn hàng gần đây
-                                                                </a>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-xl-3">
-                                                            <div class="dropdown-column m-0">
-                                                                <h5 class="dropdown-header">
-                                                                    Tính năng sản phẩm </h5>
-                                                                <a class="dropdown-item"
-                                                                    href="product-image.html">Sản phẩm đơn giản</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-rectangle.html">
-                                                                    Sản phẩm phân loại <label
-                                                                        class="menu-label">Mới</label>
-                                                                </a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-size-chart.html">Bảng kích thước <label
-                                                                        class="menu-label">Mới</label></a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-size-chart.html">Giao hàng & đổi trả</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-size-chart.html">Đánh giá sản phẩm</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-expert.html">Hỏi chuyên gia</a>
-                                                                <h5 class="custom-mt dropdown-header">Tính năng sản phẩm
-                                                                </h5>
-                                                                <a class="dropdown-item"
-                                                                    href="product-bottom-thumbnail.html">Thẻ sản phẩm</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-image.html">Thông tin cửa hàng</a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-image.html">Chia sẻ mạng xã hội <label
-                                                                        class="menu-label warning-label">Hot</label>
-                                                                </a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-left-thumbnail.html">Sản phẩm liên quan
-                                                                    <label
-                                                                        class="menu-label warning-label">Hot</label>
-                                                                </a>
-                                                                <a class="dropdown-item"
-                                                                    href="product-right-thumbnail.html">Yêu thích & so sánh</a>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-xl-3 d-xl-block d-none">
-                                                            <div class="dropdown-column m-0">
-                                                                <div class="menu-img-banner">
-                                                                    <a class="text-title"
-                                                                        href="product-circle.html">
-                                                                        <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/mega-menu.png') }}"
-                                                                            alt="banner">
-                                                                    </a>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </li>
+                                                        if ($hasChildren) {
+                                                            $html .= '<ul class="dropdown-menu">';
+                                                            foreach ($children as $child) {
+                                                                $html .= $renderHeaderCategoryHtml($child, $level + 1);
+                                                            }
+                                                            $html .= '</ul>';
+                                                        }
 
-                                            <li class="nav-item dropdown dropdown-mega">
-                                                <a class="nav-link dropdown-toggle ps-xl-2 ps-0"
-                                                    href="javascript:void(0)" data-bs-toggle="dropdown">Menu lớn</a>
+                                                        $html .= '</li>';
+                                                        return $html;
+                                                    }
 
-                                                <div class="dropdown-menu dropdown-menu-2">
-                                                    <div class="row">
-                                                        <div class="dropdown-column col-xl-3">
-                                                            <h5 class="dropdown-header">Rau củ hằng ngày</h5>
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Đậu & cà tím</a>
+                                                    if ($hasChildren) {
+                                                        $html = '<li class="sub-dropdown-hover">';
+                                                        $html .= '<a class="dropdown-item" href="' . $url . '">' . $name . '</a>';
+                                                        $html .= '<ul class="sub-menu">';
+                                                        foreach ($children as $child) {
+                                                            $html .= $renderHeaderCategoryHtml($child, $level + 1);
+                                                        }
+                                                        $html .= '</ul>';
+                                                        $html .= '</li>';
+                                                        return $html;
+                                                    }
 
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Bông cải xanh & súp lơ</a>
+                                                    return '<li><a class="dropdown-item" href="' . $url . '">' . $name . '</a></li>';
+                                                };
 
-                                                            <a href="shop-left-sidebar.html"
-                                                                class="dropdown-item">Ớt, tỏi</a>
+                                                $headerMenuHtml = '';
+                                                if (!empty($headerCategories) && $headerCategories->count() > 0) {
+                                                    foreach ($headerCategories as $category) {
+                                                        $headerMenuHtml .= $renderHeaderCategoryHtml($category, 0);
+                                                    }
+                                                }
+                                            @endphp
 
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Rau củ & salad</a>
-
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Bầu bí, dưa leo</a>
-
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Rau thơm & mầm non</a>
-
-                                                            <a href="demo-personal-portfolio.html"
-                                                                class="dropdown-item">Xà lách & rau lá</a>
-                                                        </div>
-
-                                                        <div class="dropdown-column col-xl-3">
-                                                            <h5 class="dropdown-header">Rau non</h5>
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Đậu & cà tím</a>
-
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Bông cải xanh & súp lơ</a>
-
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Ớt, tỏi</a>
-
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Rau củ & salad</a>
-
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Bầu bí, dưa leo</a>
-
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Khoai tây & cà chua</a>
-
-                                                            <a href="shop-left-sidebar.html"
-                                                                class="dropdown-item">Đậu Hà Lan & bắp</a>
-                                                        </div>
-
-                                                        <div class="dropdown-column col-xl-3">
-                                                            <h5 class="dropdown-header">Rau củ cao cấp</h5>
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Măng tây & atiso</a>
-
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Bơ & ớt chuông</a>
-
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Bông cải xanh & bí ngòi</a>
-
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Cần tây, thì là & tỏi tây</a>
-
-                                                            <a class="dropdown-item"
-                                                                href="shop-left-sidebar.html">Ớt & chanh</a>
-                                                        </div>
-
-                                                        <div class="dropdown-column dropdown-column-img col-3">
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </li>
-
-                                            <li class="nav-item dropdown">
-                                                <a class="nav-link dropdown-toggle" href="javascript:void(0)"
-                                                    data-bs-toggle="dropdown">Blog</a>
-                                                <ul class="dropdown-menu">
-                                                    <li>
-                                                        <a class="dropdown-item" href="blog-detail.html">Chi tiết bài viết</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="blog-grid.html">Lưới bài viết</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="blog-list.html">Danh sách bài viết</a>
-                                                    </li>
-                                                </ul>
-                                            </li>
-
-                                            <li class="nav-item dropdown new-nav-item">
-                                                <label class="new-dropdown">Mới</label>
-                                                <a class="nav-link dropdown-toggle" href="javascript:void(0)"
-                                                    data-bs-toggle="dropdown">Trang</a>
-                                                <ul class="dropdown-menu">
-                                                    <li class="sub-dropdown-hover">
-                                                        <a class="dropdown-item" href="javascript:void(0)">Mẫu email <span class="new-text"><i
-                                                                    class="fa-solid fa-bolt-lightning"></i></span></a>
-                                                        <ul class="sub-menu">
-                                                            <li>
-                                                                <a
-                                                                    href="https://themes.pixelstrap.com/fastkart/email-templete/abandonment-email.html">Bỏ giỏ hàng</a>
-                                                            </li>
-                                                            <li>
-                                                                <a href="https://themes.pixelstrap.com/fastkart/email-templete/offer-template.html">Mẫu ưu đãi</a>
-                                                            </li>
-                                                            <li>
-                                                                <a href="https://themes.pixelstrap.com/fastkart/email-templete/order-success.html">Đặt hàng thành công</a>
-                                                            </li>
-                                                            <li>
-                                                                <a href="https://themes.pixelstrap.com/fastkart/email-templete/reset-password.html">Đặt lại mật khẩu</a>
-                                                            </li>
-                                                            <li>
-                                                                <a href="https://themes.pixelstrap.com/fastkart/email-templete/welcome.html">Mẫu chào mừng</a>
-                                                            </li>
-                                                        </ul>
-                                                    </li>
-                                                    <li class="sub-dropdown-hover">
-                                                        <a class="dropdown-item" href="javascript:void(0)">Mẫu hoá đơn <span class="new-text"><i
-                                                                    class="fa-solid fa-bolt-lightning"></i></span></a>
-                                                        <ul class="sub-menu">
-                                                            <li>
-                                                                <a href="https://themes.pixelstrap.com/fastkart/invoice/invoice-1.html">Hoá đơn 1</a>
-                                                            </li>
-
-                                                            <li>
-                                                                <a href="https://themes.pixelstrap.com/fastkart/invoice/invoice-2.html">Hoá đơn 2</a>
-                                                            </li>
-
-                                                            <li>
-                                                                <a href="https://themes.pixelstrap.com/fastkart/invoice/invoice-3.html">Hoá đơn 3</a>
-                                                            </li>
-                                                        </ul>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="404.html">Trang 404</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="about-us.html">Về chúng tôi</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="cart.html">Giỏ hàng</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="contact-us.html">Liên hệ</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="checkout.html">Thanh toán</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="coming-soon.html">Sắp ra mắt</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="compare.html">So sánh</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="faq.html">Câu hỏi thường gặp</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="order-success.html">Đặt hàng thành công</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="order-tracking.html">Theo dõi đơn hàng</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="otp.html">Mã OTP</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="search.html">Tìm kiếm</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="user-dashboard.html">Trang tài khoản</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="wishlist.html">Danh sách yêu thích</a>
-                                                    </li>
-                                                </ul>
-                                            </li>
-
-                                            <li class="nav-item dropdown">
-                                                <a class="nav-link dropdown-toggle" href="javascript:void(0)"
-                                                    data-bs-toggle="dropdown">Người bán</a>
-                                                <ul class="dropdown-menu">
-                                                    <li>
-                                                        <a class="dropdown-item" href="seller-become.html">Trở thành người bán</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="seller-dashboard.html">Bảng điều khiển người bán</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="seller-detail.html">Chi tiết người bán</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="seller-detail-2.html">Chi tiết người bán 2</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="seller-grid.html">Lưới người bán</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="seller-grid-2.html">Lưới người bán 2</a>
-                                                    </li>
-                                                </ul>
-                                            </li>
+                                            {!! $headerMenuHtml !!}
                                         </ul>
                                     </div>
                                 </div>

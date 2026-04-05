@@ -11,6 +11,7 @@
     @yield('content')
 
     @include('client.partials.footer')
+
     @include('client.partials.scripts')
     @stack('scripts')
 </body>

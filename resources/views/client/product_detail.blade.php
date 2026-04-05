@@ -265,9 +265,6 @@
                                 </div>
 
                                 <div class="payment-option">
-                                    <div class="product-title">
-                                        <h4>Phương thức thanh toán đảm bảo</h4>
-                                    </div>
                                     <ul>
                                         <li>
                                             <a href="javascript:void(0)">

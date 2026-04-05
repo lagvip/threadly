@@ -10,7 +10,6 @@ use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
-    //
     public function show($id)
     {
         $category = Category::findOrFail($id);

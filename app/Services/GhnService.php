@@ -5,7 +5,6 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-
 class GhnService
 {
     protected string $token;
@@ -22,7 +21,45 @@ class GhnService
     public function calculateFee(int $toDistrictId, string $toWardCode, int $weight = 500): int
     {
         $fromDistrictId = (int) config('services.ghn.from_district_id');
-        $serviceId = (int) config('services.ghn.service_id', 53321);
+        $weight = max($weight, 100);
+
+        if (empty($this->token) || empty($this->shopId) || $fromDistrictId <= 0) {
+            Log::error('GHN config missing for fee calculation', [
+                'token_exists' => !empty($this->token),
+                'shop_id' => $this->shopId,
+                'from_district_id' => $fromDistrictId,
+            ]);
+
+            return 0;
+        }
+
+        $serviceId = $this->getAvailableServiceId($fromDistrictId, $toDistrictId);
+
+        if (!$serviceId) {
+            $fallbackServiceId = (int) config('services.ghn.service_id', 0);
+
+            if ($fallbackServiceId > 0) {
+                Log::warning('GHN available service not found, fallback to configured service_id', [
+                    'fallback_service_id' => $fallbackServiceId,
+                    'from_district_id' => $fromDistrictId,
+                    'to_district_id' => $toDistrictId,
+                    'to_ward_code' => $toWardCode,
+                ]);
+
+                $serviceId = $fallbackServiceId;
+            }
+        }
+
+        if (!$serviceId) {
+            Log::error('GHN cannot calculate fee because no valid service_id was resolved', [
+                'from_district_id' => $fromDistrictId,
+                'to_district_id' => $toDistrictId,
+                'to_ward_code' => $toWardCode,
+                'weight' => $weight,
+            ]);
+
+            return 0;
+        }
 
         Log::info('GHN fee request payload', [
             'token_exists' => !empty($this->token),
@@ -30,7 +67,7 @@ class GhnService
             'from_district_id' => $fromDistrictId,
             'to_district_id' => $toDistrictId,
             'to_ward_code' => $toWardCode,
-            'weight' => max($weight, 100),
+            'weight' => $weight,
             'service_id' => $serviceId,
             'base_url' => $this->baseUrl,
         ]);
@@ -48,23 +85,42 @@ class GhnService
             'to_ward_code' => $toWardCode,
             'height' => 10,
             'length' => 20,
-            'weight' => max($weight, 100),
+            'weight' => $weight,
             'width' => 20,
         ]);
 
+        $json = $response->json();
+
         Log::info('GHN fee response', [
             'status' => $response->status(),
-            'body' => $response->json(),
+            'body' => $json,
             'raw' => $response->body(),
         ]);
 
         if (!$response->successful()) {
+            Log::error('GHN fee request failed', [
+                'status' => $response->status(),
+                'body' => $json,
+                'to_district_id' => $toDistrictId,
+                'to_ward_code' => $toWardCode,
+                'service_id' => $serviceId,
+            ]);
+
             return 0;
         }
 
-        $json = $response->json();
+        $total = (int) data_get($json, 'data.total', 0);
 
-        return (int) data_get($json, 'data.total', 0);
+        if ($total <= 0) {
+            Log::warning('GHN fee returned empty or zero total', [
+                'body' => $json,
+                'to_district_id' => $toDistrictId,
+                'to_ward_code' => $toWardCode,
+                'service_id' => $serviceId,
+            ]);
+        }
+
+        return $total;
     }
 
     protected function getAvailableServiceId(int $fromDistrictId, int $toDistrictId): ?int
@@ -79,16 +135,16 @@ class GhnService
             'to_district' => $toDistrictId,
         ]);
 
+        $json = $response->json();
+
         Log::info('GHN available-services response', [
             'status' => $response->status(),
-            'body' => $response->json(),
+            'body' => $json,
         ]);
 
         if (!$response->successful()) {
             return null;
         }
-
-        $json = $response->json();
 
         if ((int) data_get($json, 'code', 500) !== 200) {
             return null;
@@ -96,10 +152,18 @@ class GhnService
 
         $services = data_get($json, 'data', []);
 
-        if (empty($services) || !isset($services[0]['service_id'])) {
+        if (empty($services)) {
             return null;
         }
 
-        return (int) $services[0]['service_id'];
+        foreach ($services as $service) {
+            $serviceId = (int) ($service['service_id'] ?? 0);
+
+            if ($serviceId > 0) {
+                return $serviceId;
+            }
+        }
+
+        return null;
     }
 }
