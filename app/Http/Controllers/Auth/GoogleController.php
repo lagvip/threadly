@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -44,7 +45,6 @@ class GoogleController extends Controller
                 ]);
             }
 
-            // Gán role customer theo slug
             $customerRole = Role::where('slug', 'customer')->first();
 
             if ($customerRole && !$user->hasRole('customer')) {
@@ -53,7 +53,27 @@ class GoogleController extends Controller
 
             Auth::login($user, true);
 
-            return redirect()->route('admin.homeAdmin');
+            if (method_exists($user, 'hasRole') && $user->hasRole('admin') && Route::has('admin.homeAdmin')) {
+                return redirect()->route('admin.homeAdmin');
+            }
+
+            if (Route::has('client.checkout.index')) {
+                return redirect()->route('client.checkout.index');
+            }
+
+            if (Route::has('client.cart.index')) {
+                return redirect()->route('client.cart.index');
+            }
+
+            if (Route::has('client.home')) {
+                return redirect()->route('client.home');
+            }
+
+            if (Route::has('home')) {
+                return redirect()->route('home');
+            }
+
+            return redirect('/');
         } catch (\Exception $e) {
             return redirect()->route('admin.auth.login')
                 ->with('error', 'Đăng nhập Google thất bại: ' . $e->getMessage());

@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
@@ -25,11 +24,11 @@ use App\Http\Controllers\Client\AccountController;
 use App\Http\Controllers\Client\ClientOrderController;
 use App\Http\Controllers\Client\AddressController;
 use App\Http\Controllers\Client\CategoryController;
+use App\Http\Controllers\Client\ChatbotController;
 
 // =======================================================
 // CLIENT
 // =======================================================
-
 // Redirect
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/admin', fn () => redirect('/admin/dashboard'));
@@ -76,9 +75,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [ClientOrderController::class, 'index'])->name('index');
         Route::get('/{id}', [ClientOrderController::class, 'show'])->name('show');
         Route::post('/{id}/cancel', [ClientOrderController::class, 'cancel'])->name('cancel');
-        Route::post('/{id}/reviews/{productId}', [ClientOrderController::class, 'submitReview'])
+        Route::post('/{id}/reviews/{detailId}', [ClientOrderController::class, 'submitReview'])
             ->whereNumber('id')
-            ->whereNumber('productId')
+            ->whereNumber('detailId')
             ->name('reviews.submit');
     });
 
@@ -89,6 +88,11 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/{id}', [AddressController::class, 'update'])->name('update');
         Route::delete('/{id}', [AddressController::class, 'destroy'])->name('destroy');
         Route::post('/{id}/default', [AddressController::class, 'setDefault'])->name('default');
+    });
+    // Trợ lý AI
+        Route::prefix('tro-ly-ai')->name('client.ai.')->group(function () {
+        Route::get('/', [ChatbotController::class, 'index'])->name('index');
+        Route::post('/hoi', [ChatbotController::class, 'ask'])->name('ask');
     });
 });
 
@@ -167,6 +171,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/store', [BannerController::class, 'store'])->name('storeBanner');
             Route::get('/edit/{id}', [BannerController::class, 'edit'])->name('editBanner');
             Route::put('/update/{id}', [BannerController::class, 'update'])->name('updateBanner');
+            Route::delete('/bulk-delete', [BannerController::class, 'bulkDestroy'])->name('bulkDelete');
             Route::delete('/delete/{id}', [BannerController::class, 'destroy'])->name('deleteBanner');
             Route::get('/search', [BannerController::class, 'search'])->name('searchBanner');
         });
@@ -259,8 +264,12 @@ Route::middleware(['auth'])->group(function () {
         // REVIEW
         Route::prefix('reviews')->name('reviews.')->group(function () {
             Route::get('/', [ReviewController::class, 'index'])->name('index');
+            Route::get('/trash', [ReviewController::class, 'trash'])->name('trash');
             Route::get('/{review}/edit', [ReviewController::class, 'edit'])->name('edit');
             Route::put('/{review}', [ReviewController::class, 'update'])->name('update');
+            Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
+            Route::get('/restore/{id}', [ReviewController::class, 'restore'])->name('restore');
+            Route::post('/bulk-restore', [ReviewController::class, 'bulkRestore'])->name('bulkRestore');
         });
     });
 
@@ -286,6 +295,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/trash', [UserController::class, 'trash'])->name('trash');
             Route::get('/restore/{id}', [UserController::class, 'restore'])->name('restore');
             Route::delete('/force-delete/{id}', [UserController::class, 'forceDelete'])->name('forceDelete');
+            Route::patch('/{id}/ban', [UserController::class, 'ban'])->name('ban');
+            Route::patch('/{id}/unban', [UserController::class, 'unban'])->name('unban');
         });
 
         // ROLE
@@ -335,7 +346,7 @@ Route::middleware(['auth'])->group(function () {
         });
         // REVIEW - FORCE DELETE
          Route::prefix('reviews')->name('reviews.')->group(function () {
-            Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
+            Route::get('/force-delete/{id}', [ReviewController::class, 'forceDelete'])->name('forceDelete');
         });
         // SIZE - FORCE DELETE
         Route::prefix('listSize')->name('listSize.')->group(function () {

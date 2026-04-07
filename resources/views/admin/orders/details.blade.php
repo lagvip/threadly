@@ -18,33 +18,46 @@
     @endif
 
     <div class="container py-4">
-        {{-- Header: Thông tin đơn hàng --}}
         <div class="card mb-4 p-3">
             <h5><strong>Đơn hàng:</strong> {{ $order->order_code }}</h5>
             <p class="mb-1">Ngày tạo: {{ $order->created_at->format('d/m/Y H:i') }}</p>
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-primary">
-                    {{ $order->payment_method === 'cod' ? 'Thanh toán khi nhận hàng' : ucfirst($order->payment_method) }}
-                </span>
-                @php
-                    $statusLabels = [
-                        'pending' => 'Chờ xử lý',
-                        'processing' => 'Đang xử lý',
-                        'shipping' => 'Đang giao hàng',
-                        'delivered' => 'Đã giao',
-                        'canceled' => 'Đã hủy',
-                        'refund' => 'Đã hoàn tiền',
-                    ];
-                @endphp
 
-<span class="badge bg-warning">
-    {{ $statusLabels[$order->order_status] ?? ucfirst($order->order_status) }}
-</span>
+            @php
+                $statusLabels = [
+                    'pending' => 'Chờ xử lý',
+                    'processing' => 'Đang xử lý',
+                    'shipped' => 'Đang giao hàng',
+                    'delivered' => 'Đã giao',
+                    'cancelled' => 'Đã hủy',
+                    'waiting_for_cancellation' => 'Chờ duyệt hủy',
+                ];
+
+                $paymentLabels = [
+                    'paid' => 'Đã thanh toán',
+                    'unpaid' => 'Chưa thanh toán',
+                    'pending' => 'Đang chờ thanh toán',
+                    'failed' => 'Thanh toán thất bại',
+                    'cancelled' => 'Thanh toán đã hủy',
+                    'expired' => 'Thanh toán hết hạn',
+                ];
+            @endphp
+
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="badge bg-primary">
+                    {{ $order->payment_method === 'cod' ? 'Thanh toán khi nhận hàng' : strtoupper($order->payment_method) }}
+                </span>
+
+                <span class="badge bg-success">
+                    {{ $paymentLabels[$order->payment_status] ?? ucfirst($order->payment_status) }}
+                </span>
+
+                <span class="badge bg-warning text-dark">
+                    {{ $statusLabels[$order->order_status] ?? ucfirst($order->order_status) }}
+                </span>
             </div>
         </div>
 
         <div class="row g-4">
-            {{-- Danh sách sản phẩm --}}
             <div class="col-lg-8">
                 <div class="card shadow-sm">
                     <div class="card-header fw-bold">Sản phẩm</div>
@@ -59,17 +72,24 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($order->details as $item)
+                                @forelse ($order->details as $item)
+                                    @php
+                                        $product = $item->variant?->product;
+                                        $size = $item->variant?->size?->name ?? '-';
+                                        $color = $item->variant?->color?->name ?? '-';
+                                        $image = $product?->image_primary ? asset('storage/' . $product->image_primary) : 'https://via.placeholder.com/50x50?text=No+Image';
+                                    @endphp
+
                                     <tr>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
-                                                <img src="{{ asset('storage/' . $item->variant->product->image_primary) }}"
-                                                    alt="{{ $item->variant->product->name }}"
+                                                <img src="{{ $image }}"
+                                                    alt="{{ $product?->name ?? $item->product_name }}"
                                                     class="rounded" style="width:50px;height:50px;object-fit:cover">
                                                 <div>
-                                                    <div class="fw-bold">{{ $item->variant->product->name }}</div>
-                                                    <small class="text-muted">Size: {{ $item->variant->size->name }}</small>
-                                                    <small class="text-muted">Color: {{ $item->variant->color->name }}</small>
+                                                    <div class="fw-bold">{{ $product?->name ?? $item->product_name }}</div>
+                                                    <small class="text-muted d-block">Size: {{ $size }}</small>
+                                                    <small class="text-muted d-block">Color: {{ $color }}</small>
                                                 </div>
                                             </div>
                                         </td>
@@ -77,30 +97,34 @@
                                         <td>{{ number_format($item->unit_price, 0, ',', '.') }} VNĐ</td>
                                         <td>{{ number_format($item->total, 0, ',', '.') }} VNĐ</td>
                                     </tr>
-                                @endforeach
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="text-center">Không có sản phẩm</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                {{-- Tổng tiền --}}
                 <div class="card mt-3 shadow-sm">
                     <div class="card-body">
                         @php
-                            $subtotal = $order->details->sum(fn($d) => (int)$d->total);
-                            $discount = (int) ($order->discount ?? 0);
-                            $shippingFee = (int) ($order->shipping_fee ?? 0);
-                            $grandTotal = $subtotal - $discount + $shippingFee;
+                            $subtotal = $order->details->sum(fn($d) => (float) $d->total);
+                            $discount = (float) ($order->discount ?? 0);
+                            $shippingFee = (float) ($order->shipping_fee ?? 0);
                         @endphp
+
                         <p><strong>Tổng tiền hàng:</strong> {{ number_format($subtotal, 0, ',', '.') }} VNĐ</p>
                         <p><strong>Phí vận chuyển:</strong> {{ number_format($shippingFee, 0, ',', '.') }} VNĐ</p>
                         <p><strong>Giảm giá:</strong> {{ number_format($discount, 0, ',', '.') }} VNĐ</p>
-                        <h5 class="mt-3 text-primary fw-bold">Tổng thanh toán: {{ number_format($grandTotal, 0, ',', '.') }} VNĐ</h5>
+                        <h5 class="mt-3 text-primary fw-bold">
+                            Tổng thanh toán: {{ number_format($order->total_price, 0, ',', '.') }} VNĐ
+                        </h5>
                     </div>
                 </div>
             </div>
 
-            {{-- Thông tin khách hàng --}}
             <div class="col-lg-4">
                 <div class="card shadow-sm mb-3">
                     <div class="card-header fw-bold">Thông tin người nhận</div>
@@ -112,31 +136,55 @@
                     </div>
                 </div>
 
-
                 <div class="card shadow-sm mb-3">
-                    <div class="card-header fw-bold">Lý do huỷ đơn</div>
+                    <div class="card-header fw-bold">Lý do hủy đơn</div>
                     <div class="card-body">
                         <span class="badge bg-secondary">
-                            {{ $order->cancel_reason ?? 'Không có lý do huỷ đơn' }}
+                            {{ $order->cancel_reason ?: 'Không có lý do hủy đơn' }}
                         </span>
                     </div>
                 </div>
 
-
-                {{-- Đánh giá sản phẩm --}}
                 <div class="card shadow-sm">
-                    <div class="card-header fw-bold">Đánh giá sản phẩm</div>
+                    <div class="card-header fw-bold">Voucher áp dụng</div>
                     <div class="card-body">
-                        @foreach ($order->details as $item)
-                            <div class="d-flex justify-content-between border-bottom py-2">
-                                <div>
-                                    <strong>{{ $item->variant->product->name }}</strong>
-                                    <div class="text-muted small">Size: {{ $item->variant->size->name }}</div>
-                                    <div class="text-muted small">Color: {{ $item->variant->color->name }}</div>
-                                </div>
-                                <span class="badge bg-light text-muted">Chưa có đánh giá</span>
-                            </div>
-                        @endforeach
+                        @php
+                            $appliedDiscount = (float) ($order->discount ?? 0);
+                            $voucherTypeLabel = [
+                                'percent' => 'Giảm theo phần trăm',
+                                'fixed' => 'Giảm số tiền cố định',
+                            ];
+                        @endphp
+
+                        @if ($order->voucher_code)
+                            <p class="mb-2">
+                                <strong>Mã voucher:</strong>
+                                <span class="badge bg-success">{{ $order->voucher_code }}</span>
+                            </p>
+
+                            <p class="mb-2">
+                                <strong>Số tiền đã giảm:</strong>
+                                {{ number_format($appliedDiscount, 0, ',', '.') }} VNĐ
+                            </p>
+
+                            @if ($order->voucher)
+                                <p class="mb-2">
+                                    <strong>Loại voucher:</strong>
+                                    {{ $voucherTypeLabel[$order->voucher->type] ?? $order->voucher->type }}
+                                </p>
+
+                                <p class="mb-0">
+                                    <strong>Giá trị voucher:</strong>
+                                    @if ($order->voucher->type === 'percent')
+                                        {{ rtrim(rtrim(number_format((float) $order->voucher->value, 2, '.', ''), '0'), '.') }}%
+                                    @else
+                                        {{ number_format((float) $order->voucher->value, 0, ',', '.') }} VNĐ
+                                    @endif
+                                </p>
+                            @endif
+                        @else
+                            <p class="mb-0 text-muted">Đơn hàng không áp dụng voucher.</p>
+                        @endif
                     </div>
                 </div>
             </div>

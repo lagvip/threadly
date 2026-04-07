@@ -160,14 +160,15 @@
                                 </div>
                             </div>
 
-                            <div class="col-12">
-                                <label class="form-label">Ghi chú đơn hàng</label>
+                            <div class="mb-3">
+                                <label for="customer_note" class="form-label">Ghi chú đơn hàng</label>
                                 <textarea
-                                    name="note"
-                                    rows="4"
-                                    class="form-control checkout-input"
-                                    placeholder="Nhập ghi chú nếu có..."
-                                >{{ old('note') }}</textarea>
+                                    name="customer_note"
+                                    id="customer_note"
+                                    rows="3"
+                                    class="form-control"
+                                    placeholder="Ví dụ: giao giờ hành chính, gọi trước khi giao..."
+                                >{{ old('customer_note') }}</textarea>
                             </div>
                         </div>
                     </div>

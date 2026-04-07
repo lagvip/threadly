@@ -11,6 +11,9 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable, SoftDeletes;
 
+    public const STATUS_ACTIVE = 1;
+    public const STATUS_BANNED = 0;
+
     protected $fillable = [
         'name',
         'email',
@@ -18,6 +21,9 @@ class User extends Authenticatable
         'google_id',
         'avatar',
         'status',
+        'ban_reason',
+        'banned_at',
+        'banned_by',
         'email_verified_at',
     ];
 
@@ -29,46 +35,55 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'deleted_at' => 'datetime',
+        'banned_at' => 'datetime',
     ];
 
-    // users <-> roles
     public function roles()
     {
         return $this->belongsToMany(Role::class, 'role_users', 'user_id', 'role_id')
             ->withTimestamps();
     }
 
-    // user -> addresses
     public function addresses()
     {
         return $this->hasMany(Address::class, 'user_id', 'id');
     }
 
-    // kiểm tra 1 role theo slug
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'user_id', 'id');
+    }
+
+    public function allOrders()
+    {
+        return $this->hasMany(Order::class, 'user_id', 'id')->withTrashed();
+    }
+
+    public function bannedBy()
+    {
+        return $this->belongsTo(User::class, 'banned_by');
+    }
+
     public function hasRole(string $role): bool
     {
         return $this->roles()->where('slug', $role)->exists();
     }
 
-    // kiểm tra nhiều role
     public function hasAnyRole(array $roles): bool
     {
         return $this->roles()->whereIn('slug', $roles)->exists();
     }
 
-    // lấy danh sách tên role
     public function roleNames()
     {
         return $this->roles->pluck('name')->toArray();
     }
 
-    // lấy danh sách slug role
     public function roleSlugs()
     {
         return $this->roles->pluck('slug')->toArray();
     }
 
-    // viết nhanh
     public function isAdmin(): bool
     {
         return $this->hasRole('admin');
@@ -87,5 +102,10 @@ class User extends Authenticatable
     public function isStaff(): bool
     {
         return $this->hasAnyRole(['admin', 'manager']);
+    }
+
+    public function isBanned(): bool
+    {
+        return (int) $this->status === self::STATUS_BANNED;
     }
 }

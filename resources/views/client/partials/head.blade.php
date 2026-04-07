@@ -29,4 +29,15 @@
 
     <!-- Template css -->
     <link id="color-link" rel="stylesheet" type="text/css" href="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/css/style.css') }}">
+
+    <style>
+        #primaryMenu .navbar-nav .nav-link::before,
+        #primaryMenu .navbar-nav .nav-link::after,
+        #primaryMenu .navbar-nav .dropdown-item::before,
+        #primaryMenu .navbar-nav .dropdown-item::after {
+            content: none !important;
+            display: none !important;
+            background: none !important;
+        }
+    </style>
 </head>

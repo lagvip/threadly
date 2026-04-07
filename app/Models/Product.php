@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Http\Request;
 
 class Product extends Model
 {
@@ -80,6 +81,17 @@ class Product extends Model
             ->whereHas('variants', function ($q) {
                 $q->where('status', 'active');
             });
+    }
+    public function list(Request $request)
+    {
+        $products = $this->productService->getAllProducts();
+        $brands = Brand::orderBy('name')->get();
+        $categories = Category::with('parent')
+            ->whereNotNull('id_parent')
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.product.list-product', compact('products', 'brands', 'categories'));
     }
 
 }

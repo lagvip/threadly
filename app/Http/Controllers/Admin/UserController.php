@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Role;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -60,6 +61,7 @@ class UserController extends Controller
         $roles = Role::orderBy('name')->get();
 
         $users = User::with('roles')
+            ->withCount(['allOrders as orders_count'])
             ->when($role, function ($q) use ($role) {
                 $q->whereHas('roles', function ($r) use ($role) {
                     $r->where('slug', $role);
@@ -79,6 +81,7 @@ class UserController extends Controller
     {
         $users = User::onlyTrashed()
             ->with('roles')
+            ->withCount(['allOrders as orders_count'])
             ->orderByDesc('deleted_at')
             ->paginate(10);
 
@@ -254,15 +257,16 @@ class UserController extends Controller
 
     // ============================
     // XÓA MỀM USER
+    // CHỈ XÓA KHI KHÔNG CÒN ĐƠN HÀNG NÀO
     // ============================
     public function destroy($id)
     {
         $user = User::with('roles')->findOrFail($id);
 
-        if ($this->isAdminUser($user)) {
+        if ($user->allOrders()->exists()) {
             return redirect()
                 ->route('users.list')
-                ->with('error', 'Không thể xóa tài khoản Admin duy nhất của hệ thống.');
+                ->with('error', 'User này vẫn còn đơn hàng, không thể xóa.');
         }
 
         // Xóa mềm: KHÔNG xóa avatar, KHÔNG detach role
@@ -287,6 +291,7 @@ class UserController extends Controller
 
     // ============================
     // XÓA VĨNH VIỄN USER
+    // CHỈ XÓA KHI KHÔNG CÒN ĐƠN HÀNG NÀO
     // ============================
     public function forceDelete($id)
     {
@@ -294,11 +299,10 @@ class UserController extends Controller
             ->with('roles')
             ->findOrFail($id);
 
-        // Nếu muốn vẫn chặn admin kể cả trong thùng rác
-        if ($this->isAdminUser($user)) {
+        if ($user->allOrders()->exists()) {
             return redirect()
                 ->route('users.trash')
-                ->with('error', 'Không thể xóa vĩnh viễn tài khoản Admin.');
+                ->with('error', 'User này vẫn còn đơn hàng, không thể xóa vĩnh viễn.');
         }
 
         if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
@@ -322,6 +326,7 @@ class UserController extends Controller
         $roles = Role::orderBy('name')->get();
 
         $users = User::with('roles')
+            ->withCount(['allOrders as orders_count'])
             ->when($role, function ($q) use ($role) {
                 $q->whereHas('roles', function ($r) use ($role) {
                     $r->where('slug', $role);
@@ -330,7 +335,7 @@ class UserController extends Controller
             ->when($keyword, function ($q) use ($keyword) {
                 $q->where(function ($qq) use ($keyword) {
                     $qq->where('name', 'LIKE', "%{$keyword}%")
-                       ->orWhere('email', 'LIKE', "%{$keyword}%");
+                        ->orWhere('email', 'LIKE', "%{$keyword}%");
                 });
             })
             ->orderByDesc('id')
@@ -376,5 +381,62 @@ class UserController extends Controller
         $user->roles()->sync([$request->role_id]);
 
         return back()->with('success', 'Cập nhật quyền thành công!');
+    }
+    public function ban(Request $request, $id)
+    {
+        $request->validate([
+            'ban_reason_option' => 'required|string',
+            'ban_reason_custom' => 'nullable|string|max:1000',
+        ], [
+            'ban_reason_option.required' => 'Vui lòng chọn lý do ban.',
+            'ban_reason_custom.max' => 'Lý do tự nhập không được quá 1000 ký tự.',
+        ]);
+
+        $user = User::findOrFail($id);
+
+        if ($this->isAdminUser($user)) {
+            return redirect()
+                ->route('users.list')
+                ->with('error', 'Không thể ban tài khoản Admin.');
+        }
+
+        $reason = $request->ban_reason_option;
+
+        if ($reason === 'custom') {
+            $reason = trim((string) $request->ban_reason_custom);
+
+            if ($reason === '') {
+                return back()
+                    ->withErrors(['ban_reason_custom' => 'Vui lòng nhập lý do ban.'])
+                    ->withInput();
+            }
+        }
+
+        $user->update([
+            'status' => User::STATUS_BANNED,
+            'ban_reason' => $reason,
+            'banned_at' => now(),
+            'banned_by' => Auth::id(),
+        ]);
+
+        return redirect()
+            ->route('users.list')
+            ->with('success', 'Đã ban user thành công.');
+    }
+
+    public function unban($id)
+    {
+        $user = User::findOrFail($id);
+
+        $user->update([
+            'status' => User::STATUS_ACTIVE,
+            'ban_reason' => null,
+            'banned_at' => null,
+            'banned_by' => null,
+        ]);
+
+        return redirect()
+            ->route('users.list')
+            ->with('success', 'Đã bỏ ban user thành công.');
     }
 }

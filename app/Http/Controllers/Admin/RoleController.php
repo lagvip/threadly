@@ -11,13 +11,20 @@ class RoleController extends Controller
 {
     public function index()
     {
-        $roles = Role::latest()->paginate(10);
+        $roles = Role::withCount(['usersWithTrashed as users_count'])
+            ->latest()
+            ->paginate(10);
+
         return view('admin.roles.list', compact('roles'));
     }
 
     public function trash()
     {
-        $roles = Role::onlyTrashed()->latest()->paginate(10);
+        $roles = Role::onlyTrashed()
+            ->withCount(['usersWithTrashed as users_count'])
+            ->latest()
+            ->paginate(10);
+
         return view('admin.roles.trash', compact('roles'));
     }
 
@@ -84,10 +91,12 @@ class RoleController extends Controller
 
     public function destroy($id)
     {
-        $role = Role::findOrFail($id);
+        $role = Role::withCount(['usersWithTrashed as users_count'])->findOrFail($id);
 
-        if ($role->slug === 'admin') {
-            return redirect()->route('roles.list')->with('error', 'Không được xóa role admin');
+        if ($role->users_count > 0) {
+            return redirect()
+                ->route('roles.list')
+                ->with('error', 'Role này vẫn còn user, không thể xóa.');
         }
 
         $role->delete();
@@ -105,10 +114,14 @@ class RoleController extends Controller
 
     public function forceDelete($id)
     {
-        $role = Role::onlyTrashed()->findOrFail($id);
+        $role = Role::onlyTrashed()
+            ->withCount(['usersWithTrashed as users_count'])
+            ->findOrFail($id);
 
-        if ($role->users()->exists()) {
-            return redirect()->route('roles.trash')->with('error', 'Role đang được gán cho user, không thể xóa vĩnh viễn');
+        if ($role->users_count > 0) {
+            return redirect()
+                ->route('roles.trash')
+                ->with('error', 'Role này vẫn còn user, không thể xóa vĩnh viễn.');
         }
 
         $role->forceDelete();

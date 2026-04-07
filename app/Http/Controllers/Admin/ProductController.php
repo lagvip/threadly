@@ -25,10 +25,28 @@ class ProductController extends Controller
         $this->productVariantService = $productVariantService;
     }
 
-    public function list()
+    public function list(Request $request)
     {
-        $products = $this->productService->getAllProducts();
-        return view('admin.product.list-product', compact('products'));
+        $filters = [
+            'search' => $request->input('search'),
+            'brand_id' => $request->input('brand_id'),
+            'category_id' => $request->input('category_id'),
+        ];
+
+        $products = $this->productService->getAllProducts($filters)->appends($filters);
+
+        $brands = Brand::orderBy('name')->get();
+
+        $categories = Category::with('parent')
+            ->whereNotNull('id_parent')
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.product.list-product', compact(
+            'products',
+            'brands',
+            'categories'
+        ));
     }
 
     public function create()
@@ -268,26 +286,42 @@ class ProductController extends Controller
 
     public function search(Request $request)
     {
-        $searchTerm = $request->input('search');
+        $searchTerm = trim($request->input('search'));
+        $brandId = $request->input('brand_id');
+        $categoryId = $request->input('category_id');
 
         $products = Product::with(['brand', 'category'])
-            ->when(!empty($searchTerm), function ($query) use ($searchTerm) {
-                $query->where('name', 'like', '%' . $searchTerm . '%')
-                    ->orWhereHas('brand', function ($q) use ($searchTerm) {
-                        $q->where('name', 'like', '%' . $searchTerm . '%');
-                    })
-                    ->orWhereHas('category', function ($q) use ($searchTerm) {
-                        $q->where('name', 'like', '%' . $searchTerm . '%');
-                    });
-            })->paginate(10);
+            ->when($searchTerm, function ($query) use ($searchTerm) {
+                $query->where('name', 'like', '%' . $searchTerm . '%');
+            })
+            ->when($brandId, function ($query) use ($brandId) {
+                $query->where('id_brand', $brandId);
+            })
+            ->when($categoryId, function ($query) use ($categoryId) {
+                $query->where('id_category', $categoryId);
+            })
+            ->orderByDesc('created_at')
+            ->paginate(10)
+            ->appends([
+                'search' => $searchTerm,
+                'brand_id' => $brandId,
+                'category_id' => $categoryId,
+            ]);
 
-        $search = $searchTerm;
+        $brands = Brand::orderBy('name')->get();
+        $categories = Category::with('parent')
+            ->whereNotNull('id_parent')
+            ->orderBy('name')
+            ->get();
 
-        if ($request->ajax()) {
-            return view('admin.product.components.product-table', compact('products'))->render();
-        }
-
-        return view('admin.product.list-product', compact('products', 'search'));
+        return view('admin.product.list-product', compact(
+            'products',
+            'brands',
+            'categories',
+            'searchTerm',
+            'brandId',
+            'categoryId'
+        ));
     }
 
     public function variantTrash()

@@ -27,6 +27,7 @@
                             <th>ID</th>
                             <th>Tên role</th>
                             <th>Slug</th>
+                            <th>Số user</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -36,6 +37,7 @@
                                 <td>{{ $role->id }}</td>
                                 <td>{{ $role->name }}</td>
                                 <td>{{ $role->slug }}</td>
+                                <td>{{ $role->users_count ?? 0 }}</td>
                                 <td>
                                     <div class="d-flex gap-2">
                                         <a href="{{ route('roles.detail', $role->id) }}"
@@ -50,7 +52,7 @@
                                                 class="align-middle fs-18"></iconify-icon>
                                         </a>
 
-                                        @if($role->slug !== 'admin')
+                                        @if(($role->users_count ?? 0) == 0)
                                             <form action="{{ route('roles.delete', $role->id) }}"
                                                 method="POST"
                                                 onsubmit="return confirm('Xóa role này?')"
@@ -62,13 +64,21 @@
                                                         class="align-middle fs-18"></iconify-icon>
                                                 </button>
                                             </form>
+                                        @else
+                                            <button type="button"
+                                                    class="btn btn-secondary btn-sm"
+                                                    disabled
+                                                    title="Role còn user nên không thể xóa">
+                                                <iconify-icon icon="solar:trash-bin-minimalistic-2-broken"
+                                                    class="align-middle fs-18"></iconify-icon>
+                                            </button>
                                         @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="text-center">Không có dữ liệu</td>
+                                <td colspan="5" class="text-center">Không có dữ liệu</td>
                             </tr>
                         @endforelse
                     </tbody>

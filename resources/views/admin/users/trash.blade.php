@@ -26,6 +26,7 @@
                             <th>Tên</th>
                             <th>Email</th>
                             <th>Role</th>
+                            <th>Số đơn</th>
                             <th>Ngày xóa</th>
                             <th>Thao tác</th>
                         </tr>
@@ -54,6 +55,7 @@
                                         <span class="badge bg-secondary">Chưa có role</span>
                                     @endif
                                 </td>
+                                <td>{{ $user->orders_count ?? 0 }}</td>
                                 <td>{{ $user->deleted_at ? $user->deleted_at->format('d/m/Y H:i') : '' }}</td>
                                 <td>
                                     <div class="d-flex gap-2">
@@ -63,20 +65,29 @@
                                             Khôi phục
                                         </a>
 
-                                        <form action="{{ route('users.forceDelete', $user->id) }}" method="POST"
-                                              onsubmit="return confirm('Xóa vĩnh viễn user này?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-danger btn-sm">
+                                        @if(($user->orders_count ?? 0) == 0)
+                                            <form action="{{ route('users.forceDelete', $user->id) }}" method="POST"
+                                                  onsubmit="return confirm('Xóa vĩnh viễn user này?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger btn-sm">
+                                                    Xóa vĩnh viễn
+                                                </button>
+                                            </form>
+                                        @else
+                                            <button type="button"
+                                                    class="btn btn-secondary btn-sm"
+                                                    disabled
+                                                    title="User còn đơn hàng nên không thể xóa vĩnh viễn">
                                                 Xóa vĩnh viễn
                                             </button>
-                                        </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center">Không có user nào trong thùng rác</td>
+                                <td colspan="8" class="text-center">Không có user nào trong thùng rác</td>
                             </tr>
                         @endforelse
                     </tbody>

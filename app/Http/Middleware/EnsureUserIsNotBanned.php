@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\Response;
+
+class EnsureUserIsNotBanned
+{
+    public function handle(Request $request, Closure $next): Response
+    {
+        if (Auth::check()) {
+            $user = Auth::user();
+
+            if ((int)($user->status ?? 1) === 0) {
+                $reason = trim((string)($user->ban_reason ?? ''));
+
+                Auth::logout();
+
+                if ($request->hasSession()) {
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+                }
+
+                return redirect()
+                    ->route('login')
+                    ->withErrors([
+                        'email' => $reason !== ''
+                            ? 'Tài khoản của bạn đã bị khóa. Lý do: ' . $reason
+                            : 'Tài khoản của bạn đã bị khóa.',
+                    ]);
+            }
+        }
+
+        return $next($request);
+    }
+}

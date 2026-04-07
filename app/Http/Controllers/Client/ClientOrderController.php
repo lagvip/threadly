@@ -17,7 +17,8 @@ class ClientOrderController extends Controller
         $orders = Order::with([
                 'details.variant',
                 'details.product',
-                'reviews',
+                'reviews.variant.color',
+                'reviews.variant.size',
             ])
             ->where('user_id', Auth::id())
             ->latest('id')
@@ -32,7 +33,8 @@ class ClientOrderController extends Controller
                 'details.variant.color',
                 'details.variant.size',
                 'details.product',
-                'reviews',
+                'reviews.variant.color',
+                'reviews.variant.size',
             ])
             ->where('user_id', Auth::id())
             ->findOrFail($id);
@@ -41,19 +43,18 @@ class ClientOrderController extends Controller
             ->filter(function ($item) {
                 return !empty($item->product_id) && !is_null($item->product);
             })
-            ->unique('product_id')
             ->values()
             ->map(function ($item) use ($order) {
-                $item->existing_review = $order->reviews->firstWhere('product_id', $item->product_id);
+                $item->existing_review = $order->reviews->firstWhere('order_detail_id', $item->id);
                 return $item;
             });
 
         return view('client.orders.show', compact('order', 'reviewItems'));
     }
 
-    public function submitReview(Request $request, $id, $productId)
+    public function submitReview(Request $request, $id, $detailId)
     {
-        $order = Order::with(['details.product'])
+        $order = Order::with(['details.product', 'details.variant.color', 'details.variant.size'])
             ->where('user_id', Auth::id())
             ->findOrFail($id);
 
@@ -61,7 +62,7 @@ class ClientOrderController extends Controller
             return back()->with('error', 'Chỉ có thể bình luận khi đơn đã giao và đã thanh toán thành công.');
         }
 
-        $detail = $order->details->firstWhere('product_id', (int) $productId);
+        $detail = $order->details->firstWhere('id', (int) $detailId);
 
         if (! $detail || ! $detail->product) {
             return back()->with('error', 'Sản phẩm không thuộc đơn hàng này hoặc đã không còn tồn tại.');
@@ -83,11 +84,16 @@ class ClientOrderController extends Controller
             [
                 'user_id' => Auth::id(),
                 'order_id' => $order->id,
-                'product_id' => $detail->product_id,
+                'order_detail_id' => $detail->id,
             ],
             [
+                'product_id' => $detail->product_id,
+                'product_variant_id' => $detail->variant_id,
                 'rating' => (int) $validated['rating'],
                 'comment' => trim((string) $validated['comment']),
+                'product_name_snapshot' => $detail->product_name,
+                'color_snapshot' => optional($detail->variant?->color)->name,
+                'size_snapshot' => optional($detail->variant?->size)->name,
             ]
         );
 
@@ -99,6 +105,10 @@ class ClientOrderController extends Controller
     public function cancel(Request $request, $id)
     {
         $order = Order::where('user_id', Auth::id())->findOrFail($id);
+
+        if ($order->payment_method === 'vnpay' && $order->payment_status === 'paid') {
+            return back()->with('error', 'Đơn hàng đã thanh toán bằng VNPay nên không thể hủy.');
+        }
 
         $request->validate([
             'cancel_reason' => ['required', 'string', 'max:1000'],

@@ -56,11 +56,22 @@
             <div class="card p-3 h-100">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">📈 Thống Kê Doanh Thu</h6>
-                    <div class="btn-group btn-group-sm" role="group" id="revenuePeriodSelector">
-                        <button type="button" class="btn btn-outline-primary" data-period="7d">7 Ngày</button>
-                        <button type="button" class="btn btn-outline-primary active" data-period="30d">30 Ngày</button>
-                        <button type="button" class="btn btn-outline-primary" data-period="12m">12 Tháng</button>
-                    </div>
+                    <form method="GET" class="d-flex align-items-center gap-2">
+                        <input
+                            type="date"
+                            class="form-control form-control-sm"
+                            name="from"
+                            value="{{ $filterFrom ?? '' }}"
+                        />
+                        <span class="text-muted small">-</span>
+                        <input
+                            type="date"
+                            class="form-control form-control-sm"
+                            name="to"
+                            value="{{ $filterTo ?? '' }}"
+                        />
+                        <button type="submit" class="btn btn-sm btn-outline-primary">Lọc</button>
+                    </form>
                 </div>
                 <div class="chart-container" style="position: relative; height:350px; width:100%">
                     <canvas id="mainRevenueChart"></canvas>
@@ -194,9 +205,7 @@
 document.addEventListener("DOMContentLoaded", function() {
     let mainRevenueChart;
 
-    const chartData30Days = @json($chartData30Days ?? ['labels' => [], 'data' => []]);
-    const chartData7Days = @json($chartData7Days ?? ['labels' => [], 'data' => []]);
-    const chartData12Months = @json($chartData12Months ?? ['labels' => [], 'data' => []]);
+    const chartDataRange = @json($chartDataRange ?? ['labels' => [], 'data' => []]);
 
     const defaultLineOptions = {
         responsive: true,
@@ -257,27 +266,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     };
 
-    document.getElementById('revenuePeriodSelector').addEventListener('click', (e) => {
-        if (e.target.tagName === 'BUTTON' && !e.target.classList.contains('active')) {
-            e.currentTarget.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
-            e.target.classList.add('active');
-
-            const period = e.target.dataset.period;
-            let selectedData;
-
-            if (period === '7d') {
-                selectedData = chartData7Days;
-            } else if (period === '30d') {
-                selectedData = chartData30Days;
-            } else if (period === '12m') {
-                selectedData = chartData12Months;
-            }
-
-            initMainRevenueChart(selectedData);
-        }
-    });
-
-    initMainRevenueChart(chartData30Days);
+    initMainRevenueChart(chartDataRange);
 });
 </script>
 @endsection
