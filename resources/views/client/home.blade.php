@@ -1,6 +1,6 @@
 @extends('client.layouts.master')
 
-@section('title', 'Giao hàng chặng cuối theo yêu cầu')
+@section('title', 'Threadly')
 
 @section('content')
 <!-- mobile fix menu start -->
@@ -227,25 +227,7 @@
                                                 <img src="{{ asset('storage/' . $product->image_primary) }}" alt="{{ $product->name }}">
                                             </a>
 
-                                            <ul class="product-option">
-                                                <li data-bs-toggle="tooltip" data-bs-placement="top" title="View">
-                                                    <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#view">
-                                                        <i data-feather="eye"></i>
-                                                    </a>
-                                                </li>
 
-                                                <li data-bs-toggle="tooltip" data-bs-placement="top" title="Compare">
-                                                    <a href="#">
-                                                        <i data-feather="refresh-cw"></i>
-                                                    </a>
-                                                </li>
-
-                                                <li data-bs-toggle="tooltip" data-bs-placement="top" title="Wishlist">
-                                                    <a href="#" class="notifi-wishlist">
-                                                        <i data-feather="heart"></i>
-                                                    </a>
-                                                </li>
-                                            </ul>
                                         </div>
 
                                         <div class="product-detail position-relative">
@@ -262,9 +244,6 @@
                                             </h6>
 
                                             <div class="add-to-cart-btn-2 addtocart_btn">
-                                                <button class="btn addcart-button btn buy-button">
-                                                    <i class="fa-solid fa-plus"></i>
-                                                </button>
 
                                                 <div class="cart_qty qty-box-2">
                                                     <div class="input-group">
@@ -318,25 +297,7 @@
                                             <img src="{{ asset('storage/' . $product->image_primary) }}" class="img-fluid blur-up lazyload"
                                                 alt="{{ $product->name }}">
                                         </a>
-                                        <ul class="product-option">
-                                            <li data-bs-toggle="tooltip" data-bs-placement="top" title="View">
-                                                <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#view">
-                                                    <i data-feather="eye"></i>
-                                                </a>
-                                            </li>
 
-                                            <li data-bs-toggle="tooltip" data-bs-placement="top" title="Compare">
-                                                <a href="#">
-                                                    <i data-feather="refresh-cw"></i>
-                                                </a>
-                                            </li>
-
-                                            <li data-bs-toggle="tooltip" data-bs-placement="top" title="Wishlist">
-                                                <a href="#" class="notifi-wishlist">
-                                                    <i data-feather="heart"></i>
-                                                </a>
-                                            </li>
-                                        </ul>
                                     </div>
                                     <div class="product-detail position-relative">
                                         <a href="{{ route('client.product.detail', $product->id) }}">
@@ -352,9 +313,6 @@
                                         </h6>
 
                                         <div class="add-to-cart-btn-2 addtocart_btn">
-                                            <button class="btn addcart-button btn buy-button">
-                                                <i class="fa-solid fa-plus"></i>
-                                            </button>
 
                                             <div class="cart_qty qty-box-2">
                                                 <div class="input-group">

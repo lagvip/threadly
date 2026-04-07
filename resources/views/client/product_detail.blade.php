@@ -39,19 +39,6 @@
         <div class="container-fluid-lg">
             <div class="row">
                 <div class="col-12">
-                    <div class="breadcrumb-contain">
-                        <h2>{{ $product->name }}</h2>
-                        <nav>
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item">
-                                    <a href="{{ route('home') }}">
-                                        <i class="fa-solid fa-house"></i>
-                                    </a>
-                                </li>
-                                <li class="breadcrumb-item active">{{ $product->name }}</li>
-                            </ol>
-                        </nav>
-                    </div>
                 </div>
             </div>
         </div>
@@ -493,8 +480,9 @@
                         <div class="vendor-box">
                             <div class="vendor-contain">
                                 <div class="vendor-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/product/vendor.png') }}"
-                                         class="blur-up lazyload" alt="">
+                                    <img src="{{ !empty($product->brand?->image) ? asset('storage/' . $product->brand->image) : asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/product/vendor.png') }}"
+                                        class="blur-up lazyload vendor-img"
+                                        alt="{{ $product->brand->name ?? 'Thương hiệu' }}">
                                 </div>
 
                                 <div class="vendor-name">

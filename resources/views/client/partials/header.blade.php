@@ -235,9 +235,6 @@
 
                                                         <div class="button-group">
                                                             <a href="{{ route('client.cart.index') }}" class="btn btn-sm cart-button">Xem giỏ hàng</a>
-                                                            <a href="#" class="btn btn-sm cart-button theme-bg-color text-white">
-                                                                Thanh toán
-                                                            </a>
                                                         </div>
                                                     @else
                                                         <div class="p-3 text-center">
