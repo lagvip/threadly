@@ -274,10 +274,6 @@
                                                 <li class="product-box-contain">
                                                     <a href="{{ route('register') }}">Đăng ký</a>
                                                 </li>
-
-                                                <li class="product-box-contain">
-                                                    <a href="#">Quên mật khẩu</a>
-                                                </li>
                                             @endguest
 
                                             @auth
