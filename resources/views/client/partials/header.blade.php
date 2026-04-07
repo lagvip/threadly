@@ -23,11 +23,9 @@
                     <div class="navbar-top">
                         <button class="navbar-toggler d-xl-none d-inline navbar-menu-button me-2" type="button"
                             data-bs-toggle="offcanvas" data-bs-target="#primaryMenu">
-                            <span class="navbar-toggler-icon">
-                                <i class="fa-solid fa-bars"></i>
-                            </span>
+
                         </button>
-                        <a href="index.html" class="web-logo nav-logo">
+                        <a href="{{ route('home') }}" class="web-logo nav-logo">
                             <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/logo/6.png') }}" class="img-fluid blur-up lazyload" alt="">
                         </a>
 
