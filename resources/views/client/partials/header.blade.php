@@ -124,7 +124,7 @@
                                     </div>
                                 </li>
                                 <li class="right-side">
-                                    <a href="wishlist.html" class="btn p-0 position-relative header-wishlist">
+                                    <a href="{{ route('client.wishlist.index') }}" class="btn p-0 position-relative header-wishlist">
                                         <i data-feather="bookmark"></i>
                                     </a>
                                 </li>

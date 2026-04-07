@@ -24,7 +24,9 @@ use App\Http\Controllers\Client\AccountController;
 use App\Http\Controllers\Client\ClientOrderController;
 use App\Http\Controllers\Client\AddressController;
 use App\Http\Controllers\Client\CategoryController;
+use App\Http\Controllers\Client\WishlistController;
 use App\Http\Controllers\Client\ChatbotController;
+
 
 // =======================================================
 // CLIENT
@@ -89,11 +91,21 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{id}', [AddressController::class, 'destroy'])->name('destroy');
         Route::post('/{id}/default', [AddressController::class, 'setDefault'])->name('default');
     });
+
     // Trợ lý AI
         Route::prefix('tro-ly-ai')->name('client.ai.')->group(function () {
         Route::get('/', [ChatbotController::class, 'index'])->name('index');
         Route::post('/hoi', [ChatbotController::class, 'ask'])->name('ask');
     });
+
+    //ưa thích
+    Route::prefix('yeu-thich')->name('client.wishlist.')->group(function () {
+        Route::get('/', [WishlistController::class, 'index'])->name('index');
+        Route::post('/them', [WishlistController::class, 'store'])->name('store');
+        Route::delete('/xoa/{id}', [WishlistController::class, 'destroy'])->name('destroy');
+
+    });
+
 });
 
 // VNPay callback routes: để ngoài auth
