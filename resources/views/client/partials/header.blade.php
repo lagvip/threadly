@@ -131,6 +131,11 @@
                                     </a>
                                 </li>
                                 <li class="right-side">
+                                    <a href="{{ route('client.wishlist.index') }}" class="btn p-0 position-relative header-wishlist">
+                                        <i data-feather="bookmark"></i>
+                                    </a>
+                                </li>
+                                <li class="right-side">
                                     @php
                                         use Illuminate\Support\Facades\Auth;
                                         use App\Models\Cart;
