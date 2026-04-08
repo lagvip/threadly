@@ -9,5 +9,10 @@ class Contact extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'email', 'phone', 'message'];
+    protected $fillable = ['name', 'email', 'phone', 'message', 'replied', 'replied_at'];
+
+    protected $casts = [
+        'replied' => 'boolean',
+        'replied_at' => 'datetime',
+    ];
 }

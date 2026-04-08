@@ -115,7 +115,7 @@
                                     @endif
                                 </td>
 
-                                <td>{{ $v->quantity }}</td>
+                                <td>{{ $v->quantity === 0 ? 'Vô hạn' : $v->quantity }}</td>
 
                                 <td>{{ $v->max_uses_per_user }}</td>
 
@@ -133,26 +133,21 @@
 
                                 <td>
                                     <div class="d-flex gap-2">
-
-                                     
-                                        
-
-                                        <!-- SỬA -->
                                         <a href="{{ route('vouchers.edit',$v) }}"
-                                           class="btn btn-soft-primary btn-sm">
+                                           class="btn btn-soft-primary btn-sm" title="Sửa voucher">
                                             <iconify-icon icon="solar:pen-2-broken"
                                                 class="align-middle fs-18"></iconify-icon>
                                         </a>
 
-                                        <!-- XOÁ -->
                                         <form action="{{ route('vouchers.destroy',$v) }}"
                                               method="POST">
                                             @csrf
                                             @method('DELETE')
 
                                             <button type="submit"
+                                                class="btn btn-soft-danger btn-sm"
                                                 onclick="return confirm('Bạn có chắc muốn xoá không?')"
-                                                class="btn btn-soft-danger btn-sm">
+                                                @if($v->hasAppliedOrders()) disabled title="Voucher đã áp dụng cho đơn hàng, không thể xóa" @endif>
                                                 <iconify-icon icon="solar:trash-bin-minimalistic-2-broken"
                                                     class="align-middle fs-18"></iconify-icon>
                                             </button>

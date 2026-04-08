@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Voucher;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class VoucherController extends Controller
@@ -46,19 +47,33 @@ class VoucherController extends Controller
             'code' => 'required|unique:vouchers,code',
             'type' => 'required|in:percent,fixed',
             'value' => 'required|numeric|min:1',
-            'start_date' => 'required',
-            'end_date' => 'required|after:start_date',
-            'quantity' => 'required|integer|min:1',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'quantity' => 'nullable|integer|min:0',
             'min_order_value' => 'nullable|numeric|min:0',
             'max_discount' => 'nullable|numeric|min:0',
             'max_uses_per_user' => 'required|integer|min:1',
             'max_uses_per_order' => 'required|integer|min:1'
         ]);
 
+        if ($request->filled('start_date') && $request->filled('end_date') && Carbon::parse($request->end_date)->lte(Carbon::parse($request->start_date))) {
+            return back()->withErrors(['end_date' => 'Ngày kết thúc phải sau ngày bắt đầu'])->withInput();
+        }
+
        
         if ($request->type == 'percent' && $request->value > 100) {
             return back()->withErrors(['value' => 'Phần trăm giảm không được vượt quá 100%'])->withInput();
         }
+
+        $startDate = $request->filled('start_date')
+            ? Carbon::parse($request->start_date)->format('Y-m-d H:i:s')
+            : Carbon::now()->format('Y-m-d H:i:s');
+
+        $endDate = $request->filled('end_date')
+            ? Carbon::parse($request->end_date)->format('Y-m-d H:i:s')
+            : Carbon::now()->addYears(10)->format('Y-m-d H:i:s');
+
+        $quantity = $request->filled('quantity') ? (int) $request->quantity : 0;
 
         Voucher::create([
             'code' => $request->code,
@@ -66,9 +81,9 @@ class VoucherController extends Controller
             'value' => $request->value,
             'max_discount' => $request->max_discount,
             'min_order_value' => $request->min_order_value,
-            'start_date' => str_replace('T', ' ', $request->start_date),
-            'end_date' => str_replace('T', ' ', $request->end_date),
-            'quantity' => $request->quantity,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'quantity' => $quantity,
             'max_uses_per_user' => $request->max_uses_per_user,
             'max_uses_per_order' => $request->max_uses_per_order,
             'status' => 'active'
@@ -91,19 +106,33 @@ class VoucherController extends Controller
             'code' => 'required|unique:vouchers,code,'.$voucher->id,
             'type' => 'required|in:percent,fixed',
             'value' => 'required|numeric|min:1',
-            'start_date' => 'required',
-            'end_date' => 'required|after:start_date',
-            'quantity' => 'required|integer|min:0',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'quantity' => 'nullable|integer|min:0',
             'min_order_value' => 'nullable|numeric|min:0',
             'max_discount' => 'nullable|numeric|min:0',
             'max_uses_per_user' => 'required|integer|min:1',
             'max_uses_per_order' => 'required|integer|min:1'
         ]);
 
+        if ($request->filled('start_date') && $request->filled('end_date') && Carbon::parse($request->end_date)->lte(Carbon::parse($request->start_date))) {
+            return back()->withErrors(['end_date' => 'Ngày kết thúc phải sau ngày bắt đầu'])->withInput();
+        }
+
        
         if ($request->type == 'percent' && $request->value > 100) {
             return back()->withErrors(['value' => 'Phần trăm giảm không được vượt quá 100%'])->withInput();
         }
+
+        $startDate = $request->filled('start_date')
+            ? Carbon::parse($request->start_date)->format('Y-m-d H:i:s')
+            : Carbon::now()->format('Y-m-d H:i:s');
+
+        $endDate = $request->filled('end_date')
+            ? Carbon::parse($request->end_date)->format('Y-m-d H:i:s')
+            : Carbon::now()->addYears(10)->format('Y-m-d H:i:s');
+
+        $quantity = $request->filled('quantity') ? (int) $request->quantity : 0;
 
         $voucher->update([
             'code' => $request->code,
@@ -111,9 +140,9 @@ class VoucherController extends Controller
             'value' => $request->value,
             'max_discount' => $request->max_discount,
             'min_order_value' => $request->min_order_value,
-            'start_date' => str_replace('T', ' ', $request->start_date),
-            'end_date' => str_replace('T', ' ', $request->end_date),
-            'quantity' => $request->quantity,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'quantity' => $quantity,
             'max_uses_per_user' => $request->max_uses_per_user,
             'max_uses_per_order' => $request->max_uses_per_order,
         ]);
@@ -125,9 +154,9 @@ class VoucherController extends Controller
    
     public function destroy(Voucher $voucher)
     {
-        if ($voucher->isInUse()) {
+        if ($voucher->hasAppliedOrders()) {
             return redirect()->route('vouchers.index')
-                ->with('error','Không thể xóa voucher đang áp dụng');
+                ->with('error','Không thể xóa voucher đang áp dụng cho đơn hàng');
         }
 
         $voucher->delete();

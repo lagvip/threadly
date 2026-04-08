@@ -19,7 +19,9 @@
                                         <th>Email</th>
                                         <th>Số điện thoại</th>
                                         <th>Tin nhắn</th>
+                                        <th>Trạng thái</th>
                                         <th>Ngày gửi</th>
+                                        <th>Hành động</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -30,11 +32,23 @@
                                             <td>{{ $contact->email }}</td>
                                             <td>{{ $contact->phone ?? 'N/A' }}</td>
                                             <td>{{ substr($contact->message, 0, 50) }}{{ strlen($contact->message) > 50 ? '...' : '' }}</td>
+                                            <td>
+                                                @if($contact->replied)
+                                                    <span class="badge bg-success">Đã liên hệ</span>
+                                                @else
+                                                    <span class="badge bg-warning text-dark">Chưa liên hệ</span>
+                                                @endif
+                                            </td>
                                             <td>{{ $contact->created_at->format('d/m/Y H:i') }}</td>
+                                            <td>
+                                                <a href="{{ route('listContact.show', $contact->id) }}" class="btn btn-soft-primary btn-sm" title="Xem chi tiết">
+                                                    <iconify-icon icon="solar:eye-broken" class="align-middle fs-18"></iconify-icon>
+                                                </a>
+                                            </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="text-center">Chưa có liên hệ nào.</td>
+                                            <td colspan="8" class="text-center">Chưa có liên hệ nào.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>

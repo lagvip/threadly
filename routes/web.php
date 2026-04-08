@@ -167,6 +167,8 @@ Route::middleware(['auth'])->group(function () {
         // CONTACTS
         Route::prefix('listContact')->name('listContact.')->group(function () {
             Route::get('/', [AdminContactController::class, 'index'])->name('list');
+            Route::get('/{contact}', [AdminContactController::class, 'show'])->name('show');
+            Route::post('/{contact}/toggle-replied', [AdminContactController::class, 'toggleReplied'])->name('toggleReplied');
         });
 
         // CATEGORY
