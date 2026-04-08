@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\OrderDetailController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\ProductController;
 use App\Http\Controllers\Client\CartController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Client\AddressController;
 use App\Http\Controllers\Client\CategoryController;
 use App\Http\Controllers\Client\WishlistController;
 use App\Http\Controllers\Client\ChatbotController;
+use App\Http\Controllers\ContactController;
 
 
 // =======================================================
@@ -38,6 +40,10 @@ Route::get('/admin', fn () => redirect('/admin/dashboard'));
 // Client giao diện
 Route::get('/san-pham/{id}', [ProductController::class, 'show'])->name('client.product.detail');
 Route::get('/category/{id}', [CategoryController::class, 'show'])->name('client.category');
+
+// Liên hệ
+Route::get('/lien-he', [ContactController::class, 'index'])->name('contact.index');
+Route::post('/lien-he', [ContactController::class, 'store'])->name('contact.store');
 
 // Client cần đăng nhập - giỏ hàng
 Route::middleware('auth')->group(function () {
@@ -156,6 +162,11 @@ Route::middleware(['auth'])->group(function () {
         // DASHBOARD
         Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/dashboard', [AdminController::class, 'homeAdmin'])->name('homeAdmin');
+        });
+
+        // CONTACTS
+        Route::prefix('listContact')->name('listContact.')->group(function () {
+            Route::get('/', [AdminContactController::class, 'index'])->name('list');
         });
 
         // CATEGORY
