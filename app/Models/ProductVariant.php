@@ -42,4 +42,8 @@ class ProductVariant extends Model
     {
         return $this->hasMany(OrderDetail::class, 'variant_id');
     }
+    public function wishlist()
+    {
+        return $this->hasMany(Wishlist::class, 'product_variant_id');
+    }
 }

@@ -7,34 +7,6 @@
                             <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/logo/4.png') }}" class="img-fluid blur-up lazyload" alt="">
                         </a>
                         <p class="information-text information-text-2">một thực tế quen thuộc là người đọc thường bị thu hút bởi nội dung dễ nhìn và dễ đọc.</p>
-                        <ul class="social-icon">
-                            <li class="light-bg">
-                                <a href="https://www.facebook.com/" class="footer-link-color">
-                                    <i class="fab fa-facebook-f"></i>
-                                </a>
-                            </li>
-                            <li class="light-bg">
-                                <a href="https://accounts.google.com/signin/v2/identifier?flowName=GlifWebSignIn&amp;flowEntry=ServiceLogin"
-                                    class="footer-link-color">
-                                    <i class="fab fa-google"></i>
-                                </a>
-                            </li>
-                            <li class="light-bg">
-                                <a href="https://twitter.com/i/flow/login" class="footer-link-color">
-                                    <i class="fab fa-twitter"></i>
-                                </a>
-                            </li>
-                            <li class="light-bg">
-                                <a href="https://www.instagram.com/" class="footer-link-color">
-                                    <i class="fab fa-instagram"></i>
-                                </a>
-                            </li>
-                            <li class="light-bg">
-                                <a href="https://in.pinterest.com/" class="footer-link-color">
-                                    <i class="fab fa-pinterest-p"></i>
-                                </a>
-                            </li>
-                        </ul>
                     </div>
 
                     <div class="col-xxl-2 col-xl-4 col-sm-6">
@@ -56,29 +28,6 @@
                             </li>
                             <li>
                                 <a href="blog-list.html" class="light-text">Bài viết mới nhất</a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div class="col-xxl-2 col-xl-4 col-sm-6">
-                        <div class="footer-title">
-                            <h4 class="text-white">Liên kết hữu ích</h4>
-                        </div>
-                        <ul class="footer-list footer-list-light footer-contact">
-                            <li>
-                                <a href="order-success.html" class="light-text">Đơn hàng của bạn</a>
-                            </li>
-                            <li>
-                                <a href="user-dashboard.html" class="light-text">Tài khoản của bạn</a>
-                            </li>
-                            <li>
-                                <a href="order-tracking.html" class="light-text">Theo dõi đơn hàng</a>
-                            </li>
-                            <li>
-                                <a href="wishlist.html" class="light-text">Danh sách yêu thích</a>
-                            </li>
-                            <li>
-                                <a href="faq.html" class="light-text">Câu hỏi thường gặp</a>
                             </li>
                         </ul>
                     </div>
@@ -149,30 +98,6 @@
                         </ul>
                     </div>
                 </div>
-            </div>
-
-            <div class="sub-footer sub-footer-lite section-b-space section-t-space">
-                <div class="left-footer">
-                    <p class="light-text">Bản quyền 2022 bởi Themeforest - phát triển bởi Pixelstrap</p>
-                </div>
-
-                <ul class="payment-box">
-                    <li>
-                        <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/icon/paymant/visa.png') }}" class="blur-up lazyload" alt="">
-                    </li>
-                    <li>
-                        <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/icon/paymant/discover.png') }}" alt="" class="blur-up lazyload">
-                    </li>
-                    <li>
-                        <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/icon/paymant/american.png') }}" alt="" class="blur-up lazyload">
-                    </li>
-                    <li>
-                        <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/icon/paymant/master-card.png') }}" alt="" class="blur-up lazyload">
-                    </li>
-                    <li>
-                        <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/icon/paymant/giro-pay.png') }}" alt="" class="blur-up lazyload">
-                    </li>
-                </ul>
             </div>
         </div>
     </footer>
@@ -459,7 +384,7 @@
     <!-- Deal Box Modal End -->
 
     <!-- Tap to top and theme setting button start -->
-   
+
     <!-- Tap to top and theme setting button end -->
 
     <!-- Bg overlay Start -->

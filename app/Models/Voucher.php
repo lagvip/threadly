@@ -24,92 +24,51 @@ class Voucher extends Model
         'quantity',
         'status',
         'max_uses_per_user',
-        'max_uses_per_order',
+        'max_uses_per_order'
     ];
 
     protected $casts = [
-        'value' => 'decimal:2',
-        'max_discount' => 'decimal:2',
-        'min_order_value' => 'decimal:2',
         'start_date' => 'datetime',
         'end_date'   => 'datetime',
-        'quantity' => 'integer',
-        'max_uses_per_user' => 'integer',
-        'max_uses_per_order' => 'integer',
-        'status' => 'string',
+        'status'     => 'string'
     ];
 
     /**
-     * Quan hệ: 1 voucher có thể được dùng trong nhiều order
-     */
-    public function orders()
-    {
-        return $this->hasMany(Order::class, 'voucher_id');
-    }
-
-    /**
-     * Accessor: trạng thái thực tế của voucher
-     * - expired: đã quá hạn
-     * - inactive: admin tắt hoặc chưa tới ngày bắt đầu
-     * - active: dùng được
+     * Accessor: Lấy trạng thái thực tế (tính toán dựa trên ngày hết hạn)
      */
     public function getActualStatusAttribute()
     {
         $now = Carbon::now();
 
-        if ($this->status !== 'active') {
-            return $this->status;
-        }
-
-        if ($now->lt($this->start_date)) {
-            return 'inactive';
-        }
-
+        // Nếu đã hết hạn
         if ($now->gt($this->end_date)) {
             return 'expired';
         }
 
-        return 'active';
+        // Trả về status từ database
+        return $this->status;
     }
 
     /**
      * Kiểm tra voucher có hợp lệ không
-     *
-     * @param float $orderTotal Tổng tiền hàng trước khi trừ voucher
-     * @param int $currentUses Số lần user hiện tại đã dùng voucher này
-     * @param int $usesInOrder Số lần voucher được áp trong 1 đơn
      */
-    public function isValid($orderTotal, $currentUses = 0, $usesInOrder = 1)
+    public function isValid($orderTotal)
     {
+        // Bị tắt hoặc hết hạn
+        if ($this->actual_status !== 'active') return false;
+
+        // Hết lượt dùng
+        if ($this->quantity <= 0) return false;
+
         $now = Carbon::now();
 
-        // Voucher không ở trạng thái dùng được
-        if ($this->actual_status !== 'active') {
-            return false;
-        }
-
-        // Hết số lượng
-        if ($this->quantity <= 0) {
-            return false;
-        }
-
-        // Ngoài thời gian áp dụng
+        // Chưa tới ngày hoặc đã hết hạn
         if ($now->lt($this->start_date) || $now->gt($this->end_date)) {
             return false;
         }
 
-        // Không đạt giá trị đơn hàng tối thiểu
-        if ((float) $orderTotal < (float) $this->min_order_value) {
-            return false;
-        }
-
-        // Vượt giới hạn theo user
-        if (!$this->canUserUse($currentUses)) {
-            return false;
-        }
-
-        // Vượt giới hạn trong 1 đơn
-        if (!$this->canUseInOrder($usesInOrder)) {
+        // Đơn hàng chưa đủ điều kiện
+        if ($orderTotal < $this->min_order_value) {
             return false;
         }
 
@@ -121,67 +80,59 @@ class Voucher extends Model
      */
     public function getDiscount($orderTotal)
     {
-        $orderTotal = (float) $orderTotal;
-
-        if ($orderTotal <= 0) {
-            return 0;
-        }
-
-        // Giảm theo phần trăm
+        // Giảm theo %
         if ($this->type === 'percent') {
-            $discount = $orderTotal * ((float) $this->value / 100);
+            $discount = $orderTotal * ($this->value / 100);
 
+            // Giới hạn giảm tối đa
             if (!is_null($this->max_discount)) {
-                $discount = min($discount, (float) $this->max_discount);
+                $discount = min($discount, $this->max_discount);
             }
 
             return round($discount, 2);
         }
 
-        // Giảm tiền cố định
+        // Giảm trừ tiền trực tiếp
         if ($this->type === 'fixed') {
-            return min((float) $this->value, $orderTotal);
+            return min($this->value, $orderTotal);
         }
 
         return 0;
     }
 
     /**
-     * Giảm số lượng voucher sau khi chốt đơn
+     * Giảm số lượt sử dụng sau khi áp dụng
      */
-    public function decreaseQuantity($amount = 1)
+    public function decreaseQuantity()
     {
-        $amount = max(1, (int) $amount);
-
-        if ($this->quantity >= $amount) {
-            $this->decrement('quantity', $amount);
-            $this->refresh();
+        if ($this->quantity > 0) {
+            $this->quantity -= 1;
+            $this->save();
         }
-
-        return $this;
     }
 
     /**
-     * Kiểm tra user có còn lượt dùng voucher không
+     * Kiểm tra xem user có thể sử dụng voucher này không (dựa trên giới hạn sử dụng)
      */
-    public function canUserUse($currentUses = 0)
+    public function canUserUse($userId, $currentUses = 0)
     {
-        if (is_null($this->max_uses_per_user) || $this->max_uses_per_user <= 0) {
-            return true;
-        }
-
-        return (int) $currentUses < (int) $this->max_uses_per_user;
+        return $currentUses < $this->max_uses_per_user;
     }
 
     /**
-     * Kiểm tra voucher có vượt giới hạn trong 1 đơn không
+     * Kiểm tra xem voucher có thể được sử dụng trong đơn hàng này không
      */
     public function canUseInOrder($usesInOrder = 1)
     {
-        if (is_null($this->max_uses_per_order) || $this->max_uses_per_order <= 0) {
-            return true;
-        }
+        return $usesInOrder <= $this->max_uses_per_order;
+    }
 
-        return (int) $usesInOrder <= (int) $this->max_uses_per_order;
+    /**
+     * Kiểm tra xem voucher có đang áp dụng không (không thể xóa)
+     */
+    public function isInUse()
+    {
+        $now = Carbon::now();
+        return $this->actual_status === 'active' && $this->quantity > 0 && $now->between($this->start_date, $this->end_date);
     }
 }

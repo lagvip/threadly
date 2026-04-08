@@ -23,11 +23,9 @@
                     <div class="navbar-top">
                         <button class="navbar-toggler d-xl-none d-inline navbar-menu-button me-2" type="button"
                             data-bs-toggle="offcanvas" data-bs-target="#primaryMenu">
-                            <span class="navbar-toggler-icon">
-                                <i class="fa-solid fa-bars"></i>
-                            </span>
+
                         </button>
-                        <a href="index.html" class="web-logo nav-logo">
+                        <a href="{{ route('home') }}" class="web-logo nav-logo">
                             <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/logo/6.png') }}" class="img-fluid blur-up lazyload" alt="">
                         </a>
 
@@ -126,7 +124,7 @@
                                     </div>
                                 </li>
                                 <li class="right-side">
-                                    <a href="wishlist.html" class="btn p-0 position-relative header-wishlist">
+                                    <a href="{{ route('client.wishlist.index') }}" class="btn p-0 position-relative header-wishlist">
                                         <i data-feather="bookmark"></i>
                                     </a>
                                 </li>
@@ -237,9 +235,6 @@
 
                                                         <div class="button-group">
                                                             <a href="{{ route('client.cart.index') }}" class="btn btn-sm cart-button">Xem giỏ hàng</a>
-                                                            <a href="#" class="btn btn-sm cart-button theme-bg-color text-white">
-                                                                Thanh toán
-                                                            </a>
                                                         </div>
                                                     @else
                                                         <div class="p-3 text-center">
@@ -278,10 +273,6 @@
 
                                                 <li class="product-box-contain">
                                                     <a href="{{ route('register') }}">Đăng ký</a>
-                                                </li>
-
-                                                <li class="product-box-contain">
-                                                    <a href="#">Quên mật khẩu</a>
                                                 </li>
                                             @endguest
 

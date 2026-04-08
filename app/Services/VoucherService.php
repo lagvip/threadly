@@ -34,6 +34,12 @@ class VoucherService
     public function deleteVoucher($id)
     {
         $voucher = Voucher::find($id);
+        if (!$voucher) {
+            throw new \Exception('Voucher không tồn tại');
+        }
+        if ($voucher->isInUse()) {
+            throw new \Exception('Không thể xóa voucher đang áp dụng');
+        }
         $voucher->delete();
         return $voucher;
     }
