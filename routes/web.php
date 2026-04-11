@@ -34,6 +34,8 @@ use App\Http\Controllers\Client\CategoryController;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/admin', fn () => redirect('/admin/dashboard'));
 
+Route::get('/ve-chung-toi', [HomeController::class, 'about'])->name('client.about');
+
 // Client giao diện
 Route::get('/san-pham/{id}', [ProductController::class, 'show'])->name('client.product.detail');
 Route::get('/category/{id}', [CategoryController::class, 'show'])->name('client.category');
