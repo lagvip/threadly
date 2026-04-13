@@ -110,7 +110,7 @@
                                             <div class="text-content">Ưu tiên nguồn hàng uy tín và kiểm tra trước khi giao.</div>
                                         </div>
                                     </div>
-                                </div>
+                                </div> 
 
                                 <div class="col-12">
                                     <div class="d-flex align-items-start gap-3">

@@ -63,10 +63,10 @@
                                             <div>
                                                 <h6>Ưu đãi độc quyền <span> {{ $banner->title }}</span></h6>
                                                 @if(!empty($banner->link))
-                                                    <button onclick="location.href='{{ $banner->link }}';"
+                                                    <a href="{{ $banner->link }}"
                                                         class="btn theme-bg-color mt-sm-4 mt-2 btn-md text-white fw-bold">
                                                         Mua ngay
-                                                    </button>
+                                                    </a>
                                                 @endif
                                             </div>
                                         </div>
