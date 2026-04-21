@@ -125,6 +125,11 @@ class VoucherController extends Controller
    
     public function destroy(Voucher $voucher)
     {
+        if ($voucher->isInUse()) {
+            return redirect()->route('vouchers.index')
+                ->with('error','Không thể xóa voucher đang áp dụng');
+        }
+
         $voucher->delete();
 
         return redirect()->route('vouchers.index')

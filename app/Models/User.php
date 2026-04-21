@@ -108,4 +108,8 @@ class User extends Authenticatable
     {
         return (int) $this->status === self::STATUS_BANNED;
     }
+    public function wishlist()
+    {
+        return $this->hasMany(Wishlist::class);
+    }
 }

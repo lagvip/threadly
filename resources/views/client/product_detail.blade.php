@@ -39,19 +39,6 @@
         <div class="container-fluid-lg">
             <div class="row">
                 <div class="col-12">
-                    <div class="breadcrumb-contain">
-                        <h2>{{ $product->name }}</h2>
-                        <nav>
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item">
-                                    <a href="{{ route('home') }}">
-                                        <i class="fa-solid fa-house"></i>
-                                    </a>
-                                </li>
-                                <li class="breadcrumb-item active">{{ $product->name }}</li>
-                            </ol>
-                        </nav>
-                    </div>
                 </div>
             </div>
         </div>
@@ -219,6 +206,18 @@
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+
+                                <div class="buy-box">
+                                    <form action="{{ route('client.wishlist.store') }}" method="POST" id="wishlist-form" class="m-0">
+                                        @csrf
+                                        <input type="hidden" name="variant_id" id="wishlist-variant-id">
+
+                                        <button type="submit" class="btn p-0 border-0 bg-transparent d-flex align-items-center gap-2">
+                                            <i data-feather="heart"></i>
+                                            <span>Thêm vào yêu thích</span>
+                                        </button>
+                                    </form>
                                 </div>
                                 <div class="pickup-box">
                                     <div class="product-title">
@@ -391,11 +390,7 @@
 
                                                                 <div class="review-title-2 border-0 pb-0">
                                                                     <h4 class="fw-bold">Bình luận từ khách hàng</h4>
-                                                                    <p>Chỉ hiển thị các đánh giá đã được gửi sau khi khách mua và nhận hàng. Khi bạn chọn đủ màu và kích thước, danh sách bên phải sẽ lọc theo đúng biến thể đó.</p>
-                                                                    <div class="review-filter-summary mt-3" id="review-filter-summary">
-                                                                        <span class="review-filter-chip" id="review-filter-chip">Đang hiển thị: tất cả đánh giá</span>
-                                                                        <span class="review-filter-count" id="review-filter-count">{{ $reviewCount }} đánh giá phù hợp</span>
-                                                                    </div>
+                                                                    <p>Chỉ hiển thị các đánh giá đã được gửi sau khi khách mua và nhận hàng.</p>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -411,15 +406,8 @@
                                                                     $avatarUrl = $avatar
                                                                         ? (\Illuminate\Support\Str::startsWith($avatar, ['http://', 'https://']) ? $avatar : asset('storage/' . $avatar))
                                                                         : asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/review/1.jpg');
-                                                                    $reviewVariantId = $review->product_variant_id ?? optional($review->variant)->id;
-                                                                    $reviewColorName = trim((string) ($review->color_snapshot ?? optional(optional($review->variant)->color)->name));
-                                                                    $reviewSizeName = trim((string) ($review->size_snapshot ?? optional(optional($review->variant)->size)->name));
                                                                 @endphp
-                                                                <li class="review-item"
-                                                                    data-review-item
-                                                                    data-variant-id="{{ $reviewVariantId }}"
-                                                                    data-color-name="{{ $reviewColorName }}"
-                                                                    data-size-name="{{ $reviewSizeName }}">
+                                                                <li>
                                                                     <div class="people-box">
                                                                         <div>
                                                                             <div class="people-image people-text">
@@ -448,17 +436,6 @@
                                                                                     </div>
                                                                                 </div>
                                                                             </div>
-                                                                            @if($reviewColorName || $reviewSizeName)
-                                                                                <div class="review-variant-meta">
-                                                                                    <span>Biến thể đã mua:</span>
-                                                                                    @if($reviewColorName)
-                                                                                        <span>Màu: {{ $reviewColorName }}</span>
-                                                                                    @endif
-                                                                                    @if($reviewSizeName)
-                                                                                        <span>@if($reviewColorName) | @endif Size: {{ $reviewSizeName }}</span>
-                                                                                    @endif
-                                                                                </div>
-                                                                            @endif
                                                                             <div class="reply">
                                                                                 <p>{{ $review->comment }}</p>
                                                                             </div>
@@ -486,20 +463,6 @@
                                                                     </div>
                                                                 </li>
                                                             @endforelse
-                                                            @if($reviews->isNotEmpty())
-                                                                <li class="d-none" id="review-empty-filter-state">
-                                                                    <div class="people-box empty-review-box">
-                                                                        <div class="people-comment">
-                                                                            <div class="people-name">
-                                                                                <a href="javascript:void(0)" class="name">Chưa có đánh giá khớp biến thể</a>
-                                                                            </div>
-                                                                            <div class="reply">
-                                                                                <p>Biến thể bạn đang chọn chưa có bình luận nào. Bạn có thể xem tất cả đánh giá bằng cách bỏ chọn màu hoặc kích thước hiện tại.</p>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </li>
-                                                            @endif
                                                         </ul>
                                                     </div>
                                                 </div>
@@ -517,8 +480,9 @@
                         <div class="vendor-box">
                             <div class="vendor-contain">
                                 <div class="vendor-image">
-                                    <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/product/vendor.png') }}"
-                                         class="blur-up lazyload" alt="">
+                                    <img src="{{ !empty($product->brand?->image) ? asset('storage/' . $product->brand->image) : asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/product/vendor.png') }}"
+                                        class="blur-up lazyload vendor-img"
+                                        alt="{{ $product->brand->name ?? 'Thương hiệu' }}">
                                 </div>
 
                                 <div class="vendor-name">
@@ -749,43 +713,6 @@
         line-height: 1.7;
     }
 
-    .review-filter-summary {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        align-items: center;
-    }
-
-    .review-filter-chip {
-        display: inline-flex;
-        align-items: center;
-        padding: 8px 12px;
-        border-radius: 999px;
-        background: #f8f9fa;
-        border: 1px solid rgba(34, 34, 34, 0.08);
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    .review-filter-count {
-        font-size: 13px;
-        color: #4a5568;
-    }
-
-    .review-variant-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-bottom: 10px;
-        font-size: 13px;
-        color: #4a5568;
-    }
-
-    .review-variant-meta span:first-child {
-        font-weight: 600;
-        color: #222;
-    }
-
     .admin-reply-box {
         padding: 14px 16px;
         border-radius: 10px;
@@ -861,17 +788,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const $mainSlider = $('#product-main-slider');
     const $thumbSlider = $('#variant-thumbs');
-    const reviewItems = Array.from(document.querySelectorAll('[data-review-item]'));
-    const reviewFilterChip = document.getElementById('review-filter-chip');
-    const reviewFilterCount = document.getElementById('review-filter-count');
-    const reviewEmptyFilterState = document.getElementById('review-empty-filter-state');
 
     function formatPrice(number) {
         return new Intl.NumberFormat('vi-VN').format(number || 0) + ' đ';
-    }
-
-    function normalizeText(value) {
-        return String(value || '').trim().toLowerCase();
     }
 
     function getColorTextById(colorId) {
@@ -1021,52 +940,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     }
 
-    function applyReviewFilter() {
-        if (!reviewItems.length) {
-            return;
-        }
-
-        const hasExactVariant = Boolean(selectedColorId && selectedSizeId && currentVariant);
-        const selectedColorText = normalizeText(selectedColorId ? getColorTextById(selectedColorId) : '');
-        const selectedSizeText = normalizeText(selectedSizeId ? getSizeTextById(selectedSizeId) : '');
-        let visibleCount = 0;
-
-        reviewItems.forEach(item => {
-            let shouldShow = true;
-
-            if (hasExactVariant) {
-                const itemVariantId = String(item.dataset.variantId || '').trim();
-                const itemColorName = normalizeText(item.dataset.colorName);
-                const itemSizeName = normalizeText(item.dataset.sizeName);
-
-                shouldShow = (itemVariantId && String(currentVariant.id) === itemVariantId)
-                    || (!itemVariantId && itemColorName && itemSizeName
-                        && itemColorName === selectedColorText
-                        && itemSizeName === selectedSizeText);
-            }
-
-            item.classList.toggle('d-none', !shouldShow);
-
-            if (shouldShow) {
-                visibleCount += 1;
-            }
-        });
-
-        if (reviewFilterChip) {
-            reviewFilterChip.textContent = hasExactVariant
-                ? 'Đang hiển thị: đánh giá cho ' + getColorTextById(selectedColorId) + ' / ' + getSizeTextById(selectedSizeId)
-                : 'Đang hiển thị: tất cả đánh giá';
-        }
-
-        if (reviewFilterCount) {
-            reviewFilterCount.textContent = visibleCount + ' đánh giá phù hợp';
-        }
-
-        if (reviewEmptyFilterState) {
-            reviewEmptyFilterState.classList.toggle('d-none', !(hasExactVariant && visibleCount === 0));
-        }
-    }
-
     function syncUI() {
         refreshAvailableOptions();
         renderSelectedState();
@@ -1079,8 +952,6 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             resetVariantUI();
         }
-
-        applyReviewFilter();
     }
 
     document.querySelectorAll('.color-option').forEach(el => {
@@ -1200,7 +1071,6 @@ document.addEventListener('DOMContentLoaded', function () {
     updateSelectedLabel();
     refreshAvailableOptions();
     renderSelectedState();
-    applyReviewFilter();
 });
 </script>
 @endpush
