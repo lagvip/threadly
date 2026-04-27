@@ -95,9 +95,6 @@
                                 </div>
 
                                 <div class="product-contain">
-                                    <p>
-                                        {{ $product->short_description ?? $product->description ?? 'Đang cập nhật mô tả sản phẩm.' }}
-                                    </p>
                                 </div>
 
                                 <div class="product-package">

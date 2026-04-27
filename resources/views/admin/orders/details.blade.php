@@ -135,15 +135,185 @@
                         <p><strong>Địa chỉ:</strong> {{ $order->address }}</p>
                     </div>
                 </div>
-
                 <div class="card shadow-sm mb-3">
-                    <div class="card-header fw-bold">Lý do hủy đơn</div>
+                    <div class="card-header fw-bold">Thông tin vận chuyển GHN</div>
+
                     <div class="card-body">
-                        <span class="badge bg-secondary">
-                            {{ $order->cancel_reason ?: 'Không có lý do hủy đơn' }}
-                        </span>
+                        @if ($order->ghn_order_code)
+                            <p class="mb-2">
+                                <strong>Mã vận đơn GHN:</strong>
+                                <span class="text-primary fw-bold">{{ $order->ghn_order_code }}</span>
+                            </p>
+
+                            <p class="mb-2">
+                                <strong>Mã đơn nội bộ gửi GHN:</strong>
+                                <span class="text-muted">{{ $order->ghn_client_order_code ?: '-' }}</span>
+                            </p>
+
+                            <p class="mb-2">
+                                <strong>Nhóm trạng thái GHN:</strong>
+                                <span class="badge {{ $order->ghn_status_group_badge }}">
+                                    {{ $order->ghn_status_group }}
+                                </span>
+                            </p>
+
+                            <p class="mb-2">
+                                <strong>Trạng thái chi tiết:</strong>
+                                {{ $order->ghn_status_name ?: ($order->ghn_status ?: '-') }}
+
+                                @if ($order->ghn_status)
+                                    <small class="text-muted">({{ $order->ghn_status }})</small>
+                                @endif
+                            </p>
+
+                            <p class="mb-2">
+                                <strong>Dự kiến giao:</strong>
+                                {{ $order->ghn_expected_delivery_time ? $order->ghn_expected_delivery_time->format('d/m/Y H:i') : '-' }}
+                            </p>
+
+                            <p class="mb-3">
+                                <strong>Cập nhật lúc:</strong>
+                                {{ $order->ghn_synced_at ? $order->ghn_synced_at->format('d/m/Y H:i') : 'Chưa đồng bộ' }}
+                            </p>
+
+                            {{-- Nút thao tác GHN thật --}}
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <form method="POST" action="{{ route('orders.ghn.sync', $order->id) }}">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                        Đồng bộ trạng thái GHN
+                                    </button>
+                                </form>
+
+                                <a href="{{ route('orders.ghn.print', $order->id) }}"
+                                target="_blank"
+                                class="btn btn-sm btn-outline-secondary">
+                                    In vận đơn GHN
+                                </a>
+
+                                @if (!in_array($order->ghn_status, ['delivered', 'cancel', 'returned', 'lost', 'damage'], true))
+                                    <form method="POST"
+                                        action="{{ route('orders.ghn.cancel', $order->id) }}"
+                                        onsubmit="return confirm('Anh chắc chắn muốn hủy vận đơn GHN này?')">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            Hủy vận đơn GHN
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
+
+                            {{-- Nút giả lập GHN local --}}
+                            @if (app()->environment('local'))
+                                <hr>
+
+                                <div class="mt-3">
+                                    <div class="fw-bold mb-2 text-danger">
+                                        Giả lập trạng thái GHN local
+                                    </div>
+
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <form method="POST" action="{{ route('orders.ghn.simulate', [$order->id, 'ready_to_pick']) }}">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                Giả lập: Chờ bàn giao
+                                            </button>
+                                        </form>
+
+                                        <form method="POST" action="{{ route('orders.ghn.simulate', [$order->id, 'picked']) }}">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-info">
+                                                Giả lập: Đã lấy hàng
+                                            </button>
+                                        </form>
+
+                                        <form method="POST" action="{{ route('orders.ghn.simulate', [$order->id, 'delivering']) }}">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-info">
+                                                Giả lập: Đang giao
+                                            </button>
+                                        </form>
+
+                                        <form method="POST" action="{{ route('orders.ghn.simulate', [$order->id, 'delivery_fail']) }}">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-warning">
+                                                Giả lập: Giao thất bại
+                                            </button>
+                                        </form>
+
+                                        <form method="POST" action="{{ route('orders.ghn.simulate', [$order->id, 'waiting_to_return']) }}">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                Giả lập: Chờ hoàn hàng
+                                            </button>
+                                        </form>
+
+                                        <form method="POST" action="{{ route('orders.ghn.simulate', [$order->id, 'returned']) }}">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                Giả lập: Đã hoàn hàng
+                                            </button>
+                                        </form>
+
+                                        <form method="POST" action="{{ route('orders.ghn.simulate', [$order->id, 'delivered']) }}">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                                Giả lập: Hoàn tất
+                                            </button>
+                                        </form>
+
+                                        <form method="POST"
+                                            action="{{ route('orders.ghn.simulate', [$order->id, 'cancel']) }}"
+                                            onsubmit="return confirm('Giả lập GHN hủy đơn này?')">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                Giả lập: Đơn hủy
+                                            </button>
+                                        </form>
+
+                                        <form method="POST" action="{{ route('orders.ghn.simulate', [$order->id, 'lost']) }}">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-dark">
+                                                Giả lập: Thất lạc
+                                            </button>
+                                        </form>
+
+                                        <form method="POST" action="{{ route('orders.ghn.simulate', [$order->id, 'damage']) }}">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-dark">
+                                                Giả lập: Hư hỏng
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    <small class="text-muted d-block mt-2">
+                                        Các nút này chỉ đổi trạng thái trong Laravel để test webhook/local, không đổi trạng thái thật trên GHN.
+                                    </small>
+                                </div>
+                            @endif
+                        @else
+                            <p class="text-muted mb-3">Đơn này chưa gửi sang GHN.</p>
+
+                            <form method="POST" action="{{ route('orders.ghn.create', $order->id) }}">
+                                @csrf
+                                <button type="submit" class="btn btn-success">
+                                    Tạo vận đơn GHN
+                                </button>
+                            </form>
+                        @endif
                     </div>
                 </div>
+
+                @if(filled($order->cancel_reason))
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header fw-bold">Lý do hủy đơn</div>
+                        <div class="card-body">
+                            <span class="badge bg-secondary">
+                                {{ $order->cancel_reason }}
+                            </span>
+                        </div>
+                    </div>
+                @endif
 
                 <div class="card shadow-sm">
                     <div class="card-header fw-bold">Voucher áp dụng</div>

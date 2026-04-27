@@ -34,7 +34,22 @@ class Order extends Model
         'cancel_reason',
         'customer_note',
 
-        // VNPay metadata
+        // GHN shipping metadata
+        'shipping_address_id',
+        'ghn_to_province_id',
+        'ghn_to_district_id',
+        'ghn_to_ward_code',
+        'ghn_order_code',
+        'ghn_client_order_code',
+        'ghn_status',
+        'ghn_status_name',
+        'ghn_service_id',
+        'ghn_service_type_id',
+        'ghn_expected_delivery_time',
+        'ghn_raw_response',
+        'ghn_synced_at',
+
+        // VNPay / payment metadata
         'payment_request_date',
         'payment_expire_date',
         'payment_transaction_no',
@@ -43,6 +58,9 @@ class Order extends Model
         'payment_transaction_status',
         'payment_pay_date',
         'paid_at',
+
+        // Customer confirmation
+        'customer_confirmed_at',
     ];
 
     protected $casts = [
@@ -50,6 +68,10 @@ class Order extends Model
         'discount' => 'float',
         'total_price' => 'float',
         'paid_at' => 'datetime',
+        'customer_confirmed_at' => 'datetime',
+        'ghn_expected_delivery_time' => 'datetime',
+        'ghn_raw_response' => 'array',
+        'ghn_synced_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -63,6 +85,9 @@ class Order extends Model
         'can_review',
         'pending_review_count',
         'has_pending_review',
+        'ghn_status_group',
+        'ghn_status_group_badge',
+        'can_confirm_received',
     ];
 
     public const PAYMENT_METHOD_VNPAY = 'vnpay';
@@ -169,6 +194,78 @@ class Order extends Model
         };
     }
 
+    public function getGhnStatusGroupAttribute(): string
+    {
+        return match ((string) $this->ghn_status) {
+            'ready_to_pick',
+            'picking',
+            'money_collect_picking' => 'Chờ bàn giao',
+
+            'picked',
+            'storing',
+            'transporting',
+            'sorting',
+            'delivering',
+            'money_collect_delivering' => 'Đã bàn giao - Đang giao',
+
+            'delivery_fail' => 'Chờ xác nhận giao lại',
+
+            'waiting_to_return',
+            'return',
+            'return_transporting',
+            'return_sorting',
+            'returning',
+            'return_fail',
+            'returned' => 'Đã bàn giao - đang hoàn hàng',
+
+            'delivered' => 'Hoàn tất',
+
+            'cancel' => 'Đơn hủy',
+
+            'exception',
+            'damage',
+            'lost' => 'Hàng thất lạc - hư hỏng',
+
+            default => $this->ghn_order_code ? 'Không xác định' : 'Chưa gửi GHN',
+        };
+    }
+
+    public function getGhnStatusGroupBadgeAttribute(): string
+    {
+        return match ((string) $this->ghn_status) {
+            'ready_to_pick',
+            'picking',
+            'money_collect_picking' => 'bg-primary',
+
+            'picked',
+            'storing',
+            'transporting',
+            'sorting',
+            'delivering',
+            'money_collect_delivering' => 'bg-info',
+
+            'delivery_fail' => 'bg-warning text-dark',
+
+            'waiting_to_return',
+            'return',
+            'return_transporting',
+            'return_sorting',
+            'returning',
+            'return_fail',
+            'returned' => 'bg-secondary',
+
+            'delivered' => 'bg-success',
+
+            'cancel' => 'bg-danger',
+
+            'exception',
+            'damage',
+            'lost' => 'bg-dark',
+
+            default => 'bg-light text-dark',
+        };
+    }
+
     public function canCustomerCancelDirectly(): bool
     {
         if ($this->order_status !== self::STATUS_PENDING) {
@@ -231,10 +328,32 @@ class Order extends Model
             ], true);
     }
 
+    public function canCustomerConfirmReceived(): bool
+    {
+        if (!empty($this->customer_confirmed_at)) {
+            return false;
+        }
+
+        if ($this->order_status !== self::STATUS_DELIVERED) {
+            return false;
+        }
+
+        if ($this->payment_status !== self::PAYMENT_PAID) {
+            return false;
+        }
+
+        if ($this->ghn_order_code && $this->ghn_status !== 'delivered') {
+            return false;
+        }
+
+        return true;
+    }
+
     public function canReviewProducts(): bool
     {
         return $this->order_status === self::STATUS_DELIVERED
-            && $this->payment_status === self::PAYMENT_PAID;
+            && $this->payment_status === self::PAYMENT_PAID
+            && !empty($this->customer_confirmed_at);
     }
 
     public function getCanCancelAttribute(): bool
@@ -255,6 +374,11 @@ class Order extends Model
     public function getCanRepayAttribute(): bool
     {
         return $this->canRepayVnpay();
+    }
+
+    public function getCanConfirmReceivedAttribute(): bool
+    {
+        return $this->canCustomerConfirmReceived();
     }
 
     public function getCanReviewAttribute(): bool

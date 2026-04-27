@@ -65,14 +65,14 @@
     }
 
     .order-btn-muted {
-        background: #f8fafc !important;
-        border: 1px solid #dbe2ea !important;
+        background: #f1f5f9 !important;
+        border: 1px solid #cbd5e1 !important;
         color: #334155 !important;
     }
 
     .order-btn-muted:hover {
-        background: #eef2f7 !important;
-        border-color: #cfd8e3 !important;
+        background: #e2e8f0 !important;
+        border-color: #94a3b8 !important;
         color: #0f172a !important;
     }
 
@@ -112,6 +112,18 @@
         color: #fff !important;
     }
 
+    .order-btn-confirm {
+        background: #16a34a !important;
+        border: 1px solid #16a34a !important;
+        color: #fff !important;
+    }
+
+    .order-btn-confirm:hover {
+        background: #15803d !important;
+        border-color: #15803d !important;
+        color: #fff !important;
+    }
+
     .order-total {
         color: #ee4d2d;
     }
@@ -121,6 +133,22 @@
         font-size: 13px;
         font-weight: 600;
     }
+
+    .order-confirmed-hint {
+        color: #16a34a;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .order-ghn-hint {
+        color: #2563eb;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .order-action-row .btn {
+        min-height: 32px;
+    }
 </style>
 
 <div class="card orders-card">
@@ -128,7 +156,9 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
             <div>
                 <h4 class="mb-1">Đơn hàng của tôi</h4>
-                <p class="text-muted mb-0">Theo dõi trạng thái, mua lại, thanh toán lại và bình luận sau khi đơn đã giao thành công.</p>
+                <p class="text-muted mb-0">
+                    Theo dõi trạng thái, mua lại, thanh toán lại, xác nhận nhận hàng và đánh giá sau khi đơn đã giao thành công.
+                </p>
             </div>
         </div>
 
@@ -162,18 +192,36 @@
                             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                                 <div>
                                     <div class="fw-bold fs-6">{{ $order->order_code }}</div>
+
                                     <div class="text-muted small">
                                         Ngày tạo: {{ optional($order->created_at)->format('d/m/Y H:i') }}
                                     </div>
+
                                     <div class="text-muted small">
                                         Phương thức: {{ strtoupper($order->payment_method) }}
                                     </div>
+
+                                    @if($order->ghn_order_code)
+                                        <div class="order-ghn-hint mt-1">
+                                            GHN: {{ $order->ghn_order_code }}
+                                            @if($order->ghn_status_group)
+                                                • {{ $order->ghn_status_group }}
+                                            @endif
+                                        </div>
+                                    @endif
+
+                                    @if($order->customer_confirmed_at)
+                                        <div class="order-confirmed-hint mt-1">
+                                            Đã xác nhận nhận hàng lúc {{ $order->customer_confirmed_at->format('d/m/Y H:i') }}
+                                        </div>
+                                    @endif
+
                                     @if($order->can_review)
                                         <div class="order-review-hint mt-1">
                                             @if($order->has_pending_review)
-                                                Chờ bình luận {{ $order->pending_review_count }} sản phẩm
+                                                Chờ đánh giá {{ $order->pending_review_count }} sản phẩm
                                             @else
-                                                Bạn đã bình luận hết sản phẩm trong đơn này
+                                                Bạn đã đánh giá hết sản phẩm trong đơn này
                                             @endif
                                         </div>
                                     @endif
@@ -185,6 +233,7 @@
                                             {{ $order->payment_status_label }}
                                         </span>
                                     </div>
+
                                     <div>
                                         <span class="badge bg-{{ $order->order_status_badge }}">
                                             {{ $order->order_status_label }}
@@ -210,6 +259,7 @@
                                     <div class="order-product-meta mb-1">
                                         @if($firstItem)
                                             SL: {{ $firstItem->quantity }}
+
                                             @if($otherCount > 0)
                                                 • và {{ $otherCount }} sản phẩm khác
                                             @endif
@@ -229,7 +279,7 @@
                                 </div>
                             </div>
 
-                            <div class="d-flex flex-wrap gap-2 pt-2 border-top">
+                            <div class="d-flex flex-wrap gap-2 pt-2 border-top order-action-row">
                                 <a href="{{ route('client.orders.show', $order->id) }}"
                                    class="btn order-btn-muted btn-sm rounded-pill px-3">
                                     Xem chi tiết
@@ -242,10 +292,21 @@
                                     </button>
                                 </form>
 
+                                @if($order->can_confirm_received)
+                                    <form method="POST"
+                                          action="{{ route('client.orders.confirm-received', $order->id) }}"
+                                          onsubmit="return confirm('Bạn xác nhận đã nhận được hàng?')">
+                                        @csrf
+                                        <button type="submit" class="btn order-btn-confirm btn-sm rounded-pill px-3">
+                                            Xác nhận đã nhận hàng
+                                        </button>
+                                    </form>
+                                @endif
+
                                 @if($order->can_review)
                                     <a href="{{ route('client.orders.show', $order->id) }}#review-section"
                                        class="btn order-btn-review btn-sm rounded-pill px-3">
-                                        {{ $order->has_pending_review ? 'Bình luận' : 'Xem bình luận' }}
+                                        {{ $order->has_pending_review ? 'Đánh giá' : 'Xem đánh giá' }}
                                     </a>
                                 @endif
 
@@ -304,6 +365,7 @@
                         <label for="cancel_reason_select" class="form-label fw-semibold">
                             Chọn lý do hủy đơn
                         </label>
+
                         <select id="cancel_reason_select" class="form-select" required>
                             <option value="">-- Chọn lý do --</option>
                             <option value="Tôi muốn đổi sản phẩm khác">Tôi muốn đổi sản phẩm khác</option>
@@ -320,6 +382,7 @@
                         <label for="cancel_reason_other" class="form-label fw-semibold">
                             Nhập lý do khác
                         </label>
+
                         <textarea id="cancel_reason_other"
                                   class="form-control"
                                   rows="3"
@@ -333,6 +396,7 @@
                     <button type="button" class="btn order-btn-muted btn-sm rounded-pill px-3" data-bs-dismiss="modal">
                         Đóng
                     </button>
+
                     <button type="submit" id="cancelOrderSubmitBtn" class="btn order-btn-danger btn-sm rounded-pill px-3">
                         Xác nhận
                     </button>

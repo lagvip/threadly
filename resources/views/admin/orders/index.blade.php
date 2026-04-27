@@ -1,6 +1,130 @@
 @extends('admin.layouts.layout')
 
 @section('content')
+    <style>
+        .orders-table {
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .orders-table th,
+        .orders-table td {
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        .orders-table .col-code {
+            width: 13%;
+        }
+
+        .orders-table .col-date {
+            width: 9%;
+        }
+
+        .orders-table .col-customer {
+            width: 19%;
+        }
+
+        .orders-table .col-total {
+            width: 10%;
+        }
+
+        .orders-table .col-payment {
+            width: 13%;
+        }
+
+        .orders-table .col-status {
+            width: 12%;
+        }
+
+        .orders-table .col-ghn {
+            width: 11%;
+        }
+
+        .orders-table .col-action {
+            width: 13%;
+        }
+
+        .customer-email,
+        .order-code-text,
+        .ghn-code-text {
+            display: inline-block;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
+        }
+
+        .order-actions {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+        }
+
+        .order-actions form {
+            display: inline-flex;
+            margin: 0;
+        }
+
+        .order-actions .btn {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .order-actions .btn i {
+            font-size: 13px;
+        }
+
+        .badge-order {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ghn-info {
+            line-height: 1.25;
+        }
+
+        .ghn-info .badge {
+            font-size: 11px;
+            padding: 3px 7px;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .table-responsive {
+            overflow-x: visible;
+        }
+
+        @media (max-width: 1400px) {
+            .order-actions {
+                gap: 3px;
+            }
+
+            .order-actions .btn {
+                width: 28px;
+                height: 28px;
+            }
+
+            .orders-table {
+                font-size: 13px;
+            }
+
+            .badge.rounded-pill {
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+            }
+        }
+    </style>
+
     @if (session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle-fill me-2"></i>
@@ -47,11 +171,19 @@
 
         <form method="GET" action="{{ route('orders.index') }}" class="row g-2 mb-4 align-items-center">
             <div class="col-md-2">
-                <input type="text" name="order_code" value="{{ request('order_code') }}" class="form-control" placeholder="Mã đơn hàng">
+                <input type="text"
+                       name="order_code"
+                       value="{{ request('order_code') }}"
+                       class="form-control"
+                       placeholder="Mã đơn hàng">
             </div>
 
             <div class="col-md-2">
-                <input type="text" name="customer" value="{{ request('customer') }}" class="form-control" placeholder="Khách hàng">
+                <input type="text"
+                       name="customer"
+                       value="{{ request('customer') }}"
+                       class="form-control"
+                       placeholder="Khách hàng">
             </div>
 
             <div class="col-md-2">
@@ -86,18 +218,20 @@
 
         <div class="card border-0 shadow-sm rounded-4">
             <div class="table-responsive p-3">
-                <table class="table table-hover table-striped align-middle text-nowrap rounded">
+                <table class="table table-hover table-striped align-middle rounded orders-table">
                     <thead class="table-light text-uppercase text-center small">
                         <tr>
-                            <th>Mã đơn</th>
-                            <th>Ngày tạo</th>
-                            <th>Khách hàng</th>
-                            <th>Tổng tiền</th>
-                            <th>TT thanh toán</th>
-                            <th>Trạng thái đơn</th>
-                            <th>Thao tác</th>
+                            <th class="col-code">Mã đơn</th>
+                            <th class="col-date">Ngày tạo</th>
+                            <th class="col-customer">Khách hàng</th>
+                            <th class="col-total">Tổng tiền</th>
+                            <th class="col-payment">TT thanh toán</th>
+                            <th class="col-status">Trạng thái</th>
+                            <th class="col-ghn">GHN</th>
+                            <th class="col-action">Thao tác</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         @forelse ($orders as $order)
                             @php
@@ -110,7 +244,10 @@
                                     'expired' => ['label' => 'Thanh toán hết hạn', 'color' => 'bg-secondary'],
                                 ];
 
-                                $paymentInfo = $paymentLabels[$order->payment_status] ?? ['label' => ucfirst($order->payment_status), 'color' => 'bg-light text-dark'];
+                                $paymentInfo = $paymentLabels[$order->payment_status] ?? [
+                                    'label' => ucfirst((string) $order->payment_status),
+                                    'color' => 'bg-light text-dark',
+                                ];
 
                                 $statusLabels = [
                                     'pending' => ['label' => 'Chờ xử lý', 'color' => 'bg-warning text-dark'],
@@ -121,55 +258,134 @@
                                     'waiting_for_cancellation' => ['label' => 'Chờ duyệt hủy', 'color' => 'bg-dark'],
                                 ];
 
-                                $statusInfo = $statusLabels[$order->order_status] ?? ['label' => ucfirst($order->order_status), 'color' => 'bg-light text-dark'];
+                                $statusInfo = $statusLabels[$order->order_status] ?? [
+                                    'label' => ucfirst((string) $order->order_status),
+                                    'color' => 'bg-light text-dark',
+                                ];
+
+                                $customerEmail = $order->user->email ?? $order->email ?? 'N/A';
                             @endphp
 
                             <tr class="text-center">
-                                <td>#{{ $order->order_code }}</td>
-                                <td>{{ $order->created_at->format('d/m/Y') }}</td>
-                                <td class="text-danger fw-semibold">{{ $order->user->email ?? $order->email ?? 'N/A' }}</td>
-                                <td class="fw-medium">{{ number_format($order->total_price, 0, ',', '.') }}₫</td>
+                                <td class="fw-semibold">
+                                    <span class="order-code-text" title="#{{ $order->order_code }}">
+                                        #{{ $order->order_code }}
+                                    </span>
+                                </td>
 
                                 <td>
-                                    <span class="badge rounded-pill px-3 py-2 {{ $paymentInfo['color'] }}">
+                                    {{ $order->created_at->format('d/m/Y') }}
+                                </td>
+
+                                <td class="text-danger fw-semibold">
+                                    <span class="customer-email" title="{{ $customerEmail }}">
+                                        {{ $customerEmail }}
+                                    </span>
+                                </td>
+
+                                <td class="fw-medium">
+                                    {{ number_format($order->total_price, 0, ',', '.') }}₫
+                                </td>
+
+                                <td>
+                                    <span class="badge rounded-pill px-3 py-2 badge-order {{ $paymentInfo['color'] }}">
                                         {{ $paymentInfo['label'] }}
                                     </span>
                                 </td>
 
                                 <td>
-                                    <span class="badge rounded-pill px-3 py-2 {{ $statusInfo['color'] }}">
+                                    <span class="badge rounded-pill px-3 py-2 badge-order {{ $statusInfo['color'] }}">
                                         {{ $statusInfo['label'] }}
                                     </span>
                                 </td>
 
                                 <td>
-                                    <a href="{{ route('orders.show', $order->id) }}" class="btn btn-sm btn-outline-primary me-1" title="Xem chi tiết">
-                                        <i class="bi bi-eye-fill"></i>
-                                    </a>
+                                    @if ($order->ghn_order_code)
+                                        <div class="ghn-info">
+                                            <div class="ghn-code-text" title="{{ $order->ghn_order_code }}">
+                                                <strong>Mã:</strong>
+                                                <span class="text-primary fw-semibold">{{ $order->ghn_order_code }}</span>
+                                            </div>
 
-                                    @if (!in_array($order->order_status, ['delivered', 'cancelled'], true))
-                                        <button
-                                            class="btn btn-sm btn-outline-warning me-1 btn-edit-order"
-                                            data-id="{{ $order->id }}"
-                                            data-status="{{ $order->order_status }}"
-                                            data-previous-status="{{ $order->previous_status }}"
-                                            data-payment-method="{{ $order->payment_method }}"
-                                            data-payment-status="{{ $order->payment_status }}"
-                                            title="Chỉnh sửa">
-                                            <i class="bi bi-pencil-fill"></i>
-                                        </button>
+                                            <div class="mt-1">
+                                                <span class="badge {{ $order->ghn_status_group_badge }}"
+                                                      title="{{ $order->ghn_status_group }}">
+                                                    {{ $order->ghn_status_group }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <span class="badge bg-light text-dark">Chưa gửi GHN</span>
                                     @endif
+                                </td>
 
-                                    @if ($order->order_status === 'cancelled')
-                                        <button onclick="showDeleteModal({{ $order->id }})" class="btn btn-sm btn-outline-danger" title="Xóa">
-                                            <i class="bi bi-trash-fill"></i>
-                                        </button>
-                                    @endif
+                                <td>
+                                    <div class="order-actions">
+                                        <a href="{{ route('orders.show', $order->id) }}"
+                                           class="btn btn-sm btn-outline-primary"
+                                           title="Xem chi tiết">
+                                            <i class="bi bi-eye-fill"></i>
+                                        </a>
+
+                                        @if (
+                                            !$order->ghn_order_code
+                                            && !in_array($order->order_status, ['delivered', 'cancelled'], true)
+                                            && ($order->payment_method === 'cod' || $order->payment_status === 'paid')
+                                        )
+                                            <form action="{{ route('orders.ghn.create', $order) }}" method="POST">
+                                                @csrf
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-outline-success"
+                                                        title="Tạo vận đơn GHN"
+                                                        onclick="return confirm('Tạo vận đơn GHN cho đơn này?')">
+                                                    <i class="bi bi-truck"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        @if ($order->ghn_order_code)
+                                            <form action="{{ route('orders.ghn.sync', $order) }}" method="POST">
+                                                @csrf
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-outline-info"
+                                                        title="Đồng bộ GHN">
+                                                    <i class="bi bi-arrow-repeat"></i>
+                                                </button>
+                                            </form>
+
+                                            <a href="{{ route('orders.ghn.print', $order) }}"
+                                               target="_blank"
+                                               class="btn btn-sm btn-outline-dark"
+                                               title="In vận đơn GHN">
+                                                <i class="bi bi-printer"></i>
+                                            </a>
+
+                                            @if (!in_array($order->ghn_status, ['delivered', 'cancel', 'returned', 'lost', 'damage'], true))
+                                                <form action="{{ route('orders.ghn.cancel', $order) }}" method="POST">
+                                                    @csrf
+                                                    <button type="submit"
+                                                            class="btn btn-sm btn-outline-danger"
+                                                            title="Hủy vận đơn GHN"
+                                                            onclick="return confirm('Hủy vận đơn GHN cho đơn này?')">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        @endif
+
+                                        @if ($order->order_status === 'cancelled')
+                                            <button onclick="showDeleteModal({{ $order->id }})"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    title="Xóa">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center">Không có đơn hàng nào</td>
+                                <td colspan="8" class="text-center">Không có đơn hàng nào</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -181,116 +397,31 @@
     </div>
 
     @push('scripts')
-    <script>
-        document.querySelectorAll('.btn-edit-order').forEach(button => {
-            button.addEventListener('click', function () {
-                const orderId = this.dataset.id;
-                const orderStatus = this.dataset.status;
-                const previousStatus = this.dataset.previousStatus || 'processing';
-                const paymentMethod = this.dataset.paymentMethod;
-                const paymentStatus = this.dataset.paymentStatus;
-                const isPaidVnpay = paymentMethod === 'vnpay' && paymentStatus === 'paid';
-                const form = document.getElementById('formEditOrder');
-                const select = document.getElementById('orderStatusSelect');
-                const note = document.getElementById('orderStatusNote');
-                const statusHelp = document.getElementById('statusHelp');
-
-                form.action = '/orders/' + orderId + '/update-status';
-                note.value = '';
-
-                // reset options
-                Array.from(select.options).forEach(option => option.hidden = false);
-                statusHelp.innerText = '';
-
-                if (isPaidVnpay) {
-                    const cancelOption = Array.from(select.options).find(option => option.value === 'cancelled');
-                    if (cancelOption) {
-                        cancelOption.hidden = true;
-                    }
-                }
-
-                if (orderStatus === 'waiting_for_cancellation') {
-                    // dữ liệu cũ: nếu là VNPay đã thanh toán thì chỉ được trả về trạng thái trước đó
-                    Array.from(select.options).forEach(option => option.hidden = true);
-
-                    const allowed = isPaidVnpay ? [previousStatus] : ['cancelled', previousStatus];
-                    Array.from(select.options).forEach(option => {
-                        if (allowed.includes(option.value)) {
-                            option.hidden = false;
-                        }
-                    });
-
-                    select.value = isPaidVnpay ? previousStatus : 'cancelled';
-                    statusHelp.innerText = isPaidVnpay
-                        ? 'Đơn VNPay đã thanh toán không thể hủy vì hệ thống không hỗ trợ hoàn tiền. Bạn chỉ có thể trả đơn về trạng thái trước đó.'
-                        : 'Đơn đang chờ duyệt hủy. Bạn có thể duyệt hủy hoặc trả về trạng thái trước đó.';
-                } else {
-                    select.value = orderStatus;
-
-                    if (isPaidVnpay) {
-                        statusHelp.innerText = 'Đơn VNPay đã thanh toán không thể chuyển sang trạng thái đã hủy vì hệ thống không hỗ trợ hoàn tiền.';
-                    }
-                }
-
-                new bootstrap.Modal(document.getElementById('modalEditOrder')).show();
-            });
-        });
-
-        function showDeleteModal(orderId) {
-            const form = document.getElementById('formDeleteOrder');
-            form.action = '/orders/' + orderId;
-            new bootstrap.Modal(document.getElementById('modalDeleteOrder')).show();
-        }
-    </script>
+        <script>
+            function showDeleteModal(orderId) {
+                const form = document.getElementById('formDeleteOrder');
+                form.action = '/orders/' + orderId;
+                new bootstrap.Modal(document.getElementById('modalDeleteOrder')).show();
+            }
+        </script>
     @endpush
-
-    <div class="modal fade" id="modalEditOrder" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <form id="formEditOrder" method="POST">
-                @csrf
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Cập nhật trạng thái đơn hàng</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-
-                    <div class="modal-body">
-                        <select id="orderStatusSelect" name="order_status" class="form-select mb-2" required>
-                            <option value="pending">Chờ xử lý</option>
-                            <option value="processing">Đang xử lý</option>
-                            <option value="shipped">Đang giao hàng</option>
-                            <option value="delivered">Đã giao</option>
-                            <option value="cancelled">Đã hủy</option>
-                        </select>
-
-                        <small id="statusHelp" class="text-muted d-block mb-3"></small>
-
-                        <label for="orderStatusNote" class="form-label">Ghi chú (không bắt buộc)</label>
-                        <textarea id="orderStatusNote" name="note" rows="3" class="form-control" placeholder="Nhập ghi chú nếu cần..."></textarea>
-                    </div>
-
-                    <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary">Cập nhật</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <div class="modal fade" id="modalDeleteOrder" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <form id="formDeleteOrder" method="POST">
                 @csrf
                 @method('DELETE')
+
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title text-danger">Xóa đơn hàng</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
+
                     <div class="modal-body">
                         <p>Bạn có chắc chắn muốn xóa đơn hàng này không?</p>
                     </div>
+
                     <div class="modal-footer">
                         <button type="submit" class="btn btn-danger">Xóa</button>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>

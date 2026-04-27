@@ -224,9 +224,9 @@
                     @if($order->can_review)
                         <div class="mt-2">
                             @if($itemReview)
-                                <span class="review-status-chip done">Đã bình luận</span>
+                                <span class="review-status-chip done">Đã đánh giá</span>
                             @else
-                                <span class="review-status-chip pending">Chưa bình luận</span>
+                                <span class="review-status-chip pending">Chưa đánh giá</span>
                             @endif
                         </div>
                     @endif
@@ -245,13 +245,13 @@
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div>
-                    <h5 class="mb-1">Bình luận sản phẩm</h5>
-                    <p class="text-muted mb-0">Bạn chỉ có thể bình luận khi đơn đã giao và đã thanh toán thành công.</p>
+                    <h5 class="mb-1">Đánh giá sản phẩm</h5>
+                    <p class="text-muted mb-0">Bạn chỉ có thể đánh giá khi đơn đã giao và đã thanh toán thành công.</p>
                 </div>
                 @if($order->has_pending_review)
-                    <span class="review-status-chip pending">Còn {{ $order->pending_review_count }} sản phẩm chưa bình luận</span>
+                    <span class="review-status-chip pending">Còn {{ $order->pending_review_count }} sản phẩm chưa đánh giá</span>
                 @else
-                    <span class="review-status-chip done">Đã bình luận đầy đủ</span>
+                    <span class="review-status-chip done">Đã đánh giá đầy đủ</span>
                 @endif
             </div>
 
@@ -285,12 +285,12 @@
 
                             @if($existingReview)
                                 <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                                    <span class="review-status-chip done">Đã bình luận</span>
+                                    <span class="review-status-chip done">Đã đánh giá</span>
                                     <span class="review-stars">{{ str_repeat('★', (int) $existingReview->rating) }}{{ str_repeat('☆', max(5 - (int) $existingReview->rating, 0)) }}</span>
                                     <span class="text-muted small">{{ optional($existingReview->updated_at)->format('d/m/Y H:i') }}</span>
                                 </div>
                             @else
-                                <span class="review-status-chip pending">Chưa bình luận</span>
+                                <span class="review-status-chip pending">Chưa đánh giá</span>
                             @endif
                         </div>
                     </div>
@@ -319,7 +319,7 @@
                             </div>
 
                             <div class="col-12">
-                                <label class="form-label fw-semibold">Nội dung bình luận</label>
+                                <label class="form-label fw-semibold">Nội dung đánh giá</label>
                                 <textarea name="comment"
                                           rows="4"
                                           class="form-control rounded-3 {{ $isCurrentForm && $errors->has('comment') ? 'is-invalid' : '' }}"
@@ -335,14 +335,14 @@
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
                             <div class="text-muted small">
                                 @if($existingReview)
-                                    Bạn có thể cập nhật lại bình luận nếu muốn.
+                                    Bạn có thể cập nhật lại đánh giá nếu muốn.
                                 @else
-                                    Bình luận của bạn sẽ được hiển thị cho sản phẩm sau khi lưu.
+                                    Đánh giá của bạn sẽ được hiển thị cho sản phẩm sau khi lưu.
                                 @endif
                             </div>
 
                             <button type="submit" class="btn order-btn-review rounded-pill px-4">
-                                {{ $existingReview ? 'Cập nhật bình luận' : 'Gửi bình luận' }}
+                                {{ $existingReview ? 'Cập nhật đánh giá' : 'Gửi đánh giá' }}
                             </button>
                         </div>
 
@@ -355,7 +355,7 @@
                     </form>
                 </div>
             @empty
-                <div class="text-muted">Không có sản phẩm nào đủ điều kiện để bình luận trong đơn này.</div>
+                <div class="text-muted">Không có sản phẩm nào đủ điều kiện để đánh giá trong đơn này.</div>
             @endforelse
         </div>
     </div>
@@ -394,7 +394,7 @@
 
             @if($order->can_review)
                 <a href="#review-section" class="btn order-btn-review rounded-pill px-4">
-                    {{ $order->has_pending_review ? 'Bình luận' : 'Xem bình luận' }}
+                    {{ $order->has_pending_review ? 'Đánh giá' : 'Xem đánh giá' }}
                 </a>
             @endif
 
@@ -410,4 +410,3 @@
     </div>
 </div>
 @endsection
-    

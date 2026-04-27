@@ -2,16 +2,11 @@
     <div class="container-fluid-lg">
             <div class="main-footer">
                 <div class="row g-md-4 gy-sm-5">
-                    <div class="col-xxl-3 col-xl-4 col-sm-6">
-                        <a href="index.html" class="foot-logo theme-logo">
-                            <img src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/images/logo/4.png') }}" class="img-fluid blur-up lazyload" alt="">
-                        </a>
-                        <p class="information-text information-text-2">một thực tế quen thuộc là người đọc thường bị thu hút bởi nội dung dễ nhìn và dễ đọc.</p>
-                    </div>
+
 
                     <div class="col-xxl-2 col-xl-4 col-sm-6">
                         <div class="footer-title">
-                            <h4 class="text-white">Về Fastkart</h4>
+                            <h4 class="text-white">Về Threadly</h4>
                         </div>
                         <ul class="footer-list footer-contact footer-list-light">
                             <li>
@@ -64,7 +59,7 @@
                                 <a href="javascript:void(0)" class="light-text">
                                     <div class="inform-box flex-start-box">
                                         <i data-feather="map-pin"></i>
-                                        <p>Cửa hàng mẫu Fastkart, Ấn Độ 345 - 659</p>
+                                        <p>Cửa hàng Threadly, Việt Nam</p>
                                     </div>
                                 </a>
                             </li>
