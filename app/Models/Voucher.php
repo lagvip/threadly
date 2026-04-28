@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Order;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -56,7 +57,16 @@ class Voucher extends Model
      */
     public function isValid($orderTotal, int $currentUses = 0, int $usesInOrder = 1): bool
     {
-        if ($this->actual_status !== 'active') {
+        // Bị tắt hoặc hết hạn
+        if ($this->actual_status !== 'active') return false;
+
+        // Hết lượt dùng, nhưng 0 được coi là vô hạn
+        if ($this->quantity < 0) return false;
+
+        $now = Carbon::now();
+
+        // Chưa tới ngày hoặc đã hết hạn
+        if ($now->lt($this->start_date) || $now->gt($this->end_date)) {
             return false;
         }
 
@@ -144,6 +154,18 @@ class Voucher extends Model
         }
 
         return $usesInOrder <= (int) $this->max_uses_per_order;
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'voucher_id');
+    }
+
+    public function hasAppliedOrders(): bool
+    {
+        return $this->orders()
+            ->where('order_status', '!=', Order::STATUS_CANCELLED)
+            ->exists();
     }
 
     /**

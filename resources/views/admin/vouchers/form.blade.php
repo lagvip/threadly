@@ -51,7 +51,9 @@
 <div class="mb-3">
     <label>Ngày bắt đầu</label>
     <input type="datetime-local" name="start_date" class="form-control"
-           value="{{ old('start_date',$voucher->start_date ?? '') }}">
+           value="{{ old('start_date', isset($voucher) && $voucher->start_date ? $voucher->start_date->format('Y-m-d\TH:i') : '') }}"
+           placeholder="Để trống = bắt đầu ngay">
+    <small class="form-text text-muted">Để trống nếu muốn bắt đầu voucher ngay lập tức.</small>
     @error('start_date')
         <div class="text-danger">{{ $message }}</div>
     @enderror
@@ -60,7 +62,9 @@
 <div class="mb-3">
     <label>Ngày kết thúc</label>
     <input type="datetime-local" name="end_date" class="form-control"
-           value="{{ old('end_date',$voucher->end_date ?? '') }}">
+           value="{{ old('end_date', isset($voucher) && $voucher->end_date ? $voucher->end_date->format('Y-m-d\TH:i') : '') }}"
+           placeholder="Để trống = không giới hạn thời gian">
+    <small class="form-text text-muted">Để trống nếu muốn voucher không giới hạn thời gian.</small>
     @error('end_date')
         <div class="text-danger">{{ $message }}</div>
     @enderror
@@ -68,8 +72,10 @@
 
 <div class="mb-3">
     <label>Số lượt dùng</label>
-    <input type="number" name="quantity" class="form-control"
-           value="{{ old('quantity',$voucher->quantity ?? '') }}">
+    <input type="number" name="quantity" class="form-control" min="0"
+           value="{{ old('quantity', isset($voucher) ? ($voucher->quantity === 0 ? '' : $voucher->quantity) : '') }}"
+           placeholder="0 = vô hạn">
+    <small class="form-text text-muted">Bỏ trống hoặc nhập 0 nếu muốn số lượt dùng vô hạn.</small>
     @error('quantity')
         <div class="text-danger">{{ $message }}</div>
     @enderror
