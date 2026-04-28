@@ -76,7 +76,7 @@
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
             <div>
                 <h4 class="mb-1">Yêu cầu hoàn tiền</h4>
-                <p class="text-muted mb-0">Hoàn tiền demo cho đơn VNPay. Hệ thống chỉ hoàn giá trị sản phẩm, không hoàn phí vận chuyển.</p>
+                <p class="text-muted mb-0">Hoàn tiền demo vào ví website cho đơn VNPay/COD đã thanh toán. Hệ thống chỉ hoàn giá trị sản phẩm, không hoàn phí vận chuyển.</p>
             </div>
             <a href="{{ route('client.orders.index') }}" class="btn refund-btn-muted rounded-pill px-4">Quay lại</a>
         </div>

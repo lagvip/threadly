@@ -29,6 +29,9 @@ class RefundRequest extends Model
         'admin_note',
         'approved_at',
         'rejected_at',
+        'restocked_at',
+        'restocked_by',
+        'restock_note',
     ];
 
     protected $casts = [
@@ -36,6 +39,7 @@ class RefundRequest extends Model
         'approved_amount' => 'float',
         'approved_at' => 'datetime',
         'rejected_at' => 'datetime',
+        'restocked_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -52,6 +56,11 @@ class RefundRequest extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function restockedBy()
+    {
+        return $this->belongsTo(User::class, 'restocked_by');
     }
 
     public function admin()
@@ -77,8 +86,8 @@ class RefundRequest extends Model
     public function getTypeLabelAttribute(): string
     {
         return match ($this->type) {
-            self::TYPE_FULL => 'Hoàn toàn bộ đơn',
-            self::TYPE_PARTIAL => 'Hoàn 1 phần đơn',
+            self::TYPE_FULL => 'Hoàn toàn bộ tiền hàng',
+            self::TYPE_PARTIAL => 'Hoàn một phần tiền hàng',
             default => ucfirst((string) $this->type),
         };
     }

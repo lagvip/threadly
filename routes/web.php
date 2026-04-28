@@ -43,7 +43,7 @@ Route::get('/ve-chung-toi', [HomeController::class, 'about'])->name('client.abou
 // Client giao diện
 Route::get('/san-pham/{id}', [ProductController::class, 'show'])->name('client.product.detail');
 Route::get('/category/{id}', [CategoryController::class, 'show'])->name('client.category');
-
+Route::get('/tim-kiem', [ProductController::class, 'search'])->name('client.products.search');
 // Liên hệ
 Route::get('/lien-he', [ContactController::class, 'index'])->name('contact.index');
 Route::post('/lien-he', [ContactController::class, 'store'])->name('contact.store');
@@ -318,6 +318,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/', [AdminRefundRequestController::class, 'index'])->name('index');
             Route::get('/{refundRequest}', [AdminRefundRequestController::class, 'show'])->name('show');
             Route::post('/{refundRequest}/approve', [AdminRefundRequestController::class, 'approve'])->name('approve');
+            Route::post('/{refundRequest}/restock', [AdminRefundRequestController::class, 'restock'])->name('restock');
             Route::post('/{refundRequest}/reject', [AdminRefundRequestController::class, 'reject'])->name('reject');
         });
 

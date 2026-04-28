@@ -19,7 +19,7 @@
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
         <div>
             <h3 class="fs-4 fw-semibold mb-1">Yêu cầu hoàn tiền</h3>
-            <div class="text-muted">Duyệt hoàn tiền VNPay demo vào ví người dùng.</div>
+            <div class="text-muted">Duyệt hoàn tiền demo vào ví người dùng cho đơn VNPay/COD đã thanh toán.</div>
         </div>
     </div>
 

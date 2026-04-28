@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\ProductVariant;
 use App\Models\RefundRequest;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
@@ -83,6 +84,25 @@ class RefundRequestController extends Controller
                 }
 
                 $order = Order::whereKey($refundRequest->order_id)->lockForUpdate()->firstOrFail();
+
+                if (!in_array($order->payment_method, [Order::PAYMENT_METHOD_VNPAY, Order::PAYMENT_METHOD_COD], true)) {
+                    throw new \RuntimeException('Phương thức thanh toán của đơn hàng không hỗ trợ hoàn tiền demo.');
+                }
+
+                if ($order->payment_status !== Order::PAYMENT_PAID || $order->order_status !== Order::STATUS_DELIVERED) {
+                    throw new \RuntimeException('Chỉ duyệt hoàn tiền cho đơn đã giao thành công và đã thanh toán.');
+                }
+
+                if ($order->ghn_order_code && $order->ghn_status !== 'delivered') {
+                    throw new \RuntimeException('Đơn có vận đơn GHN nhưng GHN chưa xác nhận giao thành công.');
+                }
+
+                if (WalletTransaction::where('refund_request_id', $refundRequest->id)
+                    ->where('type', WalletTransaction::TYPE_REFUND_CREDIT)
+                    ->exists()) {
+                    throw new \RuntimeException('Yêu cầu hoàn tiền này đã được cộng ví trước đó.');
+                }
+
                 $approvedAmount = (float) $refundRequest->requested_amount;
                 $maxAmount = (float) $order->refundable_amount;
 
@@ -116,7 +136,7 @@ class RefundRequestController extends Controller
                     'amount' => $approvedAmount,
                     'balance_before' => $balanceBefore,
                     'balance_after' => $balanceAfter,
-                    'description' => 'Hoàn tiền demo cho đơn #' . $order->order_code,
+                    'description' => 'Hoàn tiền demo vào ví cho đơn #' . $order->order_code,
                 ]);
 
                 $newRefundedAmount = (float) $order->refunded_amount + $approvedAmount;
@@ -143,6 +163,75 @@ class RefundRequestController extends Controller
         return redirect()
             ->route('admin.refunds.show', $refundRequest->id)
             ->with('success', 'Đã duyệt hoàn tiền và cộng tiền vào ví demo của khách hàng.');
+    }
+
+
+    public function restock(Request $request, RefundRequest $refundRequest)
+    {
+        $request->validate([
+            'restock_note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        try {
+            DB::transaction(function () use ($request, $refundRequest) {
+                $refundRequest = RefundRequest::with(['items.orderDetail'])
+                    ->whereKey($refundRequest->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($refundRequest->status !== RefundRequest::STATUS_APPROVED) {
+                    throw new \RuntimeException('Chỉ được nhập kho sau khi yêu cầu hoàn tiền đã được duyệt.');
+                }
+
+                if ($refundRequest->restocked_at) {
+                    throw new \RuntimeException('Yêu cầu hoàn này đã được nhập lại kho trước đó.');
+                }
+
+                if ($refundRequest->items->isEmpty()) {
+                    throw new \RuntimeException('Yêu cầu hoàn không có dòng sản phẩm để nhập kho.');
+                }
+
+                foreach ($refundRequest->items as $item) {
+                    $restockedQuantity = (int) ($item->restocked_quantity ?? 0);
+                    $quantityToRestock = max((int) $item->quantity - $restockedQuantity, 0);
+
+                    if ($quantityToRestock <= 0) {
+                        continue;
+                    }
+
+                    $detail = $item->orderDetail;
+
+                    if (!$detail || !$detail->variant_id) {
+                        throw new \RuntimeException('Không tìm thấy biến thể sản phẩm để nhập lại kho cho dòng hoàn: ' . $item->product_name_snapshot);
+                    }
+
+                    $variant = ProductVariant::whereKey($detail->variant_id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$variant) {
+                        throw new \RuntimeException('Biến thể sản phẩm không còn tồn tại: ' . $item->product_name_snapshot);
+                    }
+
+                    $variant->increment('quantity', $quantityToRestock);
+
+                    $item->update([
+                        'restocked_quantity' => $restockedQuantity + $quantityToRestock,
+                        'restocked_at' => now(),
+                    ]);
+                }
+
+                $refundRequest->update([
+                    'restocked_at' => now(),
+                    'restocked_by' => Auth::id(),
+                    'restock_note' => trim((string) $request->restock_note) ?: null,
+                ]);
+            });
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage() ?: 'Nhập lại kho thất bại.');
+        }
+
+        return back()->with('success', 'Đã nhập lại kho các sản phẩm trong yêu cầu hoàn.');
     }
 
     public function reject(Request $request, RefundRequest $refundRequest)

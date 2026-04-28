@@ -9,6 +9,7 @@ use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\OrderInventoryService;
 
 class ClientOrderController extends Controller
 {
@@ -187,6 +188,8 @@ class ClientOrderController extends Controller
                     'payment_status' => 'cancelled',
                     'cancel_reason' => $reason,
                 ]);
+
+                app(OrderInventoryService::class)->releaseCancelledOrder($order);
 
                 OrderStatusLog::create([
                     'order_id' => $order->id,
