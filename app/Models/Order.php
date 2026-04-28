@@ -61,6 +61,12 @@ class Order extends Model
 
         // Customer confirmation
         'customer_confirmed_at',
+
+        // Demo refund wallet metadata
+        'refund_status',
+        'refunded_amount',
+        'last_refund_requested_at',
+        'last_refunded_at',
     ];
 
     protected $casts = [
@@ -69,6 +75,9 @@ class Order extends Model
         'total_price' => 'float',
         'paid_at' => 'datetime',
         'customer_confirmed_at' => 'datetime',
+        'refunded_amount' => 'float',
+        'last_refund_requested_at' => 'datetime',
+        'last_refunded_at' => 'datetime',
         'ghn_expected_delivery_time' => 'datetime',
         'ghn_raw_response' => 'array',
         'ghn_synced_at' => 'datetime',
@@ -88,6 +97,12 @@ class Order extends Model
         'ghn_status_group',
         'ghn_status_group_badge',
         'can_confirm_received',
+        'refund_status_label',
+        'refundable_product_subtotal',
+        'refundable_product_amount',
+        'refundable_amount',
+        'net_paid_amount',
+        'can_request_refund',
     ];
 
     public const PAYMENT_METHOD_VNPAY = 'vnpay';
@@ -106,6 +121,12 @@ class Order extends Model
     public const STATUS_DELIVERED                = 'delivered';
     public const STATUS_CANCELLED                = 'cancelled';
     public const STATUS_WAITING_FOR_CANCELLATION = 'waiting_for_cancellation';
+
+    public const REFUND_NONE = 'none';
+    public const REFUND_REQUESTED = 'requested';
+    public const REFUND_PARTIALLY_REFUNDED = 'partially_refunded';
+    public const REFUND_REFUNDED = 'refunded';
+    public const REFUND_REJECTED = 'rejected';
 
     public function user()
     {
@@ -139,7 +160,12 @@ class Order extends Model
 
     public function refunds()
     {
-        return $this->hasMany(OrderRefund::class, 'order_id');
+        return $this->hasMany(RefundRequest::class, 'order_id');
+    }
+
+    public function refundRequests()
+    {
+        return $this->hasMany(RefundRequest::class, 'order_id');
     }
 
     public function getPaymentStatusLabelAttribute(): string
@@ -407,4 +433,113 @@ class Order extends Model
     {
         return $this->pending_review_count > 0;
     }
+
+    public function pendingRefundRequest()
+    {
+        return $this->hasOne(RefundRequest::class, 'order_id')
+            ->where('status', RefundRequest::STATUS_PENDING)
+            ->latestOfMany();
+    }
+
+    public function getRefundStatusLabelAttribute(): string
+    {
+        return match ($this->refund_status ?: self::REFUND_NONE) {
+            self::REFUND_NONE => 'Chưa hoàn tiền',
+            self::REFUND_REQUESTED => 'Đang chờ duyệt hoàn tiền',
+            self::REFUND_PARTIALLY_REFUNDED => 'Đã hoàn một phần',
+            self::REFUND_REFUNDED => 'Đã hoàn hết giá trị sản phẩm',
+            self::REFUND_REJECTED => 'Yêu cầu hoàn bị từ chối',
+            default => ucfirst((string) $this->refund_status),
+        };
+    }
+
+    /**
+     * Tổng giá trị sản phẩm gốc trong đơn, không bao gồm phí vận chuyển.
+     */
+    public function getRefundableProductSubtotalAttribute(): float
+    {
+        $subtotal = $this->relationLoaded('details')
+            ? $this->details->sum(fn ($detail) => (float) $detail->total)
+            : (float) $this->details()->sum('total');
+
+        return max((float) $subtotal, 0);
+    }
+
+    /**
+     * Tổng giá trị sản phẩm còn có thể dùng làm cơ sở hoàn tiền.
+     * Không hoàn phí vận chuyển. Nếu có voucher, trừ discount khỏi phần sản phẩm.
+     */
+    public function getRefundableProductAmountAttribute(): float
+    {
+        $productSubtotal = (float) $this->refundable_product_subtotal;
+        $discount = (float) ($this->discount ?? 0);
+
+        return max($productSubtotal - $discount, 0);
+    }
+
+    /**
+     * Số tiền sản phẩm còn có thể hoàn.
+     * Tuyệt đối không tính phí vận chuyển vào số tiền còn hoàn.
+     */
+    public function getRefundableAmountAttribute(): float
+    {
+        $refundedAmount = (float) ($this->refunded_amount ?? 0);
+
+        return max((float) $this->refundable_product_amount - $refundedAmount, 0);
+    }
+
+    /**
+     * Số tiền thực thu sau hoàn: tổng khách đã thanh toán ban đầu - tiền đã hoàn.
+     * Giá trị này vẫn có thể còn phí vận chuyển nếu shop không hoàn phí ship.
+     */
+    public function getNetPaidAmountAttribute(): float
+    {
+        return max((float) $this->total_price - (float) ($this->refunded_amount ?? 0), 0);
+    }
+
+    public function hasPendingRefundRequest(): bool
+    {
+        if ($this->relationLoaded('refundRequests')) {
+            return $this->refundRequests->contains('status', RefundRequest::STATUS_PENDING);
+        }
+
+        return $this->refundRequests()
+            ->where('status', RefundRequest::STATUS_PENDING)
+            ->exists();
+    }
+
+    public function canRequestRefund(): bool
+    {
+        if ($this->payment_method !== self::PAYMENT_METHOD_VNPAY) {
+            return false;
+        }
+
+        if ($this->payment_status !== self::PAYMENT_PAID) {
+            return false;
+        }
+
+        if ($this->order_status !== self::STATUS_DELIVERED) {
+            return false;
+        }
+
+        if ($this->refundable_amount <= 0) {
+            return false;
+        }
+
+        if (($this->refund_status ?? self::REFUND_NONE) === self::REFUND_REFUNDED) {
+            return false;
+        }
+
+        if ($this->hasPendingRefundRequest()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function getCanRequestRefundAttribute(): bool
+    {
+        return $this->canRequestRefund();
+    }
+
 }

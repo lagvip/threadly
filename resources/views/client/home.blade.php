@@ -59,14 +59,15 @@
                                         <img src="{{ asset('storage/' . $banner->image) }}"
                                             class="bg-img blur-up lazyload w-100" alt="{{ $banner->title }}">
 
-                                        <div class="home-detail p-top-left mend-auto w-100">
-                                            <div>
+                                        <div class="home-detail p-top-left mend-auto w-100" style="z-index: 5;">
+                                            <div style="position: relative; pointer-events: auto;">
                                                 <h6>Ưu đãi độc quyền <span> {{ $banner->title }}</span></h6>
                                                 @if(!empty($banner->link))
-                                                    <button onclick="location.href='{{ $banner->link }}';"
-                                                        class="btn theme-bg-color mt-sm-4 mt-2 btn-md text-white fw-bold">
+                                                    <a href="{{ $banner->link }}"
+                                                        class="btn theme-bg-color mt-sm-4 mt-2 btn-md text-white fw-bold d-inline-block"
+                                                        style="position: relative; z-index: 10;">
                                                         Mua ngay
-                                                    </button>
+                                                    </a>
                                                 @endif
                                             </div>
                                         </div>
@@ -75,12 +76,12 @@
                             @endforeach
                         </div>
 
-                        <button class="carousel-control-prev" type="button" data-bs-target="#mainBannerCarousel" data-bs-slide="prev">
-                            <span class="carousel-control-prev-icon"></span>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#mainBannerCarousel" data-bs-slide="prev" style="pointer-events: none;">
+                            <span class="carousel-control-prev-icon" style="pointer-events: auto;"></span>
                         </button>
 
-                        <button class="carousel-control-next" type="button" data-bs-target="#mainBannerCarousel" data-bs-slide="next">
-                            <span class="carousel-control-next-icon"></span>
+                        <button class="carousel-control-next" type="button" data-bs-target="#mainBannerCarousel" data-bs-slide="next" style="pointer-events: none;">
+                            <span class="carousel-control-next-icon" style="pointer-events: auto;"></span>
                         </button>
 
                         <div class="carousel-indicators">

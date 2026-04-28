@@ -112,6 +112,18 @@
         color: #fff !important;
     }
 
+    .order-btn-refund {
+        background: #7c3aed !important;
+        border: 1px solid #7c3aed !important;
+        color: #fff !important;
+    }
+
+    .order-btn-refund:hover {
+        background: #6d28d9 !important;
+        border-color: #6d28d9 !important;
+        color: #fff !important;
+    }
+
     .order-btn-confirm {
         background: #16a34a !important;
         border: 1px solid #16a34a !important;
@@ -149,6 +161,71 @@
     .order-action-row .btn {
         min-height: 32px;
     }
+
+    .order-refund-note {
+        margin-top: 8px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        font-size: 13px;
+        line-height: 1.45;
+    }
+
+    .order-filter-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        padding: 16px;
+        margin-bottom: 24px;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .order-filter-grid {
+        display: grid;
+        grid-template-columns:
+            minmax(130px, 1fr)
+            minmax(160px, 1.05fr)
+            minmax(190px, 1.15fr)
+            minmax(190px, 1.15fr)
+            130px
+            85px;
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+    }
+
+    .order-filter-grid .form-control,
+    .order-filter-grid .form-select,
+    .order-filter-grid .btn {
+        width: 100%;
+        height: 42px;
+        border-radius: 10px;
+        white-space: nowrap;
+        min-width: 0;
+    }
+
+    .order-filter-grid .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    @media (max-width: 1500px) {
+        .order-filter-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .order-filter-grid {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 
 <div class="card orders-card">
@@ -170,8 +247,52 @@
             <div class="alert alert-danger rounded-4">{{ session('error') }}</div>
         @endif
 
+        <form method="GET" action="{{ route('client.orders.index') }}" class="order-filter-card">
+            <div class="order-filter-grid">
+                <input type="text"
+                       name="order_code"
+                       value="{{ request('order_code') }}"
+                       class="form-control"
+                       placeholder="Mã đơn hàng">
+
+                <input type="text"
+                       name="customer"
+                       value="{{ request('customer') }}"
+                       class="form-control"
+                       placeholder="Người nhận, SĐT, email">
+
+                <select name="payment_status" class="form-select">
+                    <option value="">-- Trạng thái thanh toán --</option>
+                    <option value="paid" {{ request('payment_status') === 'paid' ? 'selected' : '' }}>Đã thanh toán</option>
+                    <option value="unpaid" {{ request('payment_status') === 'unpaid' ? 'selected' : '' }}>Chưa thanh toán</option>
+                    <option value="pending" {{ request('payment_status') === 'pending' ? 'selected' : '' }}>Đang chờ thanh toán</option>
+                    <option value="failed" {{ request('payment_status') === 'failed' ? 'selected' : '' }}>Thanh toán thất bại</option>
+                    <option value="cancelled" {{ request('payment_status') === 'cancelled' ? 'selected' : '' }}>Thanh toán đã hủy</option>
+                    <option value="expired" {{ request('payment_status') === 'expired' ? 'selected' : '' }}>Thanh toán hết hạn</option>
+                </select>
+
+                <select name="order_status" class="form-select">
+                    <option value="">-- Trạng thái đơn hàng --</option>
+                    <option value="pending" {{ request('order_status') === 'pending' ? 'selected' : '' }}>Chờ xử lý</option>
+                    <option value="processing" {{ request('order_status') === 'processing' ? 'selected' : '' }}>Đang xử lý</option>
+                    <option value="shipped" {{ request('order_status') === 'shipped' ? 'selected' : '' }}>Đang giao hàng</option>
+                    <option value="delivered" {{ request('order_status') === 'delivered' ? 'selected' : '' }}>Đã giao</option>
+                    <option value="cancelled" {{ request('order_status') === 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
+                    <option value="waiting_for_cancellation" {{ request('order_status') === 'waiting_for_cancellation' ? 'selected' : '' }}>Chờ duyệt hủy</option>
+                </select>
+
+                <button type="submit" class="btn order-btn-main">
+                    Tìm kiếm
+                </button>
+
+                <a href="{{ route('client.orders.index') }}" class="btn order-btn-muted">
+                    Đặt lại
+                </a>
+            </div>
+        </form>
+
         @if($orders->isEmpty())
-            <div class="text-muted">Bạn chưa có đơn hàng nào.</div>
+            <div class="text-muted">Không tìm thấy đơn hàng nào.</div>
         @else
             <div class="row g-3">
                 @foreach($orders as $order)
@@ -181,10 +302,32 @@
                         $variantImage = optional(optional($firstItem)->variant)->image;
                         $productImage = optional(optional($firstItem)->product)->image_primary;
                         $thumb = $variantImage ?: $productImage;
-
                         $thumbUrl = $thumb ? asset('storage/' . $thumb) : null;
 
                         $otherCount = max(($order->details->count() - 1), 0);
+
+                        $latestRefundRequest = $order->refundRequests
+                            ->sortByDesc('id')
+                            ->first();
+
+                        $latestRefundAdminNote = $latestRefundRequest
+                            ? trim((string) ($latestRefundRequest->admin_note ?? ''))
+                            : '';
+
+                        $latestRefundNoteTitle = 'Phản hồi hoàn tiền';
+
+                        if ($latestRefundRequest && $latestRefundRequest->status === 'approved') {
+                            $latestRefundNoteTitle = 'Phản hồi duyệt hoàn';
+                        }
+
+                        if ($latestRefundRequest && $latestRefundRequest->status === 'rejected') {
+                            $latestRefundNoteTitle = 'Lý do từ chối hoàn';
+                        }
+
+                        $netPaidAfterRefund = max(
+                            (float) ($order->total_price ?? 0) - (float) ($order->refunded_amount ?? 0),
+                            0
+                        );
                     @endphp
 
                     <div class="col-12">
@@ -213,6 +356,22 @@
                                     @if($order->customer_confirmed_at)
                                         <div class="order-confirmed-hint mt-1">
                                             Đã xác nhận nhận hàng lúc {{ $order->customer_confirmed_at->format('d/m/Y H:i') }}
+                                        </div>
+                                    @endif
+
+                                    @if(($order->refund_status ?? 'none') !== 'none')
+                                        <div class="order-review-hint mt-1" style="color:#7c3aed;">
+                                            Hoàn tiền: {{ $order->refund_status_label }}
+                                            @if(($order->refunded_amount ?? 0) > 0)
+                                                • Đã hoàn {{ number_format($order->refunded_amount, 0, ',', '.') }} đ
+                                            @endif
+                                        </div>
+                                    @endif
+
+                                    @if($latestRefundAdminNote !== '')
+                                        <div class="order-refund-note">
+                                            <strong>{{ $latestRefundNoteTitle }}:</strong>
+                                            {{ $latestRefundAdminNote }}
                                         </div>
                                     @endif
 
@@ -276,6 +435,16 @@
                                     <div class="fs-5 fw-bold order-total">
                                         {{ number_format($order->total_price, 0, ',', '.') }} đ
                                     </div>
+
+                                    @if(($order->refunded_amount ?? 0) > 0)
+                                        <div class="small text-danger fw-semibold">
+                                            Đã hoàn: {{ number_format($order->refunded_amount, 0, ',', '.') }} đ
+                                        </div>
+
+                                        <div class="small text-success fw-semibold">
+                                            Thực thu: {{ number_format($netPaidAfterRefund, 0, ',', '.') }} đ
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
 
@@ -301,6 +470,13 @@
                                             Xác nhận đã nhận hàng
                                         </button>
                                     </form>
+                                @endif
+
+                                @if($order->can_request_refund)
+                                    <a href="{{ route('client.refunds.create', $order->id) }}"
+                                       class="btn order-btn-refund btn-sm rounded-pill px-3">
+                                        Yêu cầu hoàn tiền
+                                    </a>
                                 @endif
 
                                 @if($order->can_review)
@@ -337,7 +513,7 @@
             </div>
 
             <div class="mt-4">
-                {{ $orders->links() }}
+                {{ $orders->withQueryString()->links() }}
             </div>
         @endif
     </div>
@@ -393,11 +569,15 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn order-btn-muted btn-sm rounded-pill px-3" data-bs-dismiss="modal">
+                    <button type="button"
+                            class="btn order-btn-muted btn-sm rounded-pill px-3"
+                            data-bs-dismiss="modal">
                         Đóng
                     </button>
 
-                    <button type="submit" id="cancelOrderSubmitBtn" class="btn order-btn-danger btn-sm rounded-pill px-3">
+                    <button type="submit"
+                            id="cancelOrderSubmitBtn"
+                            class="btn order-btn-danger btn-sm rounded-pill px-3">
                         Xác nhận
                     </button>
                 </div>

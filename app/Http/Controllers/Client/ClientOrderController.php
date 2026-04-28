@@ -12,17 +12,46 @@ use Illuminate\Support\Facades\DB;
 
 class ClientOrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $orders = Order::with([
+        $query = Order::with([
                 'details.variant',
                 'details.product',
                 'reviews.variant.color',
                 'reviews.variant.size',
+                'refundRequests.admin',
             ])
-            ->where('user_id', Auth::id())
+            ->where('user_id', Auth::id());
+
+        if ($request->filled('order_code')) {
+            $keyword = trim((string) $request->order_code);
+
+            $query->where('order_code', 'like', '%' . $keyword . '%');
+        }
+
+        if ($request->filled('customer')) {
+            $keyword = trim((string) $request->customer);
+
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'like', '%' . $keyword . '%')
+                    ->orWhere('email', 'like', '%' . $keyword . '%')
+                    ->orWhere('phone', 'like', '%' . $keyword . '%')
+                    ->orWhere('address', 'like', '%' . $keyword . '%');
+            });
+        }
+
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
+
+        if ($request->filled('order_status')) {
+            $query->where('order_status', $request->order_status);
+        }
+
+        $orders = $query
             ->latest('id')
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
         return view('client.orders.index', compact('orders'));
     }
@@ -35,6 +64,8 @@ class ClientOrderController extends Controller
                 'details.product',
                 'reviews.variant.color',
                 'reviews.variant.size',
+                'refundRequests.admin',
+                'refundRequests.items',
             ])
             ->where('user_id', Auth::id())
             ->findOrFail($id);

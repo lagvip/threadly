@@ -26,23 +26,23 @@
         }
 
         .orders-table .col-total {
-            width: 10%;
-        }
-
-        .orders-table .col-payment {
-            width: 13%;
-        }
-
-        .orders-table .col-status {
-            width: 12%;
-        }
-
-        .orders-table .col-ghn {
             width: 11%;
         }
 
+        .orders-table .col-payment {
+            width: 15%;
+        }
+
+        .orders-table .col-status {
+            width: 11%;
+        }
+
+        .orders-table .col-ghn {
+            width: 12%;
+        }
+
         .orders-table .col-action {
-            width: 13%;
+            width: 10%;
         }
 
         .customer-email,
@@ -100,6 +100,16 @@
             text-overflow: ellipsis;
         }
 
+        .refund-money-line {
+            font-size: 12px;
+            line-height: 1.25;
+        }
+
+        .refund-status-badge {
+            font-size: 11px;
+            padding: 4px 8px;
+        }
+
         .table-responsive {
             overflow-x: visible;
         }
@@ -119,8 +129,13 @@
             }
 
             .badge.rounded-pill {
-                padding-left: 0.75rem !important;
-                padding-right: 0.75rem !important;
+                padding-left: 0.65rem !important;
+                padding-right: 0.65rem !important;
+            }
+
+            .refund-status-badge {
+                font-size: 10px;
+                padding: 3px 6px;
             }
         }
     </style>
@@ -263,6 +278,31 @@
                                     'color' => 'bg-light text-dark',
                                 ];
 
+                                $refundStatus = $order->refund_status ?? 'none';
+                                $refundedAmount = (float) ($order->refunded_amount ?? 0);
+                                $netPaidAmount = max((float) $order->total_price - $refundedAmount, 0);
+                                $refundableAmount = (float) ($order->refundable_amount ?? 0);
+
+                                $refundInfo = match ($refundStatus) {
+                                    'requested' => [
+                                        'label' => 'Chờ hoàn tiền',
+                                        'class' => 'bg-warning text-dark',
+                                    ],
+                                    'partially_refunded' => [
+                                        'label' => 'Hoàn một phần',
+                                        'class' => 'bg-info',
+                                    ],
+                                    'refunded' => [
+                                        'label' => 'Đã hoàn tiền',
+                                        'class' => 'bg-danger',
+                                    ],
+                                    'rejected' => [
+                                        'label' => 'Từ chối hoàn',
+                                        'class' => 'bg-secondary',
+                                    ],
+                                    default => null,
+                                };
+
                                 $customerEmail = $order->user->email ?? $order->email ?? 'N/A';
                             @endphp
 
@@ -284,13 +324,39 @@
                                 </td>
 
                                 <td class="fw-medium">
-                                    {{ number_format($order->total_price, 0, ',', '.') }}₫
+                                    <div>
+                                        {{ number_format($order->total_price, 0, ',', '.') }}₫
+                                    </div>
+
+                                    @if ($refundedAmount > 0)
+                                        <div class="refund-money-line text-danger">
+                                            -{{ number_format($refundedAmount, 0, ',', '.') }}₫
+                                        </div>
+
+                                        <div class="refund-money-line text-success fw-semibold">
+                                            Thực thu: {{ number_format($netPaidAmount, 0, ',', '.') }}₫
+                                        </div>
+                                    @endif
                                 </td>
 
                                 <td>
                                     <span class="badge rounded-pill px-3 py-2 badge-order {{ $paymentInfo['color'] }}">
                                         {{ $paymentInfo['label'] }}
                                     </span>
+
+                                    @if ($refundInfo)
+                                        <div class="mt-1">
+                                            <span class="badge rounded-pill refund-status-badge {{ $refundInfo['class'] }}">
+                                                {{ $refundInfo['label'] }}
+                                            </span>
+                                        </div>
+                                    @endif
+
+                                    @if ($refundedAmount > 0)
+                                        <div class="refund-money-line text-danger fw-semibold mt-1">
+                                            Đã hoàn: {{ number_format($refundedAmount, 0, ',', '.') }}₫
+                                        </div>
+                                    @endif
                                 </td>
 
                                 <td>

@@ -4,6 +4,33 @@
 <div class="container-fluid">
     <h3 class="fw-bold text-uppercase mb-4">📊 Dashboard Thống Kê</h3>
 
+    <div class="card p-3 mb-4 shadow-sm">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label mb-1">Từ ngày</label>
+                <input
+                    type="date"
+                    class="form-control"
+                    name="from"
+                    value="{{ $filterFrom ?? '' }}"
+                />
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label mb-1">Đến ngày</label>
+                <input
+                    type="date"
+                    class="form-control"
+                    name="to"
+                    value="{{ $filterTo ?? '' }}"
+                />
+            </div>
+            <div class="col-12 col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Lọc</button>
+                <a href="{{ route('admin.homeAdmin') }}" class="btn btn-outline-secondary">Mặc định</a>
+            </div>
+        </form>
+    </div>
+
     <div class="row">
         <div class="col-lg-3 col-md-6 mb-4">
             <div class="card p-3 d-flex flex-row align-items-center shadow-sm h-100">
@@ -56,22 +83,7 @@
             <div class="card p-3 h-100">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">📈 Thống Kê Doanh Thu</h6>
-                    <form method="GET" class="d-flex align-items-center gap-2">
-                        <input
-                            type="date"
-                            class="form-control form-control-sm"
-                            name="from"
-                            value="{{ $filterFrom ?? '' }}"
-                        />
-                        <span class="text-muted small">-</span>
-                        <input
-                            type="date"
-                            class="form-control form-control-sm"
-                            name="to"
-                            value="{{ $filterTo ?? '' }}"
-                        />
-                        <button type="submit" class="btn btn-sm btn-outline-primary">Lọc</button>
-                    </form>
+                    <div class="text-muted small">{{ $filterFrom ?? '' }} - {{ $filterTo ?? '' }}</div>
                 </div>
                 <div class="chart-container" style="position: relative; height:350px; width:100%">
                     <canvas id="mainRevenueChart"></canvas>
@@ -192,9 +204,6 @@
 </div>
 
 <style>
-.card {
-    margin: 0 !important;
-}
 .table th, .table td {
     vertical-align: middle;
 }

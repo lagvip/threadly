@@ -26,6 +26,8 @@ use App\Http\Controllers\Client\AddressController;
 use App\Http\Controllers\Client\CategoryController;
 use App\Http\Controllers\Client\WishlistController;
 use App\Http\Controllers\Client\ChatbotController;
+use App\Http\Controllers\Client\RefundRequestController as ClientRefundRequestController;
+use App\Http\Controllers\Admin\RefundRequestController as AdminRefundRequestController;
 
 
 // =======================================================
@@ -34,6 +36,8 @@ use App\Http\Controllers\Client\ChatbotController;
 // Redirect
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/admin', fn () => redirect('/admin/dashboard'));
+
+Route::get('/ve-chung-toi', [HomeController::class, 'about'])->name('client.about');
 
 // Client giao diện
 Route::get('/san-pham/{id}', [ProductController::class, 'show'])->name('client.product.detail');
@@ -85,6 +89,22 @@ Route::middleware(['auth'])->group(function () {
         ->whereNumber('id')
         ->name('confirm-received');
     });
+
+
+
+    // Hoàn tiền demo VNPay và ví demo
+    Route::prefix('tai-khoan/hoan-tien')->name('client.refunds.')->group(function () {
+        Route::get('/orders/{order}/create', [ClientRefundRequestController::class, 'create'])
+            ->whereNumber('order')
+            ->name('create');
+
+        Route::post('/orders/{order}', [ClientRefundRequestController::class, 'store'])
+            ->whereNumber('order')
+            ->name('store');
+    });
+
+    Route::get('/tai-khoan/vi-demo', [ClientRefundRequestController::class, 'wallet'])
+        ->name('client.wallet.index');
 
     // Địa chỉ
     Route::prefix('tai-khoan/so-dia-chi')->name('client.addresses.')->group(function () {
@@ -265,7 +285,6 @@ Route::middleware(['auth'])->group(function () {
         // ORDER
         Route::resource('orders', OrderController::class)->only(['index', 'show', 'destroy']);
         Route::get('/order-details', [OrderController::class, 'details'])->name('order.details');
-        Route::post('/orders/{id}/refund', [OrderController::class, 'refund'])->name('orders.refund');
         Route::get('/orders/{id}/print', [OrderController::class, 'print'])->name('orders.print');
 
         Route::post('/orders/{order}/ghn/create', [OrderController::class, 'createGhnOrder'])->name('orders.ghn.create');
@@ -280,6 +299,16 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/', [OrderController::class, 'trash'])->name('index');
             Route::post('/restore', [OrderController::class, 'restore'])->name('restore');
         });
+
+
+        // REFUND REQUESTS / DEMO WALLET
+        Route::prefix('refunds')->name('admin.refunds.')->group(function () {
+            Route::get('/', [AdminRefundRequestController::class, 'index'])->name('index');
+            Route::get('/{refundRequest}', [AdminRefundRequestController::class, 'show'])->name('show');
+            Route::post('/{refundRequest}/approve', [AdminRefundRequestController::class, 'approve'])->name('approve');
+            Route::post('/{refundRequest}/reject', [AdminRefundRequestController::class, 'reject'])->name('reject');
+        });
+
         // REVIEW
         Route::prefix('reviews')->name('reviews.')->group(function () {
             Route::get('/', [ReviewController::class, 'index'])->name('index');

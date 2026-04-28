@@ -95,6 +95,10 @@
                                             @endphp
 
                                             {!! $headerMenuHtml !!}
+
+                                            <li class="nav-item">
+                                                <a class="nav-link" href="{{ route('client.about') }}">Về chúng tôi</a>
+                                            </li>
                                         </ul>
                                     </div>
                                 </div>

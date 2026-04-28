@@ -92,4 +92,9 @@ class HomeController extends Controller
             'bestSellerProducts'
         ));
     }
+
+    public function about()
+    {
+        return view('client.about');
+    }
 }

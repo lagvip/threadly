@@ -44,6 +44,18 @@
         color: #fff !important;
     }
 
+    .order-btn-refund {
+        background: #7c3aed !important;
+        border: 1px solid #7c3aed !important;
+        color: #fff !important;
+    }
+
+    .order-btn-refund:hover {
+        background: #6d28d9 !important;
+        border-color: #6d28d9 !important;
+        color: #fff !important;
+    }
+
     .order-btn-review {
         background: #0ea5e9 !important;
         border: 1px solid #0ea5e9 !important;
@@ -375,10 +387,35 @@
             <strong>- {{ number_format($order->discount, 0, ',', '.') }} đ</strong>
         </div>
 
+
+        @if(($order->refund_status ?? 'none') !== 'none')
+            <div class="d-flex justify-content-between mb-2">
+                <span>Trạng thái hoàn tiền</span>
+                <strong>{{ $order->refund_status_label }}</strong>
+            </div>
+
+            <div class="d-flex justify-content-between mb-2">
+                <span>Đã hoàn vào ví demo</span>
+                <strong class="text-danger">- {{ number_format($order->refunded_amount, 0, ',', '.') }} đ</strong>
+            </div>
+
+            <div class="d-flex justify-content-between mb-2">
+                <span>Còn có thể hoàn sản phẩm</span>
+                <strong>{{ number_format($order->refundable_amount, 0, ',', '.') }} đ</strong>
+            </div>
+        @endif
+
         <div class="d-flex justify-content-between fs-5 mt-3 pt-3 border-top">
-            <span class="fw-bold">Tổng thanh toán</span>
+            <span class="fw-bold">Tổng khách đã thanh toán</span>
             <span class="fw-bold text-danger">{{ number_format($order->total_price, 0, ',', '.') }} đ</span>
         </div>
+
+        @if((float) ($order->refunded_amount ?? 0) > 0)
+            <div class="d-flex justify-content-between fs-5 mt-2">
+                <span class="fw-bold">Thực thu sau hoàn</span>
+                <span class="fw-bold text-success">{{ number_format($order->net_paid_amount, 0, ',', '.') }} đ</span>
+            </div>
+        @endif
 
         <div class="mt-4 d-flex flex-wrap gap-2">
             <a href="{{ route('client.orders.index') }}" class="btn order-btn-muted rounded-pill px-4">
@@ -391,6 +428,13 @@
                     Mua lại
                 </button>
             </form>
+
+
+            @if($order->can_request_refund)
+                <a href="{{ route('client.refunds.create', $order->id) }}" class="btn order-btn-refund rounded-pill px-4">
+                    Yêu cầu hoàn tiền
+                </a>
+            @endif
 
             @if($order->can_review)
                 <a href="#review-section" class="btn order-btn-review rounded-pill px-4">
