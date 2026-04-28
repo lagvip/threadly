@@ -42,6 +42,9 @@
                                             <li class="nav-item">
                                                 <a class="nav-link ps-xl-2 ps-0" href="{{ route('home') }}">Trang chủ</a>
                                             </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link ps-xl-2 ps-0" href="{{ route('contact.index') }}">Liên hệ</a>
+                                            </li>
 
                                             @php
                                                 $renderHeaderCategoryHtml = function ($category, $level = 0) use (&$renderHeaderCategoryHtml) {
