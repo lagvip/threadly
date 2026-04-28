@@ -112,4 +112,19 @@ class User extends Authenticatable
     {
         return $this->hasMany(Wishlist::class);
     }
+
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class, 'user_id');
+    }
+
+    public function walletTransactions()
+    {
+        return $this->hasMany(WalletTransaction::class, 'user_id');
+    }
+
+    public function refundRequests()
+    {
+        return $this->hasMany(RefundRequest::class, 'user_id');
+    }
 }

@@ -20,6 +20,10 @@ class Product extends Model
         'id_brand',
         'image_primary',
         'status',
+        'weight',
+        'length',
+        'width',
+        'height',
     ];
 
 

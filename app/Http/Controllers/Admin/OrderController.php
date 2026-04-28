@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderStatusLog;
+use App\Services\GhnService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -71,7 +72,9 @@ class OrderController extends Controller
 
     public function edit(Order $order)
     {
-        return view('admin.orders.edit', compact('order'));
+        return redirect()
+            ->route('orders.show', $order)
+            ->with('error', 'Không còn cập nhật trạng thái đơn hàng thủ công. Trạng thái giao hàng được đồng bộ từ GHN.');
     }
 
     public function updateStatus(Request $request, $id)
@@ -157,6 +160,289 @@ class OrderController extends Controller
         ]);
 
         return back()->with('success', 'Cập nhật trạng thái đơn hàng thành công.');
+    }
+
+    public function createGhnOrder(Order $order, GhnService $ghnService)
+    {
+        try {
+            $ghnService->createOrder($order);
+
+            return back()->with('success', 'Đã tạo vận đơn GHN thành công. Mã vận đơn: ' . $order->fresh()->ghn_order_code);
+        } catch (\Throwable $e) {
+            Log::error('Create GHN order failed: ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'order_code' => $order->order_code,
+            ]);
+
+            return back()->with('error', $e->getMessage() ?: 'Tạo vận đơn GHN thất bại.');
+        }
+    }
+
+    public function syncGhnOrder(Order $order, GhnService $ghnService)
+    {
+        if (empty($order->ghn_order_code)) {
+            return back()->with('error', 'Đơn này chưa có mã vận đơn GHN để đồng bộ.');
+        }
+
+        try {
+            $response = $ghnService->getOrderInfo($order->ghn_order_code);
+            $ghnService->syncOrderFromGhnInfo($order, $response, Auth::id(), 'Admin đồng bộ GHN');
+
+            return back()->with('success', 'Đã đồng bộ trạng thái GHN thành công.');
+        } catch (\Throwable $e) {
+            Log::error('Sync GHN order failed: ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'order_code' => $order->order_code,
+                'ghn_order_code' => $order->ghn_order_code,
+            ]);
+
+            return back()->with('error', $e->getMessage() ?: 'Đồng bộ GHN thất bại.');
+        }
+    }
+
+    public function cancelGhnOrder(Order $order, GhnService $ghnService)
+    {
+        if (empty($order->ghn_order_code)) {
+            return back()->with('error', 'Đơn này chưa có mã vận đơn GHN để hủy.');
+        }
+
+        if ($order->order_status === OrderStatus::Delivered->value) {
+            return back()->with('error', 'Đơn đã giao thành công, không thể hủy vận đơn GHN.');
+        }
+
+        try {
+            $response = $ghnService->cancelOrder($order->ghn_order_code);
+            $result = collect(data_get($response, 'data', []))->firstWhere('order_code', $order->ghn_order_code);
+
+            if ($result && isset($result['result']) && !$result['result']) {
+                return back()->with('error', $result['message'] ?? 'GHN không cho hủy vận đơn này.');
+            }
+
+            $oldStatus = $order->order_status;
+
+            $order->update([
+                'ghn_status' => 'cancel',
+                'ghn_status_name' => 'Đã hủy trên GHN',
+                'ghn_raw_response' => $response,
+                'ghn_synced_at' => now(),
+                'order_status' => OrderStatus::Cancelled->value,
+                'payment_status' => $order->payment_method === Order::PAYMENT_METHOD_COD && $order->payment_status !== Order::PAYMENT_PAID
+                    ? Order::PAYMENT_CANCELLED
+                    : $order->payment_status,
+            ]);
+
+            if ($oldStatus !== OrderStatus::Cancelled->value) {
+                OrderStatusLog::create([
+                    'order_id' => $order->id,
+                    'status' => OrderStatus::Cancelled->value,
+                    'note' => 'Admin hủy vận đơn GHN: ' . $order->ghn_order_code,
+                    'changed_by' => Auth::id(),
+                ]);
+            }
+
+            return back()->with('success', 'Đã gửi yêu cầu hủy vận đơn GHN thành công.');
+        } catch (\Throwable $e) {
+            Log::error('Cancel GHN order failed: ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'order_code' => $order->order_code,
+                'ghn_order_code' => $order->ghn_order_code,
+            ]);
+
+            return back()->with('error', $e->getMessage() ?: 'Hủy vận đơn GHN thất bại.');
+        }
+    }
+
+    public function printGhnOrder(Order $order, GhnService $ghnService)
+    {
+        if (empty($order->ghn_order_code)) {
+            return back()->with('error', 'Đơn này chưa có mã vận đơn GHN để in.');
+        }
+
+        try {
+            return redirect()->away($ghnService->printOrderUrl($order->ghn_order_code));
+        } catch (\Throwable $e) {
+            Log::error('Print GHN order failed: ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'order_code' => $order->order_code,
+                'ghn_order_code' => $order->ghn_order_code,
+            ]);
+
+            return back()->with('error', $e->getMessage() ?: 'Không in được vận đơn GHN.');
+        }
+    }
+    public function simulateGhnStatus(Order $order, string $status, GhnService $ghnService)
+    {
+        abort_unless(app()->environment('local'), 403, 'Chỉ được giả lập GHN ở môi trường local.');
+
+        if (empty($order->ghn_order_code)) {
+            return back()->with('error', 'Đơn này chưa có mã vận đơn GHN, không thể giả lập trạng thái.');
+        }
+
+        $currentStatus = $order->ghn_status ?: 'ready_to_pick';
+
+        $allowedTransitions = [
+            'ready_to_pick' => [
+                'picking',
+                'picked',
+                'cancel',
+            ],
+
+            'picking' => [
+                'picked',
+                'cancel',
+            ],
+
+            'money_collect_picking' => [
+                'picked',
+                'cancel',
+            ],
+
+            'picked' => [
+                'storing',
+                'delivering',
+                'cancel',
+                'lost',
+                'damage',
+            ],
+
+            'storing' => [
+                'transporting',
+                'sorting',
+                'delivering',
+                'lost',
+                'damage',
+            ],
+
+            'transporting' => [
+                'sorting',
+                'delivering',
+                'lost',
+                'damage',
+            ],
+
+            'sorting' => [
+                'delivering',
+                'lost',
+                'damage',
+            ],
+
+            'delivering' => [
+                'delivered',
+                'delivery_fail',
+                'waiting_to_return',
+                'lost',
+                'damage',
+            ],
+
+            'money_collect_delivering' => [
+                'delivered',
+                'delivery_fail',
+                'waiting_to_return',
+            ],
+
+            'delivery_fail' => [
+                'delivering',
+                'waiting_to_return',
+                'cancel',
+            ],
+
+            'waiting_to_return' => [
+                'return',
+                'return_transporting',
+                'returning',
+            ],
+
+            'return' => [
+                'return_transporting',
+                'return_sorting',
+                'returning',
+            ],
+
+            'return_transporting' => [
+                'return_sorting',
+                'returning',
+            ],
+
+            'return_sorting' => [
+                'returning',
+            ],
+
+            'returning' => [
+                'returned',
+                'return_fail',
+            ],
+
+            'return_fail' => [
+                'returning',
+                'returned',
+            ],
+
+            'delivered' => [],
+            'cancel' => [],
+            'returned' => [],
+            'lost' => [],
+            'damage' => [],
+            'exception' => [],
+        ];
+
+        $allowedNextStatuses = $allowedTransitions[$currentStatus] ?? [
+            'picked',
+            'delivering',
+            'delivery_fail',
+            'delivered',
+            'cancel',
+            'lost',
+            'damage',
+        ];
+
+        if (!in_array($status, $allowedNextStatuses, true)) {
+            return back()->with(
+                'error',
+                'Không thể giả lập từ trạng thái "' .
+                $ghnService->statusName($currentStatus) .
+                '" sang "' .
+                $ghnService->statusName($status) .
+                '".'
+            );
+        }
+
+        try {
+            $fakeGhnResponse = [
+                'code' => 200,
+                'message' => 'Local simulated GHN status',
+                'data' => [
+                    'order_code' => $order->ghn_order_code,
+                    'client_order_code' => $order->ghn_client_order_code,
+                    'status' => $status,
+                    'leadtime' => now()->addDays(2)->toISOString(),
+                ],
+            ];
+
+            $ghnService->syncOrderFromGhnInfo(
+                $order,
+                $fakeGhnResponse,
+                Auth::id(),
+                'Giả lập GHN local'
+            );
+
+            return back()->with(
+                'success',
+                'Đã giả lập trạng thái GHN: ' .
+                $ghnService->statusGroup($status) .
+                ' - ' .
+                $ghnService->statusName($status)
+            );
+        } catch (\Throwable $e) {
+            Log::error('Simulate GHN status failed: ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'order_code' => $order->order_code,
+                'ghn_order_code' => $order->ghn_order_code,
+                'from_status' => $currentStatus,
+                'to_status' => $status,
+            ]);
+
+            return back()->with('error', $e->getMessage() ?: 'Giả lập trạng thái GHN thất bại.');
+        }
     }
 
     public function destroy(Order $order)

@@ -138,6 +138,9 @@
                             <li class="sub-nav-item">
                                 <a class="sub-nav-link" href="{{ route('deleted.index') }}">Đơn hàng đã xoá</a>
                             </li>
+                            <li class="sub-nav-item">
+                                <a class="sub-nav-link" href="{{ route('admin.refunds.index') }}">Yêu cầu hoàn tiền</a>
+                            </li>
                         </ul>
                     </div>
                 </li>

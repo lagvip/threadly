@@ -12,17 +12,46 @@ use Illuminate\Support\Facades\DB;
 
 class ClientOrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $orders = Order::with([
+        $query = Order::with([
                 'details.variant',
                 'details.product',
                 'reviews.variant.color',
                 'reviews.variant.size',
+                'refundRequests.admin',
             ])
-            ->where('user_id', Auth::id())
+            ->where('user_id', Auth::id());
+
+        if ($request->filled('order_code')) {
+            $keyword = trim((string) $request->order_code);
+
+            $query->where('order_code', 'like', '%' . $keyword . '%');
+        }
+
+        if ($request->filled('customer')) {
+            $keyword = trim((string) $request->customer);
+
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'like', '%' . $keyword . '%')
+                    ->orWhere('email', 'like', '%' . $keyword . '%')
+                    ->orWhere('phone', 'like', '%' . $keyword . '%')
+                    ->orWhere('address', 'like', '%' . $keyword . '%');
+            });
+        }
+
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
+
+        if ($request->filled('order_status')) {
+            $query->where('order_status', $request->order_status);
+        }
+
+        $orders = $query
             ->latest('id')
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
         return view('client.orders.index', compact('orders'));
     }
@@ -35,6 +64,8 @@ class ClientOrderController extends Controller
                 'details.product',
                 'reviews.variant.color',
                 'reviews.variant.size',
+                'refundRequests.admin',
+                'refundRequests.items',
             ])
             ->where('user_id', Auth::id())
             ->findOrFail($id);
@@ -52,19 +83,43 @@ class ClientOrderController extends Controller
         return view('client.orders.show', compact('order', 'reviewItems'));
     }
 
+    public function confirmReceived($id)
+    {
+        $order = Order::where('user_id', Auth::id())->findOrFail($id);
+
+        if (!$order->can_confirm_received) {
+            return back()->with('error', 'Đơn hàng chưa đủ điều kiện để xác nhận đã nhận hàng.');
+        }
+
+        DB::transaction(function () use ($order) {
+            $order->update([
+                'customer_confirmed_at' => now(),
+            ]);
+
+            OrderStatusLog::create([
+                'order_id' => $order->id,
+                'status' => $order->order_status,
+                'note' => 'Khách hàng xác nhận đã nhận hàng.',
+                'changed_by' => Auth::id(),
+            ]);
+        });
+
+        return back()->with('success', 'Bạn đã xác nhận nhận hàng thành công. Cảm ơn bạn đã mua hàng.');
+    }
+
     public function submitReview(Request $request, $id, $detailId)
     {
         $order = Order::with(['details.product', 'details.variant.color', 'details.variant.size'])
             ->where('user_id', Auth::id())
             ->findOrFail($id);
 
-        if (! $order->can_review) {
-            return back()->with('error', 'Chỉ có thể bình luận khi đơn đã giao và đã thanh toán thành công.');
+        if (!$order->can_review) {
+            return back()->with('error', 'Chỉ có thể bình luận sau khi đơn đã giao, đã thanh toán và bạn đã xác nhận nhận hàng.');
         }
 
         $detail = $order->details->firstWhere('id', (int) $detailId);
 
-        if (! $detail || ! $detail->product) {
+        if (!$detail || !$detail->product) {
             return back()->with('error', 'Sản phẩm không thuộc đơn hàng này hoặc đã không còn tồn tại.');
         }
 
@@ -116,7 +171,7 @@ class ClientOrderController extends Controller
             'cancel_reason.required' => 'Vui lòng chọn lý do hủy đơn.',
         ]);
 
-        if (! $order->can_cancel) {
+        if (!$order->can_cancel) {
             return back()->with('error', 'Đơn hàng này không thể hủy ở trạng thái hiện tại.');
         }
 

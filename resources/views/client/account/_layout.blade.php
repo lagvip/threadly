@@ -56,6 +56,10 @@
                            class="list-group-item list-group-item-action {{ request()->routeIs('client.addresses.*') ? 'active' : '' }}">
                             Sổ địa chỉ
                         </a>
+                        <a href="{{ route('client.wallet.index') }}"
+                            class="list-group-item list-group-item-action {{ request()->routeIs('client.wallet.*') ? 'active' : '' }}">
+                                Ví hoàn tiền demo
+                        </a>
                     </div>
                 </div>
             </div>
