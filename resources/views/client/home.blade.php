@@ -487,11 +487,6 @@
                     </div>
                 @endforelse
             </div>
-        </div>
-    </section>
-    <!-- Best Seller Section End -->
-
-    <!-- Newsletter Section Start -->
     <section class="newsletter-section section-b-space">
         <div class="container-fluid-lg">
             <div class="newsletter-box newsletter-box-2">

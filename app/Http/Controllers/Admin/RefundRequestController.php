@@ -89,11 +89,20 @@ class RefundRequestController extends Controller
                     throw new \RuntimeException('Phương thức thanh toán của đơn hàng không hỗ trợ hoàn tiền demo.');
                 }
 
-                if ($order->payment_status !== Order::PAYMENT_PAID || $order->order_status !== Order::STATUS_DELIVERED) {
-                    throw new \RuntimeException('Chỉ duyệt hoàn tiền cho đơn đã giao thành công và đã thanh toán.');
+                $isDeliveredRefund = $order->payment_status === Order::PAYMENT_PAID
+                    && $order->order_status === Order::STATUS_DELIVERED;
+
+                $isPaidVnpayCancelledRefund = $order->payment_method === Order::PAYMENT_METHOD_VNPAY
+                    && $order->payment_status === Order::PAYMENT_PAID
+                    && $order->order_status === Order::STATUS_CANCELLED
+                    && ($order->refund_status ?? Order::REFUND_NONE) === Order::REFUND_REQUESTED
+                    && empty($order->ghn_order_code);
+
+                if (!$isDeliveredRefund && !$isPaidVnpayCancelledRefund) {
+                    throw new \RuntimeException('Chỉ duyệt hoàn tiền cho đơn đã giao thành công hoặc đơn VNPay đã thanh toán nhưng hủy trước khi xử lý.');
                 }
 
-                if ($order->ghn_order_code && $order->ghn_status !== 'delivered') {
+                if ($isDeliveredRefund && $order->ghn_order_code && $order->ghn_status !== 'delivered') {
                     throw new \RuntimeException('Đơn có vận đơn GHN nhưng GHN chưa xác nhận giao thành công.');
                 }
 

@@ -27,5 +27,9 @@
     "bugs": {
         "url": "https://github.com/lagvip/threadly/issues"
     },
-    "homepage": "https://github.com/lagvip/threadly#readme"
+    "homepage": "https://github.com/lagvip/threadly#readme",
+    "dependencies": {
+        "laravel-echo": "^2.3.4",
+        "pusher-js": "^8.5.0"
+    }
 }

@@ -73,7 +73,14 @@ class BrandController extends Controller
     public function destroy($id)
     {
         $brand = Brand::findOrFail($id);
-        $brand->delete(); // Soft Delete
+
+        if ($brand->products()->withTrashed()->exists()) {
+            return redirect()
+                ->route('brands.index')
+                ->with('error', 'Không thể xóa thương hiệu vì đang có sản phẩm sử dụng.');
+        }
+
+        $brand->delete();
 
         return redirect()->route('brands.index')->with('success', 'Đã chuyển thương hiệu vào thùng rác!');
     }
@@ -95,7 +102,13 @@ class BrandController extends Controller
     public function forceDelete($id)
     {
         $brand = Brand::withTrashed()->findOrFail($id);
-        
+
+        if ($brand->products()->withTrashed()->exists()) {
+            return redirect()
+                ->route('brands.trash')
+                ->with('error', 'Không thể xóa vĩnh viễn thương hiệu vì đang có sản phẩm sử dụng.');
+        }
+
         // Xóa ảnh vật lý để tránh rác server
         if ($brand->image && Storage::disk('public')->exists($brand->image)) {
             Storage::disk('public')->delete($brand->image);

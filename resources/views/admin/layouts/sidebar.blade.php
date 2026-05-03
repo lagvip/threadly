@@ -158,6 +158,19 @@
                         </ul>
                     </div>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link menu-arrow" href="#sidebarChat" data-bs-toggle="collapse" role="button"
+                        aria-expanded="false" aria-controls="sidebarChat">
+                        <span class="nav-text"> Chat realtime </span>
+                    </a>
+                    <div class="collapse" id="sidebarChat">
+                        <ul class="nav sub-navbar-nav">
+                            <li class="sub-nav-item">
+                                <a class="sub-nav-link" href="{{ route('admin.chats.index') }}">Danh sách</a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
 
                 <li class="nav-item">
                     <a class="nav-link menu-arrow" href="#sidebarVoucher" data-bs-toggle="collapse" role="button"
@@ -175,7 +188,7 @@
                     </div>
                 </li>
 
-             
+
 
             {{-- Chỉ Admin --}}
             @if(auth()->check() && $user->isAdmin())

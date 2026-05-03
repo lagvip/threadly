@@ -616,7 +616,12 @@ document.addEventListener('DOMContentLoaded', function () {
         reasonOtherWrap.classList.add('d-none');
         reasonOther.removeAttribute('required');
 
-        if (cancelType === 'request') {
+        if (cancelType === 'paid_vnpay_refund') {
+            cancelOrderTitle.textContent = 'Hủy đơn và yêu cầu hoàn tiền';
+            cancelSubmitBtn.textContent = 'Xác nhận hủy và hoàn tiền';
+            cancelOrderNote.classList.remove('d-none');
+            cancelOrderNote.innerHTML = 'Đơn này đã thanh toán qua <strong>VNPay</strong> nhưng chưa xử lý hàng. Sau khi hủy, hệ thống sẽ tạo <strong>yêu cầu hoàn tiền demo</strong> để admin duyệt vào ví.';
+        } else if (cancelType === 'request') {
             cancelOrderTitle.textContent = 'Gửi yêu cầu hủy đơn';
             cancelSubmitBtn.textContent = 'Gửi yêu cầu hủy';
             cancelOrderNote.classList.remove('d-none');

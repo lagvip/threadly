@@ -190,7 +190,7 @@
             </div>
 
 
-            @if($refundRequest->status === 'approved' && !$refundRequest->restocked_at)
+            @if($refundRequest->status === 'approved' && !$refundRequest->restocked_at && $refundRequest->items->isNotEmpty())
                 <div class="card border-0 shadow-sm rounded-4 mb-4">
                     <div class="card-header fw-bold text-primary">Nhập lại kho hàng hoàn</div>
                     <div class="card-body">

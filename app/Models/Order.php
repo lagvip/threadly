@@ -313,6 +313,39 @@ class Order extends Model
         return false;
     }
 
+    public function canCancelPaidVnpayBeforeProcessing(): bool
+    {
+        if ($this->payment_method !== self::PAYMENT_METHOD_VNPAY) {
+            return false;
+        }
+
+        if ($this->payment_status !== self::PAYMENT_PAID) {
+            return false;
+        }
+
+        if ($this->order_status !== self::STATUS_PENDING) {
+            return false;
+        }
+
+        if (!empty($this->ghn_order_code)) {
+            return false;
+        }
+
+        if ($this->refundable_amount <= 0) {
+            return false;
+        }
+
+        if (($this->refund_status ?? self::REFUND_NONE) === self::REFUND_REFUNDED) {
+            return false;
+        }
+
+        if ($this->hasPendingRefundRequest()) {
+            return false;
+        }
+
+        return true;
+    }
+
     public function canCustomerRequestCancellation(): bool
     {
         return false;
@@ -385,6 +418,7 @@ class Order extends Model
     public function getCanCancelAttribute(): bool
     {
         return $this->canCustomerCancelDirectly()
+            || $this->canCancelPaidVnpayBeforeProcessing()
             || $this->canCustomerRequestCancellation();
     }
 
@@ -392,6 +426,10 @@ class Order extends Model
     {
         if ($this->canCustomerCancelDirectly()) {
             return 'direct';
+        }
+
+        if ($this->canCancelPaidVnpayBeforeProcessing()) {
+            return 'paid_vnpay_refund';
         }
 
         return 'none';

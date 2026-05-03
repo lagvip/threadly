@@ -1,18 +1,20 @@
 <?php
 
+use App\Models\ChatConversation;
 use Illuminate\Support\Facades\Broadcast;
 
-/*
-|--------------------------------------------------------------------------
-| Broadcast Channels
-|--------------------------------------------------------------------------
-|
-| Here you may register all of the event broadcasting channels that your
-| application supports. The given channel authorization callbacks are
-| used to check if an authenticated user can listen to the channel.
-|
-*/
+Broadcast::channel('chat.{conversationId}', function ($user, $conversationId) {
+    $conversation = ChatConversation::find($conversationId);
 
-Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
-    return (int) $user->id === (int) $id;
+    if (!$conversation) {
+        return false;
+    }
+
+    $isOwner = (int) $conversation->user_id === (int) $user->id;
+
+    $isStaff =
+        (method_exists($user, 'isAdmin') && $user->isAdmin())
+        || (method_exists($user, 'isManager') && $user->isManager());
+
+    return $isOwner || $isStaff;
 });

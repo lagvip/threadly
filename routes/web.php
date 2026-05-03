@@ -30,6 +30,8 @@ use App\Http\Controllers\Client\ChatbotController;
 use App\Http\Controllers\Client\RefundRequestController as ClientRefundRequestController;
 use App\Http\Controllers\Admin\RefundRequestController as AdminRefundRequestController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\Client\ChatController as ClientChatController;
+use App\Http\Controllers\Admin\ChatController as AdminChatController;
 
 // =======================================================
 // CLIENT
@@ -133,6 +135,9 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/xoa/{id}', [WishlistController::class, 'destroy'])->name('destroy');
 
     });
+    // Chat realtime
+    Route::post('/chat/messages', [ClientChatController::class, 'send'])->name('client.chat.send');
+    Route::get('/chat/widget-data', [ClientChatController::class, 'widgetData'])->name('client.chat.widgetData');
 
 });
 
@@ -184,6 +189,12 @@ Route::middleware(['auth'])->group(function () {
         // DASHBOARD
         Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/dashboard', [AdminController::class, 'homeAdmin'])->name('homeAdmin');
+        });
+        // CHAT REALTIME
+        Route::prefix('admin')->name('admin.')->group(function () {
+            Route::get('/chats', [AdminChatController::class, 'index'])->name('chats.index');
+            Route::get('/chats/{conversation}', [AdminChatController::class, 'show'])->name('chats.show');
+            Route::post('/chats/{conversation}/messages', [AdminChatController::class, 'send'])->name('chats.send');
         });
 
         // CONTACTS
