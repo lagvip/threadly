@@ -18,12 +18,15 @@ class OrderController extends Controller
 {
     public function index(Request $request)
     {
+        // Tạo query lấy danh sách đơn hàng, load thêm user để hiển thị thông tin khách.
         $query = Order::with('user');
 
+        // Lọc theo mã đơn nếu admin nhập order_code.
         if ($request->filled('order_code')) {
             $query->where('order_code', 'like', '%' . $request->order_code . '%');
         }
 
+        // Lọc theo thông tin khách: email/tên lưu trong order hoặc email/tên của user.
         if ($request->filled('customer')) {
             $query->where(function ($q) use ($request) {
                 $q->where('email', 'like', '%' . $request->customer . '%')
@@ -35,21 +38,26 @@ class OrderController extends Controller
             });
         }
 
+        // Lọc theo trạng thái thanh toán nếu có chọn.
         if ($request->filled('payment_status')) {
             $query->where('payment_status', $request->payment_status);
         }
 
+        // Lọc theo trạng thái đơn hàng nếu có chọn.
         if ($request->filled('order_status')) {
             $query->where('order_status', $request->order_status);
         }
 
+        // Lấy danh sách đơn mới nhất, phân trang 10 đơn/trang.
         $orders = $query->latest()->paginate(10);
 
+        // Thống kê nhanh số đơn đã hủy, đang giao, chờ thanh toán, đã giao.
         $orderCancel = Order::where('order_status', OrderStatus::Cancelled->value)->count();
         $orderDelivering = Order::where('order_status', OrderStatus::Shipped->value)->count();
         $pendingPayment = Order::whereIn('payment_status', ['unpaid', 'pending'])->count();
         $orderDelivered = Order::where('order_status', OrderStatus::Delivered->value)->count();
 
+        // Trả dữ liệu sang trang danh sách đơn hàng admin.
         return view('admin.orders.index', compact(
             'orders',
             'orderCancel',
@@ -61,6 +69,7 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
+        // Load đầy đủ dữ liệu cần hiển thị ở trang chi tiết đơn.
         $order->load([
             'user',
             'voucher',
@@ -69,11 +78,13 @@ class OrderController extends Controller
             'details.variant.color',
         ]);
 
+        // Trả sang view chi tiết đơn hàng admin.
         return view('admin.orders.details', compact('order'));
     }
 
     public function edit(Order $order)
     {
+        // Không cho sửa trạng thái thủ công bằng form edit cũ vì trạng thái giao hàng đồng bộ từ GHN.
         return redirect()
             ->route('orders.show', $order)
             ->with('error', 'Không còn cập nhật trạng thái đơn hàng thủ công. Trạng thái giao hàng được đồng bộ từ GHN.');
@@ -81,6 +92,7 @@ class OrderController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
+        // Lấy đơn cần cập nhật trạng thái.
         $order = Order::findOrFail($id);
 
         $request->validate([
@@ -93,12 +105,12 @@ class OrderController extends Controller
         $currentEnum = OrderStatus::from($currentStatus);
         $newEnum = OrderStatus::from($newStatus);
 
-        // Đơn đã kết thúc thì không cho đổi tiếp
+        // Nếu đơn đã ở trạng thái kết thúc thì không cho đổi tiếp.
         if ($currentEnum->isTerminal()) {
             return back()->with('error', 'Đơn hàng đã ở trạng thái kết thúc, không thể cập nhật thêm.');
         }
 
-        // Không xử lý flow chờ duyệt hủy cũ nữa
+        // Không còn dùng flow chờ duyệt hủy cũ nữa.
         if (
             $currentStatus === OrderStatus::WaitingForCancellation->value ||
             $newStatus === OrderStatus::WaitingForCancellation->value
@@ -106,17 +118,19 @@ class OrderController extends Controller
             return back()->with('error', 'Trạng thái chờ duyệt hủy không còn được sử dụng.');
         }
 
-        // Thanh toán failed chỉ cho hủy
+        // Nếu thanh toán failed thì chỉ cho chuyển sang hủy.
         if ($order->payment_status === 'failed' && $newStatus !== OrderStatus::Cancelled->value) {
             return back()->with('error', 'Đơn hàng thanh toán thất bại chỉ có thể hủy.');
         }
 
-        // Hủy trực tiếp
+        // Nếu admin chọn hủy đơn.
         if ($newStatus === OrderStatus::Cancelled->value) {
+            // Đơn đã paid thì không cho hủy trực tiếp để tránh lệch tiền/refund.
             if ($order->payment_status === 'paid') {
                 return back()->with('error', 'Đơn hàng đã thanh toán không thể hủy.');
             }
 
+            // Chỉ cho hủy khi đơn còn pending hoặc processing.
             if (!in_array($currentStatus, [
                 OrderStatus::Pending->value,
                 OrderStatus::Processing->value,
@@ -124,6 +138,7 @@ class OrderController extends Controller
                 return back()->with('error', 'Chỉ có thể hủy khi đơn đang chờ xử lý hoặc đang xử lý.');
             }
 
+            // Hủy đơn trong transaction và hoàn lại kho/voucher nếu đơn đã từng trừ.
             DB::transaction(function () use ($order, $request) {
                 $order->order_status = OrderStatus::Cancelled->value;
                 $order->save();
@@ -131,6 +146,7 @@ class OrderController extends Controller
                 app(OrderInventoryService::class)->releaseCancelledOrder($order);
             });
 
+            // Ghi log lịch sử trạng thái đơn.
             OrderStatusLog::create([
                 'order_id' => $order->id,
                 'status' => OrderStatus::Cancelled->value,
@@ -141,12 +157,12 @@ class OrderController extends Controller
             return back()->with('success', 'Đã hủy đơn hàng.');
         }
 
-        // Chuyển trạng thái theo luồng chuẩn
+        // Các trạng thái khác phải đi đúng thứ tự trong enum.
         if (!$currentEnum->canTransitionTo($newEnum)) {
             return back()->with('error', 'Chỉ có thể cập nhật trạng thái lần lượt theo đúng quy trình.');
         }
 
-        // COD khi giao thành công thì coi như đã thanh toán
+        // COD khi giao thành công thì coi như đã thu tiền và cập nhật paid.
         if (
             $newStatus === OrderStatus::Delivered->value &&
             $order->payment_method === 'cod' &&
@@ -155,9 +171,11 @@ class OrderController extends Controller
             $order->payment_status = 'paid';
         }
 
+        // Cập nhật trạng thái đơn.
         $order->order_status = $newStatus;
         $order->save();
 
+        // Lưu log đổi trạng thái.
         OrderStatusLog::create([
             'order_id' => $order->id,
             'status' => $newStatus,
@@ -171,10 +189,12 @@ class OrderController extends Controller
     public function createGhnOrder(Order $order, GhnService $ghnService)
     {
         try {
+            // Tạo vận đơn thật trên GHN thông qua GhnService.
             $ghnService->createOrder($order);
 
             return back()->with('success', 'Đã tạo vận đơn GHN thành công. Mã vận đơn: ' . $order->fresh()->ghn_order_code);
         } catch (\Throwable $e) {
+            // Nếu tạo vận đơn lỗi thì log lại để debug.
             Log::error('Create GHN order failed: ' . $e->getMessage(), [
                 'order_id' => $order->id,
                 'order_code' => $order->order_code,
@@ -186,11 +206,13 @@ class OrderController extends Controller
 
     public function syncGhnOrder(Order $order, GhnService $ghnService)
     {
+        // Chưa có mã vận đơn GHN thì không thể đồng bộ.
         if (empty($order->ghn_order_code)) {
             return back()->with('error', 'Đơn này chưa có mã vận đơn GHN để đồng bộ.');
         }
 
         try {
+            // Lấy thông tin mới nhất từ GHN và đồng bộ về order local.
             $response = $ghnService->getOrderInfo($order->ghn_order_code);
             $ghnService->syncOrderFromGhnInfo($order, $response, Auth::id(), 'Admin đồng bộ GHN');
 
@@ -208,28 +230,34 @@ class OrderController extends Controller
 
     public function cancelGhnOrder(Order $order, GhnService $ghnService)
     {
+        // Chưa có mã GHN thì không có vận đơn để hủy.
         if (empty($order->ghn_order_code)) {
             return back()->with('error', 'Đơn này chưa có mã vận đơn GHN để hủy.');
         }
 
+        // Đơn đã giao thành công thì không được hủy vận đơn.
         if ($order->order_status === OrderStatus::Delivered->value) {
             return back()->with('error', 'Đơn đã giao thành công, không thể hủy vận đơn GHN.');
         }
 
+        // Đơn đã paid không hủy vận đơn trực tiếp, phải xử lý hoàn tiền/hoàn hàng riêng.
         if ($order->payment_status === Order::PAYMENT_PAID) {
             return back()->with('error', 'Đơn đã thanh toán không nên hủy vận đơn trực tiếp. Hãy xử lý hoàn tiền/hoàn hàng riêng để tránh lệch tiền và tồn kho.');
         }
 
         try {
+            // Gửi yêu cầu hủy vận đơn sang GHN.
             $response = $ghnService->cancelOrder($order->ghn_order_code);
             $result = collect(data_get($response, 'data', []))->firstWhere('order_code', $order->ghn_order_code);
 
+            // Nếu GHN trả về result false thì báo lỗi.
             if ($result && isset($result['result']) && !$result['result']) {
                 return back()->with('error', $result['message'] ?? 'GHN không cho hủy vận đơn này.');
             }
 
             $oldStatus = $order->order_status;
 
+            // Cập nhật trạng thái GHN, hủy order local và hoàn kho/voucher nếu cần.
             DB::transaction(function () use ($order, $response) {
                 $order->update([
                     'ghn_status' => 'cancel',
@@ -245,6 +273,7 @@ class OrderController extends Controller
                 app(OrderInventoryService::class)->releaseCancelledOrder($order);
             });
 
+            // Nếu trước đó chưa cancelled thì ghi log hủy vận đơn.
             if ($oldStatus !== OrderStatus::Cancelled->value) {
                 OrderStatusLog::create([
                     'order_id' => $order->id,
@@ -268,11 +297,13 @@ class OrderController extends Controller
 
     public function printGhnOrder(Order $order, GhnService $ghnService)
     {
+        // Chưa có mã GHN thì chưa thể in vận đơn.
         if (empty($order->ghn_order_code)) {
             return back()->with('error', 'Đơn này chưa có mã vận đơn GHN để in.');
         }
 
         try {
+            // Lấy URL in vận đơn từ GHN rồi redirect admin sang đó.
             return redirect()->away($ghnService->printOrderUrl($order->ghn_order_code));
         } catch (\Throwable $e) {
             Log::error('Print GHN order failed: ' . $e->getMessage(), [
@@ -284,16 +315,21 @@ class OrderController extends Controller
             return back()->with('error', $e->getMessage() ?: 'Không in được vận đơn GHN.');
         }
     }
+
     public function simulateGhnStatus(Order $order, string $status, GhnService $ghnService)
     {
+        // Chỉ cho giả lập trạng thái GHN ở môi trường local.
         abort_unless(app()->environment('local'), 403, 'Chỉ được giả lập GHN ở môi trường local.');
 
+        // Phải có mã vận đơn GHN mới giả lập được.
         if (empty($order->ghn_order_code)) {
             return back()->with('error', 'Đơn này chưa có mã vận đơn GHN, không thể giả lập trạng thái.');
         }
 
+        // Lấy trạng thái GHN hiện tại, nếu chưa có thì mặc định ready_to_pick.
         $currentStatus = $order->ghn_status ?: 'ready_to_pick';
 
+        // Chỉ cho giả lập các trạng thái an toàn, không cho giả lập lost/damage/return/cancel để tránh lệch nghiệp vụ.
         $safeDemoStatuses = [
             'ready_to_pick',
             'picking',
@@ -311,6 +347,7 @@ class OrderController extends Controller
             return back()->with('error', 'Đã tắt giả lập trạng thái GHN gây lệch nghiệp vụ như hủy, hoàn hàng, thất lạc hoặc hư hỏng.');
         }
 
+        // Khai báo các trạng thái GHN được phép chuyển tiếp.
         $allowedTransitions = [
             'ready_to_pick' => [
                 'picking',
@@ -416,6 +453,7 @@ class OrderController extends Controller
             'exception' => [],
         ];
 
+        // Lấy danh sách trạng thái tiếp theo được phép từ trạng thái hiện tại.
         $allowedNextStatuses = $allowedTransitions[$currentStatus] ?? [
             'picked',
             'delivering',
@@ -426,6 +464,7 @@ class OrderController extends Controller
             'damage',
         ];
 
+        // Nếu chuyển sai thứ tự trạng thái thì chặn.
         if (!in_array($status, $allowedNextStatuses, true)) {
             return back()->with(
                 'error',
@@ -438,6 +477,7 @@ class OrderController extends Controller
         }
 
         try {
+            // Tạo response giả giống dữ liệu GHN trả về.
             $fakeGhnResponse = [
                 'code' => 200,
                 'message' => 'Local simulated GHN status',
@@ -449,6 +489,7 @@ class OrderController extends Controller
                 ],
             ];
 
+            // Đồng bộ trạng thái giả lập vào đơn thông qua GhnService.
             $ghnService->syncOrderFromGhnInfo(
                 $order,
                 $fakeGhnResponse,
@@ -478,10 +519,12 @@ class OrderController extends Controller
 
     public function destroy(Order $order)
     {
+        // Chỉ cho xóa mềm đơn đã hủy.
         if ($order->order_status !== OrderStatus::Cancelled->value) {
             return back()->with('error', 'Chỉ có thể xóa đơn hàng đã hủy.');
         }
 
+        // Xóa mềm đơn hàng.
         $order->delete();
 
         return back()->with('success', 'Đơn hàng đã được xóa.');
@@ -489,6 +532,7 @@ class OrderController extends Controller
 
     public function trash()
     {
+        // Lấy danh sách đơn đã xóa mềm.
         $orders = Order::onlyTrashed()
             ->with('user')
             ->latest()
@@ -499,12 +543,14 @@ class OrderController extends Controller
 
     public function restore(Request $request)
     {
+        // Lấy danh sách id đơn cần khôi phục.
         $ids = $request->input('ids', []);
 
         if (empty($ids)) {
             return back()->with('error', 'Chưa chọn đơn hàng nào để khôi phục.');
         }
 
+        // Khôi phục các đơn đã xóa mềm.
         Order::withTrashed()->whereIn('id', $ids)->restore();
 
         return back()->with('success', 'Khôi phục đơn hàng thành công.');
@@ -512,6 +558,7 @@ class OrderController extends Controller
 
     public function forceDelete(Request $request)
     {
+        // Lấy danh sách id đơn cần xóa vĩnh viễn.
         $ids = $request->input('ids', []);
 
         if (empty($ids)) {
@@ -519,6 +566,7 @@ class OrderController extends Controller
         }
 
         try {
+            // Xóa vĩnh viễn các đơn đã chọn.
             Order::withTrashed()
                 ->whereIn('id', $ids)
                 ->forceDelete();

@@ -16,6 +16,7 @@ class ClientOrderController extends Controller
 {
     public function index(Request $request)
     {
+        // Lấy danh sách đơn hàng của user hiện tại, kèm dữ liệu cần hiển thị như sản phẩm, biến thể, review và refund.
         $query = Order::with([
                 'details.variant',
                 'details.product',
@@ -25,12 +26,14 @@ class ClientOrderController extends Controller
             ])
             ->where('user_id', Auth::id());
 
+        // Lọc theo order_code.
         if ($request->filled('order_code')) {
             $keyword = trim((string) $request->order_code);
 
             $query->where('order_code', 'like', '%' . $keyword . '%');
         }
 
+        // Lọc theo tên, email, số điện thoại hoặc địa chỉ.
         if ($request->filled('customer')) {
             $keyword = trim((string) $request->customer);
 
@@ -72,6 +75,7 @@ class ClientOrderController extends Controller
             ->where('user_id', Auth::id())
             ->findOrFail($id);
 
+        // Chuẩn bị danh sách sản phẩm trong đơn có thể đánh giá, đồng thời gắn review cũ nếu đã từng đánh giá.
         $reviewItems = $order->details
             ->filter(function ($item) {
                 return !empty($item->product_id) && !is_null($item->product);
@@ -93,11 +97,13 @@ class ClientOrderController extends Controller
             return back()->with('error', 'Đơn hàng chưa đủ điều kiện để xác nhận đã nhận hàng.');
         }
 
+        // Dùng transaction lỗi bước nào thì rollback toàn bộ.
         DB::transaction(function () use ($order) {
             $order->update([
                 'customer_confirmed_at' => now(),
             ]);
 
+            // Ghi lịch sử để biết ai đã xác nhận và xác nhận lúc đơn đang ở trạng thái nào.
             OrderStatusLog::create([
                 'order_id' => $order->id,
                 'status' => $order->order_status,
@@ -125,6 +131,7 @@ class ClientOrderController extends Controller
             return back()->with('error', 'Sản phẩm không thuộc đơn hàng này hoặc đã không còn tồn tại.');
         }
 
+        // Validate số sao và nội dung bình luận trước khi lưu review.
         $validated = $request->validate([
             'rating' => ['required', 'integer', 'min:1', 'max:5'],
             'comment' => ['required', 'string', 'max:1000'],
@@ -148,6 +155,8 @@ class ClientOrderController extends Controller
                 'product_variant_id' => $detail->variant_id,
                 'rating' => (int) $validated['rating'],
                 'comment' => trim((string) $validated['comment']),
+
+                // Lưu snapshot để sau này sản phẩm/màu/size đổi tên thì review vẫn giữ thông tin lúc mua.
                 'product_name_snapshot' => $detail->product_name,
                 'color_snapshot' => optional($detail->variant?->color)->name,
                 'size_snapshot' => optional($detail->variant?->size)->name,
@@ -172,6 +181,7 @@ class ClientOrderController extends Controller
 
         try {
             DB::transaction(function () use ($id, $reason, &$actionType) {
+                // Lấy đơn hàng của user hiện tại và khóa dòng order để tránh 2 request hủy cùng lúc.
                 $order = Order::with(['refundRequests', 'details'])
                     ->where('user_id', Auth::id())
                     ->whereKey($id)
@@ -182,6 +192,7 @@ class ClientOrderController extends Controller
                     throw new \RuntimeException('Đơn hàng này không thể hủy ở trạng thái hiện tại.');
                 }
 
+                // Lưu trạng thái cũ để theo dõi trước khi hủy.
                 $oldStatus = $order->order_status;
                 $actionType = $order->cancel_action_type;
 
@@ -193,8 +204,10 @@ class ClientOrderController extends Controller
                         'cancel_reason' => $reason,
                     ]);
 
+                    // Hoàn lại tồn kho cho các sản phẩm trong đơn nếu trước đó đơn đã trừ kho.
                     app(OrderInventoryService::class)->releaseCancelledOrder($order);
 
+                    // Ghi log lịch sử hủy đơn.
                     OrderStatusLog::create([
                         'order_id' => $order->id,
                         'status' => Order::STATUS_CANCELLED,
@@ -206,16 +219,19 @@ class ClientOrderController extends Controller
                 }
 
                 if ($actionType === 'paid_vnpay_refund') {
+                    // Trường hợp đơn VNPay đã thanh toán: hủy đơn sẽ tạo yêu cầu hoàn tiền.
                     if ($order->hasPendingRefundRequest()) {
                         throw new \RuntimeException('Đơn hàng đã có yêu cầu hoàn tiền đang chờ xử lý.');
                     }
 
+                    // Lấy số tiền còn có thể hoàn.
                     $refundAmount = (float) $order->refundable_amount;
 
                     if ($refundAmount <= 0) {
                         throw new \RuntimeException('Đơn hàng không còn số tiền có thể hoàn.');
                     }
 
+                    // Cập nhật đơn sang trạng thái đã hủy và đánh dấu đã gửi yêu cầu hoàn tiền.
                     $order->update([
                         'previous_status' => $oldStatus,
                         'order_status' => Order::STATUS_CANCELLED,
@@ -224,8 +240,10 @@ class ClientOrderController extends Controller
                         'cancel_reason' => $reason,
                     ]);
 
+                    // Hoàn lại tồn kho cho đơn bị hủy.
                     app(OrderInventoryService::class)->releaseCancelledOrder($order);
 
+                    // Tạo yêu cầu hoàn tiền demo để admin xử lý.
                     RefundRequest::create([
                         'order_id' => $order->id,
                         'user_id' => Auth::id(),
@@ -246,6 +264,7 @@ class ClientOrderController extends Controller
                 }
 
                 if ($actionType === 'request') {
+                    // Trường hợp không được hủy trực tiếp: khách chỉ gửi yêu cầu hủy để admin duyệt.
                     $order->update([
                         'previous_status' => $oldStatus,
                         'order_status' => Order::STATUS_WAITING_FOR_CANCELLATION,
@@ -272,6 +291,7 @@ class ClientOrderController extends Controller
             return back()->with('success', 'Đã gửi yêu cầu hủy đơn. Admin sẽ kiểm tra và xử lý tiếp.');
         }
 
+        // Nếu là đơn VNPay đã thanh toán thì báo đã tạo yêu cầu hoàn tiền demo.
         if ($actionType === 'paid_vnpay_refund') {
             return back()->with('success', 'Đã hủy đơn và tạo yêu cầu hoàn tiền demo. Admin sẽ duyệt hoàn tiền vào ví của bạn.');
         }

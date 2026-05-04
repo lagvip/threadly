@@ -24,6 +24,7 @@ class AccountController extends Controller
             ->take(5)
             ->get();
 
+        // Thống kê số lượng đơn hàng của user theo từng trạng thái để hiển thị tổng quan.
         $stats = [
             'total_orders' => Order::where('user_id', $user->id)->count(),
             'pending_orders' => Order::where('user_id', $user->id)
@@ -54,6 +55,7 @@ class AccountController extends Controller
             ->orderByDesc('id')
             ->first();
 
+        // Đếm tổng số địa chỉ mà user đã lưu.
         $addressCount = Address::where('user_id', $user->id)->count();
 
         return view('client.account.detail', compact(

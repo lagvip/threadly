@@ -17,6 +17,7 @@ class AuthController extends Controller
 {
     public function showLogin(Request $request)
     {
+        // Nếu URL có redirect thì lưu lại để sau khi đăng nhập chuyển về trang đó.
         if ($request->filled('redirect')) {
             session(['url.intended' => $request->redirect]);
         }
@@ -36,19 +37,23 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
+        // Lấy trạng thái ghi nhớ đăng nhập từ checkbox remember.
         $remember = $request->boolean('remember');
 
+        // Thử đăng nhập bằng email và password.
         if (!Auth::attempt($credentials, $remember)) {
             return back()
                 ->withInput($request->only('email'))
                 ->with('error', 'Sai email hoặc mật khẩu.');
         }
 
+        // Regenerate session để tránh session fixation sau khi đăng nhập.
         $request->session()->regenerate();
 
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        // Nếu tài khoản bị khóa thì logout ngay và hủy session.
         if ((int) $user->status !== 1) {
             Auth::logout();
             $request->session()->invalidate();
@@ -58,6 +63,7 @@ class AuthController extends Controller
                 ->with('error', 'Tài khoản của bạn đang bị khóa.');
         }
 
+        // Admin hoặc manager đăng nhập xong thì vào trang quản trị.
         if ($user->isAdmin() || $user->isManager()) {
             return redirect()->intended(route('admin.homeAdmin'));
         }
@@ -73,6 +79,7 @@ class AuthController extends Controller
             'password' => ['required', 'min:6', 'confirmed'],
         ]);
 
+        // Tạo user mới, mật khẩu được hash trước khi lưu.
         $user = User::create([
             'name'     => $data['name'],
             'email'    => $data['email'],
@@ -80,12 +87,14 @@ class AuthController extends Controller
             'status'   => 1,
         ]);
 
+        // Gán role customer cho user mới đăng ký.
         $customerRole = Role::where('slug', 'customer')->first();
 
         if ($customerRole) {
             $user->roles()->attach($customerRole->id);
         }
 
+        // Đăng nhập luôn sau khi đăng ký thành công.
         Auth::login($user);
         $request->session()->regenerate();
 
@@ -95,12 +104,14 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        // Đăng xuất user và hủy session hiện tại.
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
     }
+
     public function showForgotPasswordForm()
     {
         return view('auth.forgot-password');
@@ -115,8 +126,11 @@ class AuthController extends Controller
         ]);
 
         $email = $request->email;
+
+        // Tạo OTP 6 số ngẫu nhiên.
         $otp = (string) random_int(100000, 999999);
 
+        // Lưu OTP đã hash vào bảng password_reset_tokens.
         DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $email],
             [
@@ -125,6 +139,7 @@ class AuthController extends Controller
             ]
         );
 
+        // Gửi OTP về email của người dùng.
         Mail::raw("Mã OTP đặt lại mật khẩu của bạn là: {$otp}. Mã có hiệu lực trong 10 phút.", function ($message) use ($email) {
             $message->to($email)
                     ->subject('Mã OTP đặt lại mật khẩu');
@@ -149,15 +164,18 @@ class AuthController extends Controller
             'password' => ['required', 'min:6', 'confirmed'],
         ]);
 
+        // Lấy bản ghi OTP theo email.
         $record = DB::table('password_reset_tokens')
             ->where('email', $request->email)
             ->first();
 
+        // Không có OTP thì báo lỗi.
         if (!$record) {
             return back()->withInput($request->only('email'))
                 ->with('error', 'OTP không tồn tại hoặc đã hết hạn.');
         }
 
+        // OTP chỉ có hiệu lực 10 phút.
         if (Carbon::parse($record->created_at)->addMinutes(10)->isPast()) {
             DB::table('password_reset_tokens')->where('email', $request->email)->delete();
 
@@ -165,6 +183,7 @@ class AuthController extends Controller
                 ->with('error', 'OTP đã hết hạn. Vui lòng yêu cầu mã mới.');
         }
 
+        // So sánh OTP người dùng nhập với OTP đã hash trong database.
         if (!Hash::check($request->otp, $record->token)) {
             return back()->withInput($request->only('email'))
                 ->with('error', 'OTP không đúng.');
@@ -176,10 +195,12 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        // Đổi mật khẩu xong thì xóa OTP để không dùng lại được.
         DB::table('password_reset_tokens')->where('email', $request->email)->delete();
 
         return redirect()->route('login')->with('success', 'Đặt lại mật khẩu thành công. Bạn hãy đăng nhập lại.');
     }
+
     public function showChangePasswordForm()
     {
         return view('auth.change-password');
@@ -209,6 +230,7 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        // Đổi mật khẩu xong thì logout để user đăng nhập lại bằng mật khẩu mới.
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

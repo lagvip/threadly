@@ -24,7 +24,7 @@ class CartController extends Controller
                 'variant.color',
                 'variant.size'
             ])->where('id_cart', $cart->id)->get();
-
+            // Lấy danh sách ID các sản phẩm đã chọn để thanh toán từ session
             $selectedCartItemIds = session('checkout_selected_items', []);
             $selectedCartItemIds = collect($selectedCartItemIds)
                 ->map(fn ($id) => (int) $id)
