@@ -258,7 +258,7 @@
                                 <th>Danh mục</th>
                                 <th>Trạng thái</th>
                                 <th>Ngày tạo</th>
-                                <th>Action</th>
+                                <th>Thao tác</th>
                             </tr>
                         </thead>
 
@@ -292,8 +292,8 @@
                                         </div>
                                     </td>
 
-                                    <td>{{ $product->brand->name ?? 'N/A' }}</td>
-                                    <td>{{ $product->category->name ?? 'N/A' }}</td>
+                                    <td>{{ $product->brand->name ?? 'Không có' }}</td>
+                                    <td>{{ $product->category->name ?? 'Không có' }}</td>
 
                                     <td class="table-status-cell">
                                         <form action="{{ route('product.toggleStatus', $product->id) }}"
@@ -365,6 +365,7 @@
 </div>
 
 <script>
+    // Xử lý sự kiện cho checkbox "Chọn tất cả" và các checkbox hàng
     document.addEventListener('DOMContentLoaded', function () {
         const checkAll = document.getElementById('check-all');
         const rowCheckboxes = document.querySelectorAll('.row-checkbox');

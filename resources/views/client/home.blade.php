@@ -21,7 +21,7 @@
             </li>
 
             <li>
-                <a href="search.html" class="search-box">
+                <a href="{{ route('client.products.search') }}" class="search-box">
                     <i class="iconly-Search icli"></i>
                     <span>Tìm kiếm</span>
                 </a>

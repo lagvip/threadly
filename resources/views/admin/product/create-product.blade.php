@@ -83,7 +83,7 @@
                         <div class="dz-message needsclick">
                             <i class="bx bx-cloud-upload fs-48 text-primary"></i>
                             <h3 class="mt-4">Thả hình ảnh ở đây, hoặc <span class="text-primary">nhấp để duyệt</span></h3>
-                            <span class="text-muted fs-13">1600 x 1200 (4:3) recommended. PNG, JPG and GIF files are allowed</span>
+                            <span class="text-muted fs-13">Khuyến nghị 1600 x 1200 (4:3). Chỉ cho phép tệp PNG, JPG và GIF</span>
                             @error('image_primary')
                                 <span class="text-danger d-block">{{ $message }}</span>
                             @enderror
@@ -339,15 +339,16 @@
 
 @push('scripts')
 <script>
-    let variantIndex = {{ old('variants') ? count(old('variants')) : 0 }};
 
+    let variantIndex = {{ old('variants') ? count(old('variants')) : 0 }};
+    // Lấy các tùy chọn đã chọn
     function getSelectedOptions(selector) {
         return Array.from(document.querySelectorAll(selector + ':checked')).map(item => ({
             id: item.value,
             name: item.dataset.name
         }));
     }
-
+    // Tạo tất cả tổ hợp giữa màu sắc và kích cỡ đã chọn
     function getSelectedCombinations(colors, sizes) {
         const combinations = [];
 
@@ -363,11 +364,11 @@
 
         return combinations;
     }
-
+    // Lấy các dòng biến thể hiện có trên giao diện
     function getExistingVariantRows() {
         return Array.from(document.querySelectorAll('.variant-item'));
     }
-
+    // Cập nhật nhãn trạng thái
     function bindStatusLabel(toggle) {
         const text = toggle.closest('.status-switch-wrap')?.querySelector('.status-toggle-text');
         if (!text) return;
@@ -379,7 +380,7 @@
             text.classList.add('inactive');
         }
     }
-
+    // Tạo một dòng biến thể mới
     function createVariantRow(color, size) {
         const html = `
             <div class="row variant-item mb-3" data-color="${color.id}" data-size="${size.id}" data-key="${color.id}-${size.id}">
@@ -453,7 +454,7 @@
         const selectedKeys = selectedCombinations.map(item => item.key);
 
         const existingRows = getExistingVariantRows();
-
+        // Xóa các biến thể không còn trong lựa chọn
         existingRows.forEach(row => {
             const rowKey = row.dataset.key || `${row.dataset.color}-${row.dataset.size}`;
             if (!selectedKeys.includes(rowKey)) {
@@ -464,30 +465,30 @@
         const currentKeys = Array.from(document.querySelectorAll('.variant-item')).map(row => {
             return row.dataset.key || `${row.dataset.color}-${row.dataset.size}`;
         });
-
+        // Thêm các biến thể mới chưa tồn tại
         selectedCombinations.forEach(item => {
             if (!currentKeys.includes(item.key)) {
                 createVariantRow(item.color, item.size);
             }
         });
     }
-
+    // Xử lý sự kiện khi nhấn nút tạo biến thể
     document.getElementById('generate-variants').addEventListener('click', function() {
         syncVariants();
     });
-
+    // Xử lý sự kiện khi nhấn nút xóa biến thể
     document.addEventListener('click', function(e) {
         if (e.target && e.target.classList.contains('remove-variant')) {
             e.target.closest('.variant-item').remove();
         }
     });
-
+    // Cập nhật nhãn trạng thái khi thay đổi
     document.addEventListener('change', function (e) {
         if (e.target.classList.contains('status-toggle-input')) {
             bindStatusLabel(e.target);
         }
     });
-
+    // Gắn nhãn trạng thái cho các biến thể đã tồn tại khi tải lại trang
     document.querySelectorAll('.status-toggle-input').forEach(bindStatusLabel);
 </script>
 @endpush

@@ -25,7 +25,7 @@
                             <th>Ảnh</th>
                             <th>Tên</th>
                             <th>Email</th>
-                            <th>Role</th>
+                            <th>Vai trò</th>
                             <th>Số đơn</th>
                             <th>Ngày xóa</th>
                             <th>Thao tác</th>
@@ -61,13 +61,13 @@
                                     <div class="d-flex gap-2">
                                         <a href="{{ route('users.restore', $user->id) }}"
                                            class="btn btn-success btn-sm"
-                                           onclick="return confirm('Khôi phục user này?')">
+                                           onclick="return confirm('Khôi phục người dùng này?')">
                                             Khôi phục
                                         </a>
 
                                         @if(($user->orders_count ?? 0) == 0)
                                             <form action="{{ route('users.forceDelete', $user->id) }}" method="POST"
-                                                  onsubmit="return confirm('Xóa vĩnh viễn user này?')">
+                                                  onsubmit="return confirm('Xóa vĩnh viễn người dùng này?')">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="btn btn-danger btn-sm">
@@ -78,7 +78,7 @@
                                             <button type="button"
                                                     class="btn btn-secondary btn-sm"
                                                     disabled
-                                                    title="User còn đơn hàng nên không thể xóa vĩnh viễn">
+                                                    title="Người dùng còn đơn hàng nên không thể xóa vĩnh viễn">
                                                 Xóa vĩnh viễn
                                             </button>
                                         @endif

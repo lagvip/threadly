@@ -34,7 +34,7 @@
                                             <td>{{ $banner->title }}</td>
                                         </tr>
                                         <tr>
-                                            <th>Link:</th>
+                                            <th>Liên kết:</th>
                                             <td>
                                                 @if($banner->link)
                                                     <a href="{{ $banner->link }}" target="_blank" class="text-primary">{{ $banner->link }}</a>
@@ -51,9 +51,9 @@
                                             <th>Trạng thái:</th>
                                             <td>
                                                 @if($banner->is_active)
-                                                    <span class="badge bg-success">Active</span>
+                                                    <span class="badge bg-success">Đang hoạt động</span>
                                                 @else
-                                                    <span class="badge bg-danger">Inactive</span>
+                                                    <span class="badge bg-danger">Ngừng hoạt động</span>
                                                 @endif
                                             </td>
                                         </tr>

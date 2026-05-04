@@ -23,7 +23,7 @@
                         <tr>
                             <th>ID</th>
                             <th>Tên role</th>
-                            <th>Slug</th>
+                            <th>Đường dẫn</th>
                             <th>Số user</th>
                             <th>Ngày xoá</th>
                             <th>Thao tác</th>
@@ -40,13 +40,13 @@
                                 <td class="d-flex gap-2">
                                     <a href="{{ route('roles.restore', $role->id) }}"
                                        class="btn btn-success btn-sm"
-                                       onclick="return confirm('Khôi phục role này?')">
+                                       onclick="return confirm('Khôi phục vai trò này?')">
                                         Khôi phục
                                     </a>
 
                                     @if(($role->users_count ?? 0) == 0)
                                         <form action="{{ route('roles.forceDelete', $role->id) }}" method="POST"
-                                              onsubmit="return confirm('Xóa vĩnh viễn role này?')">
+                                              onsubmit="return confirm('Xóa vĩnh viễn vai trò này?')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-danger btn-sm">
@@ -57,7 +57,7 @@
                                         <button type="button"
                                                 class="btn btn-secondary btn-sm"
                                                 disabled
-                                                title="Role còn user nên không thể xóa vĩnh viễn">
+                                                title="Vai trò còn người dùng nên không thể xóa vĩnh viễn">
                                             Xóa vĩnh viễn
                                         </button>
                                     @endif

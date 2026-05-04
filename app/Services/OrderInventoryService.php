@@ -11,7 +11,7 @@ class OrderInventoryService
     /**
      * Hoàn lại tồn kho/voucher cho đơn bị hủy trước khi giao thành công.
      *
-     * Quy ước hiện tại của project:
+     * Quy ước hiện tại của :
      * - COD: đã trừ kho ngay khi tạo đơn.
      * - VNPay: chỉ trừ kho sau khi thanh toán thành công.
      * - Voucher: đã trừ lượt dùng khi tạo đơn.

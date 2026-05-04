@@ -51,7 +51,7 @@
                     {{-- Ảnh đại diện --}}
                     <div class="card">
                         <div class="card-header">
-                            <h4 class="card-title">Ảnh đại diện User</h4>
+                            <h4 class="card-title">Ảnh đại diện người dùng</h4>
                         </div>
                         <div class="card-body">
                             <input type="file" name="avatar" id="avatar" class="form-control mb-3" accept="image/*">
@@ -74,7 +74,7 @@
                     {{-- Thông tin user --}}
                     <div class="card mt-3">
                         <div class="card-header">
-                            <h4 class="card-title">Thông tin User</h4>
+                            <h4 class="card-title">Thông tin người dùng</h4>
                         </div>
                         <div class="card-body">
                             <div class="row g-3">
@@ -95,7 +95,7 @@
                                 </div>
 
                                 <div class="col-lg-4">
-                                    <label class="form-label">Password mới</label>
+                                    <label class="form-label">Mật khẩu mới</label>
                                     <input type="password" name="password" class="form-control" placeholder="Bỏ trống nếu không đổi">
                                     @error('password')
                                         <span class="text-danger">{{ $message }}</span>
@@ -103,7 +103,7 @@
                                 </div>
 
                                 <div class="col-lg-6">
-                                    <label class="form-label">Role</label>
+                                    <label class="form-label">Vai trò</label>
                                     <select name="role_id" class="form-control">
                                         <option value="">-- Chọn role --</option>
                                         @foreach($roles as $r)

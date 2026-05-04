@@ -2,17 +2,17 @@
 
     <div class="logo-box d-flex justify-content-center align-items-center py-3" style="height: 100px;">
         <a href="{{ route('admin.homeAdmin') }}" class="logo-dark">
-            <img src="{{ asset('admin/assets/images/cdp2.png') }}" class="logo-sm" alt="logo sm" style="height: 150px;">
+            <img src="{{ asset('admin/assets/images/cdp2.png') }}" class="logo-sm" alt="logo nhỏ" style="height: 150px;">
         </a>
         <a href="{{ route('admin.homeAdmin') }}" class="logo-dark">
-            <img src="{{ asset('admin/assets/images/cdp2.png') }}" class="logo-lg" alt="logo dark" style="height: 150px;">
+            <img src="{{ asset('admin/assets/images/cdp2.png') }}" class="logo-lg" alt="logo nền tối" style="height: 150px;">
         </a>
 
         <a href="{{ route('admin.homeAdmin') }}" class="logo-light">
-            <img src="{{ asset('admin/assets/images/cdp2.png') }}" class="logo-sm" alt="logo sm" style="height: 150px;">
+            <img src="{{ asset('admin/assets/images/cdp2.png') }}" class="logo-sm" alt="logo nhỏ" style="height: 150px;">
         </a>
         <a href="{{ route('admin.homeAdmin') }}" class="logo-light">
-            <img src="{{ asset('admin/assets/images/cdp2.png') }}" class="logo-lg" alt="logo light" style="height: 150px;">
+            <img src="{{ asset('admin/assets/images/cdp2.png') }}" class="logo-lg" alt="logo nền sáng" style="height: 150px;">
         </a>
     </div>
 
@@ -114,7 +114,7 @@
                 <li class="nav-item">
                     <a class="nav-link menu-arrow" href="#sidebarSize" data-bs-toggle="collapse" role="button"
                         aria-expanded="false" aria-controls="sidebarSize">
-                        <span class="nav-text"> Size </span>
+                        <span class="nav-text"> Kích cỡ </span>
                     </a>
                     <div class="collapse" id="sidebarSize">
                         <ul class="nav sub-navbar-nav">
@@ -161,7 +161,7 @@
                 <li class="nav-item">
                     <a class="nav-link menu-arrow" href="#sidebarChat" data-bs-toggle="collapse" role="button"
                         aria-expanded="false" aria-controls="sidebarChat">
-                        <span class="nav-text"> Chat realtime </span>
+                        <span class="nav-text"> Chat trực tuyến </span>
                     </a>
                     <div class="collapse" id="sidebarChat">
                         <ul class="nav sub-navbar-nav">
@@ -210,7 +210,7 @@
                 <li class="nav-item">
                     <a class="nav-link menu-arrow" href="#sidebarRoles" data-bs-toggle="collapse" role="button"
                         aria-expanded="false" aria-controls="sidebarRoles">
-                        <span class="nav-text"> Role </span>
+                        <span class="nav-text"> Vai trò </span>
                     </a>
                     <div class="collapse" id="sidebarRoles">
                         <ul class="nav sub-navbar-nav">
@@ -218,7 +218,7 @@
                                 <a class="sub-nav-link" href="{{ route('roles.list') }}">Danh sách role</a>
                             </li>
                             <li class="sub-nav-item">
-                                <a class="sub-nav-link" href="{{ route('roles.trash') }}">Role đã xoá</a>
+                                <a class="sub-nav-link" href="{{ route('roles.trash') }}">Vai trò đã xoá</a>
                             </li>
                         </ul>
                     </div>

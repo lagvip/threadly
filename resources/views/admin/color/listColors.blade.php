@@ -50,7 +50,7 @@
                             <th>Mã màu</th>
                             <th>Xem nhanh</th>
                             <th>Ngày tạo</th>
-                            <th>Action</th>
+                            <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>

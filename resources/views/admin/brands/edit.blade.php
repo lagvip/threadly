@@ -11,11 +11,11 @@
                     <div class="bg-light text-center rounded">
                         {{-- Hiển thị ảnh hiện có --}}
                         @if ($brand->image)
-                            <img src="{{ asset('storage/' . $brand->image) }}" alt="Current Image" class="avatar-xxl"
+                            <img src="{{ asset('storage/' . $brand->image) }}" alt="Ảnh hiện tại" class="avatar-xxl"
                                 id="leftImagePreview"> {{-- ID đồng bộ để cập nhật ảnh bên trái --}}
                         @else
                             <p id="noImageText">Không có ảnh hiện tại.</p>
-                            <img src="" alt="Image Placeholder" class="avatar-xxl" id="leftImagePreview"
+                            <img src="" alt="Ảnh chờ" class="avatar-xxl" id="leftImagePreview"
                                 style="display: none;">
                         @endif
                     </div>
@@ -57,7 +57,7 @@
                                 <i class="bx bx-cloud-upload fs-48 text-primary"></i>
                                 <h3 class="mt-4">Kéo ảnh mới vào đây, hoặc <span class="text-primary">nhấp để duyệt</span></h3>
                                 <span class="text-muted fs-13">
-                                    Khuyến nghị ảnh tỉ lệ 4:3. Chỉ cho phép file PNG, JPG và GIF.
+                                    Khuyến nghị ảnh tỉ lệ 4:3. Chỉ cho phép tệp PNG, JPG và GIF.
                                 </span>
 
                                 <p id="selectedFileNameUpdate" class="selected-file-name mt-2"></p>
@@ -65,7 +65,7 @@
                                 <div id="imagePreviewUpdate" class="image-preview mt-3">
                                     {{-- Hiển thị ảnh xem trước mặc định nếu có ảnh cũ --}}
                                     @if ($brand->image)
-                                        <img src="{{ asset('storage/' . $brand->image) }}" alt="Current Image"
+                                        <img src="{{ asset('storage/' . $brand->image) }}" alt="Ảnh hiện tại"
                                             style="max-width: 100%; max-height: 120px; display: block; margin: 0 auto; border-radius: 4px;">
                                     @endif
                                 </div>

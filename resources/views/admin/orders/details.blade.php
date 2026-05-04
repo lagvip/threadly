@@ -243,7 +243,7 @@
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i>
                 {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
             </div>
         @endif
 
@@ -251,7 +251,7 @@
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
                 {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
             </div>
         @endif
 
@@ -349,7 +349,7 @@
                                             $color = $item->variant?->color?->name ?? '-';
                                             $image = $product?->image_primary
                                                 ? asset('storage/' . $product->image_primary)
-                                                : 'https://via.placeholder.com/54x54?text=No+Image';
+                                                : 'https://via.placeholder.com/54x54?text=Khong+co+anh';
 
                                             $orderedQty = (int) ($item->quantity ?? 0);
                                             $itemTotal = (float) ($item->total ?? 0);
@@ -378,7 +378,7 @@
                                                         </div>
 
                                                         <div class="product-meta">
-                                                            Size: {{ $size }}
+                                                            Kích cỡ: {{ $size }}
                                                         </div>
 
                                                         <div class="product-meta">

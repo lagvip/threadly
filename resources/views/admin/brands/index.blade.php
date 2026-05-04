@@ -19,15 +19,15 @@
                         <div class="dropdown">
                             <a href="#" class="dropdown-toggle btn btn-sm btn-outline-light" data-bs-toggle="dropdown"
                                 aria-expanded="false">
-                                This Month
+                                Tháng này
                             </a>
                             <div class="dropdown-menu dropdown-menu-end">
                                 <!-- item-->
-                                <a href="#!" class="dropdown-item">Download</a>
+                                <a href="#!" class="dropdown-item">Tải xuống</a>
                                 <!-- item-->
-                                <a href="#!" class="dropdown-item">Export</a>
+                                <a href="#!" class="dropdown-item">Xuất dữ liệu</a>
                                 <!-- item-->
-                                <a href="#!" class="dropdown-item">Import</a>
+                                <a href="#!" class="dropdown-item">Nhập dữ liệu</a>
                             </div>
                         </div>
                     </div>
@@ -46,7 +46,7 @@
                                         <th>Ảnh thương hiệu</th>
                                         <th>Tên Thương Hiệu</th>
                                         <th>Ngày Tạo</th>
-                                        <th>Action</th>
+                                        <th>Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>

@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="container-fluid">
-    <h3 class="fw-bold text-uppercase mb-4">📊 Dashboard Thống Kê</h3>
+    <h3 class="fw-bold text-uppercase mb-4">📊 Bảng điều khiển thống kê</h3>
 
     <div class="card p-3 mb-4 shadow-sm">
         <form method="GET" class="row g-2 align-items-end">
@@ -184,7 +184,7 @@
                             <tbody>
                                 @forelse(($lowStockVariants ?? []) as $variant)
                                     <tr>
-                                        <td>{{ $variant->product->name ?? 'N/A' }}</td>
+                                        <td>{{ $variant->product->name ?? 'Không có' }}</td>
                                         <td class="text-center">
                                             <span class="badge bg-danger fw-bold">{{ number_format((int)$variant->quantity, 0, ',', '.') }}</span>
                                         </td>

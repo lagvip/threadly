@@ -20,7 +20,7 @@
                                 <h3 class="mt-4">Kéo ảnh vào đây, hoặc <span class="text-primary">nhấp để duyệt</span>
                                 </h3>
                                 <span class="text-muted fs-13">
-                                    1600 x 1200 (4:3) khuyến nghị. Chỉ cho phép file PNG, JPG và GIF.
+                                    Khuyến nghị 1600 x 1200 (4:3). Chỉ cho phép tệp PNG, JPG và GIF.
                                 </span>
                                 <p id="selectedFileName" class="selected-file-name mt-2"></p>
                                 <div id="imagePreview" class="image-preview mt-3"></div>

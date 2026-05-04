@@ -30,7 +30,7 @@
                                             <td>{{ $contact->id }}</td>
                                             <td>{{ $contact->name }}</td>
                                             <td>{{ $contact->email }}</td>
-                                            <td>{{ $contact->phone ?? 'N/A' }}</td>
+                                            <td>{{ $contact->phone ?? 'Không có' }}</td>
                                             <td>{{ substr($contact->message, 0, 50) }}{{ strlen($contact->message) > 50 ? '...' : '' }}</td>
                                             <td>
                                                 @if($contact->replied)

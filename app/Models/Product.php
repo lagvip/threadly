@@ -86,16 +86,5 @@ class Product extends Model
                 $q->where('status', 'active');
             });
     }
-    public function list(Request $request)
-    {
-        $products = $this->productService->getAllProducts();
-        $brands = Brand::orderBy('name')->get();
-        $categories = Category::with('parent')
-            ->whereNotNull('id_parent')
-            ->orderBy('name')
-            ->get();
-
-        return view('admin.product.list-product', compact('products', 'brands', 'categories'));
-    }
 
 }

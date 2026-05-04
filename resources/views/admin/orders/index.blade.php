@@ -513,7 +513,7 @@
                                         default => null,
                                     };
 
-                                    $customerEmail = $order->user->email ?? $order->email ?? 'N/A';
+                                    $customerEmail = $order->user->email ?? $order->email ?? 'Không có';
                                 @endphp
 
                                 <tr>

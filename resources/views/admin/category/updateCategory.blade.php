@@ -9,11 +9,11 @@
                         <div class="bg-light text-center rounded bg-light">
                             {{-- Hiển thị ảnh hiện có --}}
                             @if ($category['image'])
-                                <img src="{{ Storage::disk('public')->url($category['image']) }}" alt="Current Image" class="avatar-xxl"
+                                <img src="{{ Storage::disk('public')->url($category['image']) }}" alt="Ảnh hiện tại" class="avatar-xxl"
                                     id="leftImagePreview"> {{-- Thêm ID cho ảnh bên trái --}}
                             @else
                                 <p>Không có ảnh hiện tại.</p>
-                                <img src="" alt="Image Placeholder" class="avatar-xxl" id="leftImagePreview"
+                                <img src="" alt="Ảnh chờ" class="avatar-xxl" id="leftImagePreview"
                                     style="display: none;"> {{-- Placeholder nếu không có ảnh --}}
                             @endif
                         </div>
@@ -21,7 +21,7 @@
                             <h4>{{ $category['name'] }}</h4>
                             <div class="row">
                                 <div class="col-lg-4 col-4">
-                                    <p class="mb-1 mt-2">Name:</p>
+                                    <p class="mb-1 mt-2">Tên:</p>
                                     <h5 class="mb-0">{{ $category['name'] }}</h5>
                                 </div>
 
@@ -52,14 +52,14 @@
                                     <h3 class="mt-4">Kéo ảnh mới vào đây, hoặc <span class="text-primary">nhấp để
                                             duyệt</span></h3> {{-- Đổi text --}}
                                     <span class="text-muted fs-13">
-                                        1600 x 1200 (4:3) khuyến nghị. Chỉ cho phép file PNG, JPG và GIF.
+                                        Khuyến nghị 1600 x 1200 (4:3). Chỉ cho phép tệp PNG, JPG và GIF.
                                     </span>
 
                                     <p id="selectedFileNameUpdate" class="selected-file-name mt-2"></p>
                                     <div id="imagePreviewUpdate" class="image-preview mt-3">
                                         {{-- Hiển thị ảnh xem trước mặc định nếu có ảnh cũ --}}
                                         @if ($category['image'])
-                                            <img src="{{ Storage::disk('public')->url($category['image']) }}" alt="Current Image"
+                                            <img src="{{ Storage::disk('public')->url($category['image']) }}" alt="Ảnh hiện tại"
                                                 style="max-width: 100%; max-height: 120px; display: block; margin: 0 auto; border-radius: 4px;">
                                         @endif
                                     </div>
@@ -81,7 +81,7 @@
                                     <div class="mb-3">
                                         <label for="category-title" class="form-label">Tên</label>
                                         <input type="text" name="name" value="{{ $category['name'] }}"
-                                            id="category-title" class="form-control" placeholder="Enter Name">
+                                            id="category-title" class="form-control" placeholder="Nhập tên">
                                         @if ($errors->has('name'))
                                             <span style="color: red;">{{ $errors->first('name') }}</span>
                                         @endif

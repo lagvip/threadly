@@ -27,7 +27,7 @@
         <thead>
             <tr>
                 <th>Sản phẩm</th>
-                <th>Size</th>
+                <th>Kích cỡ</th>
                 <th>Màu</th>
                 <th>SL</th>
                 <th>Đơn giá</th>

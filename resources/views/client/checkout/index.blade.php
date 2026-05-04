@@ -258,8 +258,8 @@
                                             </a>
 
                                             <div class="mt-2 small text-muted">
-                                                <div>Màu: {{ $item->variant->color->name ?? 'N/A' }}</div>
-                                                <div>Size: {{ $item->variant->size->name ?? 'N/A' }}</div>
+                                                <div>Màu: {{ $item->variant->color->name ?? 'Không có' }}</div>
+                                                <div>Kích cỡ: {{ $item->variant->size->name ?? 'Không có' }}</div>
                                             </div>
                                         </div>
                                     </div>

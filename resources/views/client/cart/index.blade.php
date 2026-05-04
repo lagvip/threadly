@@ -92,8 +92,8 @@
                                         </a>
 
                                         <div class="mt-2 small text-muted">
-                                            <div>Màu: {{ $item->variant->color->name ?? 'N/A' }}</div>
-                                            <div>Size: {{ $item->variant->size->name ?? 'N/A' }}</div>
+                                            <div>Màu: {{ $item->variant->color->name ?? 'Không có' }}</div>
+                                            <div>Kích cỡ: {{ $item->variant->size->name ?? 'Không có' }}</div>
                                             <div>Tồn kho: {{ $stock }}</div>
                                         </div>
                                     </div>
@@ -317,16 +317,16 @@
         const checkoutBtn = document.getElementById('checkout-selected-btn');
         const checkoutForm = document.getElementById('checkout-selected-form');
         const selectedItemsContainer = document.getElementById('selected-items-container');
-
+        // Hàm định dạng tiền tệ
         function formatMoney(number) {
             return new Intl.NumberFormat('vi-VN').format(number || 0) + ' ₫';
         }
-
+        // Hàm lấy phí vận chuyển đã chọn
         function getShippingFee() {
             const checked = document.querySelector('.shipping-radio:checked');
             return checked ? parseInt(checked.value || 0, 10) : 0;
         }
-
+        // Hàm cập nhật trạng thái của checkbox "Chọn tất cả"
         function updateSelectAllState() {
             if (!selectAllCheckbox) return;
 
@@ -336,7 +336,7 @@
             selectAllCheckbox.checked = total > 0 && checked === total;
             selectAllCheckbox.indeterminate = checked > 0 && checked < total;
         }
-
+        // Hàm tính lại tổng tiền khi có thay đổi
         function recalcCart() {
             let subtotal = 0;
 
@@ -375,36 +375,36 @@
 
             updateSelectAllState();
         }
+            // Xử lý sự kiện khi người dùng nhấn nút giảm số lượng
+            document.querySelectorAll('.btn-decrease').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const input = this.closest('.cart-qty-box').querySelector('.quantity-product');
+                    let value = parseInt(input.value || 1, 10);
 
-        document.querySelectorAll('.btn-decrease').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const input = this.closest('.cart-qty-box').querySelector('.quantity-product');
-                let value = parseInt(input.value || 1, 10);
+                    if (isNaN(value) || value <= 1) value = 1;
+                    else value--;
 
-                if (isNaN(value) || value <= 1) value = 1;
-                else value--;
-
-                input.value = value;
-                recalcCart();
+                    input.value = value;
+                    recalcCart();
+                });
             });
-        });
+            // Xử lý sự kiện khi người dùng nhấn nút tăng số lượng
+            document.querySelectorAll('.btn-increase').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const input = this.closest('.cart-qty-box').querySelector('.quantity-product');
+                    let value = parseInt(input.value || 1, 10);
+                    let stock = parseInt(input.dataset.stock || 1, 10);
 
-        document.querySelectorAll('.btn-increase').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const input = this.closest('.cart-qty-box').querySelector('.quantity-product');
-                let value = parseInt(input.value || 1, 10);
-                let stock = parseInt(input.dataset.stock || 1, 10);
+                    if (isNaN(value) || value < 1) value = 1;
+                    if (isNaN(stock) || stock < 1) stock = 1;
 
-                if (isNaN(value) || value < 1) value = 1;
-                if (isNaN(stock) || stock < 1) stock = 1;
+                    if (value < stock) value++;
 
-                if (value < stock) value++;
-
-                input.value = value;
-                recalcCart();
+                    input.value = value;
+                    recalcCart();
+                });
             });
-        });
-
+        // Xử lý sự kiện khi người dùng nhập số lượng trực tiếp
         quantityInputs.forEach(input => {
             input.addEventListener('input', function () {
                 let value = parseInt(this.value || 1, 10);
@@ -418,11 +418,11 @@
                 recalcCart();
             });
         });
-
+        // Xử lý sự kiện khi người dùng thay đổi trạng thái checkbox của từng sản phẩm
         itemCheckboxes.forEach(cb => {
             cb.addEventListener('change', recalcCart);
         });
-
+        // Xử lý sự kiện khi người dùng thay đổi trạng thái checkbox "Chọn tất cả"
         selectAllCheckbox?.addEventListener('change', function () {
             itemCheckboxes.forEach(cb => {
                 cb.checked = this.checked;
@@ -434,7 +434,7 @@
         shippingRadios.forEach(radio => {
             radio.addEventListener('change', recalcCart);
         });
-
+        // Xử lý sự kiện khi người dùng nhấn nút "Tiến Hành Thanh Toán"
         checkoutBtn?.addEventListener('click', function () {
             const checkedItems = document.querySelectorAll('.checkout-item-checkbox:checked');
 
@@ -455,7 +455,7 @@
 
             checkoutForm.submit();
         });
-
+        // Xử lý sự kiện khi người dùng submit form cập nhật giỏ hàng
         cartForm?.addEventListener('submit', function () {
             const submitBtn = this.querySelector('button[type="submit"]');
             if (submitBtn) {

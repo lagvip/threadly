@@ -333,7 +333,7 @@
                                                     <img id="{{ $previewId }}"
                                                          src="{{ $variant->image ? asset('storage/'.$variant->image) : asset('images/placeholder-80x80.png') }}"
                                                          class="img-thumb mb-2 rounded"
-                                                         alt="preview">
+                                                         alt="Xem trước">
 
                                                     <input type="file"
                                                            name="variants[{{ $index }}][image]"
@@ -373,7 +373,7 @@
 <script>
     let variantNewIndex = 0;
     const PLACEHOLDER_SRC = `{{ asset('images/placeholder-80x80.png') }}`;
-
+    // Lấy các tùy chọn đã chọn
     function getSelectedOptions(selector) {
         return Array.from(document.querySelectorAll(selector + ':checked')).map(item => ({
             id: item.value,
@@ -392,7 +392,7 @@
             text.classList.add('inactive');
         }
     }
-
+    // Tạo danh sách các key đã chọn dựa trên màu sắc và kích cỡ
     function getSelectedKeys() {
         const colors = getSelectedOptions('.color-checkbox');
         const sizes = getSelectedOptions('.size-checkbox');
@@ -410,15 +410,15 @@
 
         return keys;
     }
-
+    // Lấy các dòng biến thể cũ và mới trên giao diện
     function getOldVariantRows() {
         return Array.from(document.querySelectorAll('#variant-list .variant-row'));
     }
-
+    // Lấy các dòng biến thể mới trên giao diện
     function getNewVariantRows() {
         return Array.from(document.querySelectorAll('#variant-new-list .variant-item'));
     }
-
+    // Kiểm tra xem dòng biến thể có chứa dữ liệu do người dùng nhập vào hay không
     function rowHasUserData(row) {
         const priceInput = row.querySelector('input[name*="[price]"]');
         const quantityInput = row.querySelector('input[name*="[quantity]"]');
@@ -437,7 +437,7 @@
 
         return hasPrice || hasQuantity || hasNewFile || hasExistingImage;
     }
-
+    // Lấy danh sách các key của biến thể hiện đang hiển thị trên giao diện
     function getVisibleExistingKeys() {
         const keys = [];
 
@@ -456,7 +456,7 @@
 
         return keys;
     }
-
+    // Tạo một dòng biến thể mới trên giao diện dựa trên màu sắc và kích cỡ được chọn
     function createNewVariantRow(color, size) {
         const html = `
             <div class="row variant-item mb-3"
@@ -515,7 +515,7 @@
                             <img id="variant-new-preview-${variantNewIndex}"
                                  src="${PLACEHOLDER_SRC}"
                                  class="img-thumb mb-2 rounded"
-                                 alt="preview">
+                                 alt="Xem trước">
 
                             <input type="file"
                                    name="variants_new[${variantNewIndex}][image]"
@@ -537,7 +537,7 @@
             bindStatusLabel(newToggle);
         }
     }
-
+    // Đồng bộ các biến thể trên giao diện dựa trên lựa chọn màu sắc và kích cỡ
     function syncVariantsBySelection() {
         const selected = getSelectedKeys();
         const selectedKeyMap = selected.map(item => item.key);
@@ -575,7 +575,7 @@
             }
         });
     }
-
+    // Xử lý sự kiện khi nhấn nút tạo biến thể
     document.getElementById('generate-variants').addEventListener('click', function() {
         const colors = getSelectedOptions('.color-checkbox');
         const sizes = getSelectedOptions('.size-checkbox');
@@ -587,7 +587,7 @@
 
         syncVariantsBySelection();
     });
-
+   // Xử lý sự kiện khi nhấn nút xóa biến thể
     document.addEventListener('change', function(e) {
         if (e.target.classList.contains('variant-image-input')) {
             const previewId = e.target.getAttribute('data-preview');
@@ -603,13 +603,13 @@
             bindStatusLabel(e.target);
         }
     });
-
+    // Xử lý sự kiện khi nhấn nút xóa biến thể mới
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('remove-variant')) {
             e.target.closest('.variant-item').remove();
         }
     });
-
+    // Xử lý sự kiện khi nhấn nút xóa biến thể cũ
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('btn-mark-delete')) {
             if (!confirm('Bạn có chắc muốn xoá biến thể này?')) return;
@@ -620,7 +620,7 @@
             row.classList.add('variant-deleted');
         }
     });
-
+    
     document.querySelectorAll('.status-toggle-input').forEach(bindStatusLabel);
 </script>
 @endpush

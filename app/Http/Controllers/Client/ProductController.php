@@ -26,6 +26,7 @@ class ProductController extends Controller
 
         $variant = $product->variants->first();
 
+        // Lấy sản phẩm liên quan trong cùng danh mục
         $relatedProducts = Product::with([
             'variants' => function ($q) {
                 $q->where('status', 'active')->with(['color', 'size']);
@@ -37,7 +38,7 @@ class ProductController extends Controller
         ->where('id', '!=', $product->id)
         ->take(8)
         ->get();
-
+        // Lấy đánh giá có bình luận của sản phẩm
         $reviews = Review::with([
             'user:id,name,avatar',
             'admin:id,name,avatar'
@@ -46,12 +47,12 @@ class ProductController extends Controller
             ->whereNotNull('comment')
             ->orderByDesc('created_at')
             ->get();
-
+        // Tính toán tổng số đánh giá và điểm trung bình
         $reviewCount = $reviews->count();
         $averageRating = $reviewCount > 0
             ? round((float) $reviews->avg('rating'), 1)
             : 0;
-
+        // Tính toán phân bố đánh giá theo sao
         $ratingSummary = collect(range(5, 1))->mapWithKeys(function ($star) use ($reviews, $reviewCount) {
             $count = $reviews->where('rating', $star)->count();
             $percent = $reviewCount > 0 ? round(($count / $reviewCount) * 100) : 0;
@@ -92,20 +93,21 @@ class ProductController extends Controller
                         ->orderBy('price', 'asc');
                 },
             ]);
-
+        // Tìm kiếm theo tên sản phẩm, thương hiệu hoặc danh mục
         if ($keyword !== '') {
-            $productsQuery->where(function ($q) use ($keyword) {
-                $q->where('name', 'like', '%' . $keyword . '%')
-                    ->orWhere('description', 'like', '%' . $keyword . '%')
-                    ->orWhereHas('brand', function ($brandQuery) use ($keyword) {
-                        $brandQuery->where('name', 'like', '%' . $keyword . '%');
+            $keywordLike = $this->accentSensitiveLikePattern($keyword);
+
+            $productsQuery->where(function ($q) use ($keywordLike) {
+                $q->whereRaw('LOWER(products.name) COLLATE utf8mb4_bin LIKE ?', [$keywordLike])
+                    ->orWhereHas('brand', function ($brandQuery) use ($keywordLike) {
+                        $brandQuery->whereRaw('LOWER(brands.name) COLLATE utf8mb4_bin LIKE ?', [$keywordLike]);
                     })
-                    ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
-                        $categoryQuery->where('name', 'like', '%' . $keyword . '%');
+                    ->orWhereHas('category', function ($categoryQuery) use ($keywordLike) {
+                        $categoryQuery->whereRaw('LOWER(categories.name) COLLATE utf8mb4_bin LIKE ?', [$keywordLike]);
                     });
             });
         }
-
+        // Lọc theo danh mục (bao gồm cả danh mục con)
         if ($request->filled('category_id')) {
             $category = Category::with('childrenRecursive')->find($request->input('category_id'));
 
@@ -114,15 +116,15 @@ class ProductController extends Controller
                 $productsQuery->whereIn('id_category', $categoryIds);
             }
         }
-
+        // Lọc theo thương hiệu
         $brandIds = array_values(array_filter((array) $request->input('brand', [])));
         if (!empty($brandIds)) {
             $productsQuery->whereIn('id_brand', $brandIds);
         }
-
+        // Lọc theo khoảng giá
         $priceMin = $request->input('price_min');
         $priceMax = $request->input('price_max');
-
+        // Chỉ áp dụng lọc giá nếu ít nhất một trong hai giá trị là hợp lệ
         if (is_numeric($priceMin) || is_numeric($priceMax)) {
             $min = is_numeric($priceMin) ? (float) $priceMin : 0;
             $max = is_numeric($priceMax) ? (float) $priceMax : null;
@@ -136,7 +138,7 @@ class ProductController extends Controller
                 }
             });
         }
-
+        // Sắp xếp kết quả
         if ($sort === 'price_asc') {
             $productsQuery->orderByRaw("
                 (
@@ -196,7 +198,12 @@ class ProductController extends Controller
             'keyword'
         ));
     }
-
+    // Hàm tạo pattern tìm kiếm không phân biệt dấu
+    private function accentSensitiveLikePattern(string $keyword): string
+    {
+        return '%' . addcslashes(mb_strtolower($keyword, 'UTF-8'), '\\%_') . '%';
+    }
+    // Hàm để thu thập tất cả ID của danh mục con
     private function collectCategoryIds(Category $category): array
     {
         $ids = [$category->id];

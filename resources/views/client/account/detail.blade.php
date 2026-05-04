@@ -94,7 +94,7 @@
                 <div class="p-4">
                     <h4 class="mb-1">Thông tin chi tiết</h4>
                     <p class="text-muted mb-4">
-                        Email để readonly, số điện thoại lấy từ địa chỉ mặc định hiện tại.
+                        Email chỉ đọc, số điện thoại lấy từ địa chỉ mặc định hiện tại.
                     </p>
 
                     <form action="{{ route('client.account.update') }}"

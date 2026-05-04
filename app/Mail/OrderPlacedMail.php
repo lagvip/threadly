@@ -15,7 +15,18 @@ class OrderPlacedMail extends Mailable
 
     public function __construct(Order $order)
     {
-        $this->order = $order->loadMissing('details');
+        $this->order = $order->loadMissing([
+            'details',
+            'details.variant' => function ($query) {
+                $query->withTrashed();
+            },
+            'details.variant.color' => function ($query) {
+                $query->withTrashed();
+            },
+            'details.variant.size' => function ($query) {
+                $query->withTrashed();
+            },
+        ]);
     }
 
     public function build()

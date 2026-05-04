@@ -84,7 +84,7 @@
                             <td>{{ optional($refund->user)->email ?: '-' }}</td>
                             <td>{{ $refund->type_label }}</td>
                             <td class="fw-bold text-danger">{{ number_format($refund->requested_amount, 0, ',', '.') }} đ</td>
-                            <td>{{ $refund->evidences->count() }} file</td>
+                            <td>{{ $refund->evidences->count() }} tệp</td>
                             <td><span class="badge bg-{{ $refund->status_badge }}">{{ $refund->status_label }}</span></td>
                             <td>{{ $refund->created_at->format('d/m/Y H:i') }}</td>
                             <td>

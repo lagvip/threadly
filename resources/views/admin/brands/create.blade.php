@@ -31,13 +31,13 @@
                         <i class="bx bx-cloud-upload fs-48 text-primary" style="font-size: 48px;"></i>
                         <h3 class="mt-4">Kéo ảnh vào đây, hoặc <span class="text-primary">nhấp để duyệt</span></h3>
                         <span class="text-muted fs-13">
-                            1600 x 1200 (4:3) khuyến nghị. Chỉ cho phép file PNG, JPG và GIF.
+                            Khuyến nghị 1600 x 1200 (4:3). Chỉ cho phép tệp PNG, JPG và GIF.
                         </span>
                         
                         {{-- Hiển thị tên file và ảnh xem trước --}}
                         <p id="selectedFileName" class="selected-file-name mt-2 text-success fw-bold"></p>
                         <div id="imagePreview" class="image-preview mt-3">
-                            <img id="img-render" src="#" alt="Preview" style="max-width: 200px; border-radius: 8px; display: none; margin: 0 auto;">
+                            <img id="img-render" src="#" alt="Xem trước" style="max-width: 200px; border-radius: 8px; display: none; margin: 0 auto;">
                         </div>
                     </div>
 

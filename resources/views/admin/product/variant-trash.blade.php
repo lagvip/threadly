@@ -37,14 +37,14 @@
                                             <input type="checkbox" name="ids[]" value="{{ $variant->id }}" class="form-check-input checkbox-item">
                                         </td>
                                         <td>{{ $loop->iteration }}</td>
-                                        <td>{{ $variant->product->name ?? 'N/A' }}</td>
-                                        <td>{{ $variant->color->name ?? 'N/A' }}</td>
-                                        <td>{{ $variant->size->name ?? 'N/A' }}</td>
+                                        <td>{{ $variant->product->name ?? 'Không có' }}</td>
+                                        <td>{{ $variant->color->name ?? 'Không có' }}</td>
+                                        <td>{{ $variant->size->name ?? 'Không có' }}</td>
                                         <td>{{ number_format($variant->price) }} đ</td>
                                         <td>{{ $variant->quantity }}</td>
                                         <td>
                                             @if($variant->image)
-                                                <img src="{{ asset('storage/'.$variant->image) }}" alt="variant" width="50">
+                                                <img src="{{ asset('storage/'.$variant->image) }}" alt="Biến thể" width="50">
                                             @else
                                                 Không có
                                             @endif
@@ -78,12 +78,12 @@
                     </div>
 
                     <div class="card-footer border-top">
-                        <button type="submit" class="btn btn-primary me-2" onclick="return confirm('Khôi phục các mục đã chọn?')">Khôi Phục Đã Chọn</button>
+                        <button type="submit" class="btn btn-primary me-2" onclick="return confirm('Khôi phục các mục đã chọn?')">Khôi phục đã chọn</button>
 
                         <form action="{{ route('product.variant.forceDelete') }}" method="POST" style="display:inline" id="bulkDeleteForm">
                             @csrf
                             <input type="hidden" name="ids[]" id="bulkDeleteIds">
-                            <button type="submit" class="btn btn-danger" onclick="return confirm('Xóa vĩnh viễn các mục đã chọn?')">Xóa Vĩnh Viễn Đã Chọn</button>
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('Xóa vĩnh viễn các mục đã chọn?')">Xóa vĩnh viễn đã chọn</button>
                         </form>
 
                         <a href="{{ route('product.listProduct') }}" class="btn btn-secondary ms-2">Quay lại</a>
