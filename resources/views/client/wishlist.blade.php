@@ -85,7 +85,7 @@
                                 </a>
 
                                 <h6 class="unit mt-1">
-                                    {{ $variant->color->name ?? 'N/A' }} / {{ $variant->size->name ?? 'N/A' }}
+                                    {{ $variant->color->name ?? 'Không có' }} / {{ $variant->size->name ?? 'Không có' }}
                                 </h6>
 
                                 <h5 class="price">

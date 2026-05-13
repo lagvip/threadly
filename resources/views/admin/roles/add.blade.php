@@ -19,7 +19,7 @@
                 </div>
 
                 <div class="mb-3">
-                    <label>Slug</label>
+                    <label>Đường dẫn</label>
                     <input type="text" name="slug" class="form-control" value="{{ old('slug') }}">
                     @error('slug')
                         <small class="text-danger">{{ $message }}</small>

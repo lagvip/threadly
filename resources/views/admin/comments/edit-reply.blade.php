@@ -133,7 +133,7 @@
                                     @endif
 
                                     @if($reviewSize)
-                                        <span class="review-meta-chip">Size: {{ $reviewSize }}</span>
+                                        <span class="review-meta-chip">Kích cỡ: {{ $reviewSize }}</span>
                                     @endif
 
                                     <span class="review-meta-chip">

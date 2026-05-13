@@ -72,7 +72,7 @@
                                     <img
                                         id="avatar-preview"
                                         src="{{ asset('images/placeholder-80x80.png') }}"
-                                        alt="avatar preview"
+                                        alt="Xem trước ảnh đại diện"
                                         class="img-thumb"
                                     >
                                 </div>
@@ -80,7 +80,7 @@
                                 <i class="bx bx-cloud-upload fs-48 text-primary"></i>
                                 <h5 class="mt-3">Chọn ảnh đại diện cho user</h5>
                                 <span class="text-muted d-block mb-2">
-                                    PNG, JPG, JPEG, WEBP đều được hỗ trợ
+                                    Hỗ trợ tệp PNG, JPG, JPEG, WEBP
                                 </span>
 
                                 <input
@@ -101,7 +101,7 @@
                     {{-- Thông tin user --}}
                     <div class="card mt-3">
                         <div class="card-header">
-                            <h4 class="card-title">Thông tin User</h4>
+                            <h4 class="card-title">Thông tin người dùng</h4>
                         </div>
 
                         <div class="card-body">
@@ -135,7 +135,7 @@
                                 </div>
 
                                 <div class="col-lg-4">
-                                    <label class="form-label">Password</label>
+                                    <label class="form-label">Mật khẩu</label>
                                     <input
                                         type="password"
                                         name="password"
@@ -148,7 +148,7 @@
                                 </div>
 
                                 <div class="col-lg-6">
-                                    <label class="form-label">Role</label>
+                                    <label class="form-label">Vai trò</label>
                                     <select name="role_id" class="form-control">
                                         <option value="">-- Chọn role --</option>
                                         @foreach($roles as $r)

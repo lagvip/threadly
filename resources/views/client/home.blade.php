@@ -21,7 +21,7 @@
             </li>
 
             <li>
-                <a href="search.html" class="search-box">
+                <a href="{{ route('client.products.search') }}" class="search-box">
                     <i class="iconly-Search icli"></i>
                     <span>Tìm kiếm</span>
                 </a>
@@ -487,11 +487,6 @@
                     </div>
                 @endforelse
             </div>
-        </div>
-    </section>
-    <!-- Best Seller Section End -->
-
-    <!-- Newsletter Section Start -->
     <section class="newsletter-section section-b-space">
         <div class="container-fluid-lg">
             <div class="newsletter-box newsletter-box-2">

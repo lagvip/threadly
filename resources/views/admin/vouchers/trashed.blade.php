@@ -29,7 +29,7 @@
                                 <th>Giảm tối đa</th>
                                 <th>Thời gian</th>
                                 <th>Số lượng</th>
-                                <th>Sử dụng/User</th>
+                                <th>Sử dụng/người dùng</th>
                                 <th>Sử dụng/Đơn</th>
                                 <th>Hành động</th>
                             </tr>

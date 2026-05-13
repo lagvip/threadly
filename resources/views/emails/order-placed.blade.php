@@ -106,9 +106,33 @@
                         </tr>
 
                         @foreach($order->details as $item)
+                            @php
+                                $variant = $item->variant;
+                                $variantParts = [];
+
+                                if (optional($variant?->color)->name) {
+                                    $variantParts[] = 'Màu: ' . $variant->color->name;
+                                }
+
+                                if (optional($variant?->size)->name) {
+                                    $variantParts[] = 'Size: ' . $variant->size->name;
+                                }
+
+                                if (!empty($item->variant_id)) {
+                                    $variantParts[] = 'Mã biến thể: #' . $item->variant_id;
+                                }
+
+                                $variantText = implode(' | ', $variantParts);
+                            @endphp
                             <tr>
                                 <td style="padding:14px 16px;font-size:14px;color:#111827;border-top:1px solid #e5e7eb;">
-                                    {{ $item->product_name }}
+                                    <div style="font-weight:700;">{{ $item->product_name }}</div>
+
+                                    @if($variantText !== '')
+                                        <div style="margin-top:6px;font-size:12px;line-height:18px;color:#6b7280;">
+                                            {{ $variantText }}
+                                        </div>
+                                    @endif
                                 </td>
                                 <td style="padding:14px 16px;font-size:14px;color:#111827;border-top:1px solid #e5e7eb;text-align:center;">
                                     {{ $item->quantity }}

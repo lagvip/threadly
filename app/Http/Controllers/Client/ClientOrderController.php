@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\RefundRequest;
 use App\Models\OrderStatusLog;
 use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\OrderInventoryService;
 
 class ClientOrderController extends Controller
 {
@@ -159,67 +161,119 @@ class ClientOrderController extends Controller
 
     public function cancel(Request $request, $id)
     {
-        $order = Order::where('user_id', Auth::id())->findOrFail($id);
-
-        if ($order->payment_method === 'vnpay' && $order->payment_status === 'paid') {
-            return back()->with('error', 'Đơn hàng đã thanh toán bằng VNPay nên không thể hủy.');
-        }
-
         $request->validate([
             'cancel_reason' => ['required', 'string', 'max:1000'],
         ], [
             'cancel_reason.required' => 'Vui lòng chọn lý do hủy đơn.',
         ]);
 
-        if (!$order->can_cancel) {
-            return back()->with('error', 'Đơn hàng này không thể hủy ở trạng thái hiện tại.');
-        }
-
         $reason = trim((string) $request->cancel_reason);
-        $oldStatus = $order->order_status;
-        $actionType = $order->cancel_action_type;
+        $actionType = 'none';
 
-        DB::transaction(function () use ($order, $reason, $oldStatus, $actionType) {
-            if ($actionType === 'direct') {
-                $order->update([
-                    'previous_status' => $oldStatus,
-                    'order_status' => 'cancelled',
-                    'payment_status' => 'cancelled',
-                    'cancel_reason' => $reason,
-                ]);
+        try {
+            DB::transaction(function () use ($id, $reason, &$actionType) {
+                $order = Order::with(['refundRequests', 'details'])
+                    ->where('user_id', Auth::id())
+                    ->whereKey($id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-                OrderStatusLog::create([
-                    'order_id' => $order->id,
-                    'status' => 'cancelled',
-                    'note' => 'Khách hàng hủy đơn: ' . $reason,
-                    'changed_by' => Auth::id(),
-                ]);
+                if (!$order->can_cancel) {
+                    throw new \RuntimeException('Đơn hàng này không thể hủy ở trạng thái hiện tại.');
+                }
 
-                return;
-            }
+                $oldStatus = $order->order_status;
+                $actionType = $order->cancel_action_type;
 
-            if ($actionType === 'request') {
-                $order->update([
-                    'previous_status' => $oldStatus,
-                    'order_status' => 'waiting_for_cancellation',
-                    'cancel_reason' => $reason,
-                ]);
+                if ($actionType === 'direct') {
+                    $order->update([
+                        'previous_status' => $oldStatus,
+                        'order_status' => Order::STATUS_CANCELLED,
+                        'payment_status' => Order::PAYMENT_CANCELLED,
+                        'cancel_reason' => $reason,
+                    ]);
 
-                OrderStatusLog::create([
-                    'order_id' => $order->id,
-                    'status' => 'waiting_for_cancellation',
-                    'note' => 'Khách hàng gửi yêu cầu hủy: ' . $reason,
-                    'changed_by' => Auth::id(),
-                ]);
+                    app(OrderInventoryService::class)->releaseCancelledOrder($order);
 
-                return;
-            }
+                    OrderStatusLog::create([
+                        'order_id' => $order->id,
+                        'status' => Order::STATUS_CANCELLED,
+                        'note' => 'Khách hàng hủy đơn: ' . $reason,
+                        'changed_by' => Auth::id(),
+                    ]);
 
-            throw new \RuntimeException('Trạng thái hủy đơn không hợp lệ.');
-        });
+                    return;
+                }
+
+                if ($actionType === 'paid_vnpay_refund') {
+                    if ($order->hasPendingRefundRequest()) {
+                        throw new \RuntimeException('Đơn hàng đã có yêu cầu hoàn tiền đang chờ xử lý.');
+                    }
+
+                    $refundAmount = (float) $order->refundable_amount;
+
+                    if ($refundAmount <= 0) {
+                        throw new \RuntimeException('Đơn hàng không còn số tiền có thể hoàn.');
+                    }
+
+                    $order->update([
+                        'previous_status' => $oldStatus,
+                        'order_status' => Order::STATUS_CANCELLED,
+                        'refund_status' => Order::REFUND_REQUESTED,
+                        'last_refund_requested_at' => now(),
+                        'cancel_reason' => $reason,
+                    ]);
+
+                    app(OrderInventoryService::class)->releaseCancelledOrder($order);
+
+                    RefundRequest::create([
+                        'order_id' => $order->id,
+                        'user_id' => Auth::id(),
+                        'type' => RefundRequest::TYPE_FULL,
+                        'requested_amount' => $refundAmount,
+                        'reason' => 'Khách hủy đơn VNPay đã thanh toán: ' . $reason,
+                        'status' => RefundRequest::STATUS_PENDING,
+                    ]);
+
+                    OrderStatusLog::create([
+                        'order_id' => $order->id,
+                        'status' => Order::STATUS_CANCELLED,
+                        'note' => 'Khách hàng hủy đơn VNPay đã thanh toán, tạo yêu cầu hoàn tiền demo: ' . $reason,
+                        'changed_by' => Auth::id(),
+                    ]);
+
+                    return;
+                }
+
+                if ($actionType === 'request') {
+                    $order->update([
+                        'previous_status' => $oldStatus,
+                        'order_status' => Order::STATUS_WAITING_FOR_CANCELLATION,
+                        'cancel_reason' => $reason,
+                    ]);
+
+                    OrderStatusLog::create([
+                        'order_id' => $order->id,
+                        'status' => Order::STATUS_WAITING_FOR_CANCELLATION,
+                        'note' => 'Khách hàng gửi yêu cầu hủy: ' . $reason,
+                        'changed_by' => Auth::id(),
+                    ]);
+
+                    return;
+                }
+
+                throw new \RuntimeException('Trạng thái hủy đơn không hợp lệ.');
+            });
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage() ?: 'Hủy đơn thất bại.');
+        }
 
         if ($actionType === 'request') {
             return back()->with('success', 'Đã gửi yêu cầu hủy đơn. Admin sẽ kiểm tra và xử lý tiếp.');
+        }
+
+        if ($actionType === 'paid_vnpay_refund') {
+            return back()->with('success', 'Đã hủy đơn và tạo yêu cầu hoàn tiền demo. Admin sẽ duyệt hoàn tiền vào ví của bạn.');
         }
 
         return back()->with('success', 'Đã hủy đơn hàng thành công.');

@@ -68,8 +68,8 @@
                                             </div>
                                         </td>
 
-                                        <td>{{ $product->brand->name ?? 'N/A' }}</td>
-                                        <td>{{ $product->category->name ?? 'N/A' }}</td>
+                                        <td>{{ $product->brand->name ?? 'Không có' }}</td>
+                                        <td>{{ $product->category->name ?? 'Không có' }}</td>
                                         <td>{{ $product->status }}</td>
                                         <td>{{ $product->created_at ? $product->created_at->format('d/m/Y H:i') : '' }}</td>
 

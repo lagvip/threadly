@@ -210,7 +210,7 @@
                     @else
                         <div class="rounded-3 border bg-light d-flex align-items-center justify-content-center"
                              style="width:84px;height:84px;">
-                            <span class="text-muted small">No image</span>
+                            <span class="text-muted small">Không có ảnh</span>
                         </div>
                     @endif
                 </div>
@@ -225,7 +225,7 @@
 
                         @if(optional($item->variant)->size?->name)
                             @if(optional($item->variant)->color?->name) | @endif
-                            Size: {{ $item->variant->size->name }}
+                            Kích cỡ: {{ $item->variant->size->name }}
                         @endif
                     </div>
 
@@ -280,7 +280,7 @@
                         @if($imageUrl)
                             <img src="{{ $imageUrl }}" alt="{{ $item->product_name }}" class="review-thumb">
                         @else
-                            <div class="review-thumb-placeholder">No image</div>
+                            <div class="review-thumb-placeholder">Không có ảnh</div>
                         @endif
 
                         <div class="flex-grow-1">
@@ -291,7 +291,7 @@
                                 @endif
                                 @if(optional($item->variant)->size?->name)
                                     @if(optional($item->variant)->color?->name) | @endif
-                                    Size: {{ $item->variant->size->name }}
+                                    Kích cỡ: {{ $item->variant->size->name }}
                                 @endif
                             </div>
 

@@ -46,19 +46,6 @@ class RefundRequestController extends Controller
             abort(403);
         }
 
-        $order = Order::with([
-                'details.variant.color',
-                'details.variant.size',
-                'details.product',
-                'refundRequests.items',
-            ])
-            ->whereKey($order->id)
-            ->firstOrFail();
-
-        if (!$order->can_request_refund) {
-            return back()->with('error', 'Đơn hàng này chưa đủ điều kiện hoặc không còn số tiền để yêu cầu hoàn.');
-        }
-
         $validated = $request->validate([
             'type' => ['required', 'in:full,partial'],
             'items' => ['nullable', 'array'],
@@ -78,121 +65,82 @@ class RefundRequestController extends Controller
             'evidences.*.max' => 'Mỗi file bằng chứng tối đa 50MB.',
         ]);
 
-        $refundableItems = $this->buildRefundableItems($order);
-        $selectedItems = [];
+        try {
+            DB::transaction(function () use ($request, $order, $validated) {
+                $order = Order::with([
+                        'details.variant.color',
+                        'details.variant.size',
+                        'details.product',
+                        'refundRequests.items',
+                    ])
+                    ->whereKey($order->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-        if ($validated['type'] === RefundRequest::TYPE_FULL) {
-            foreach ($refundableItems as $item) {
-                if ($item['available_quantity'] > 0) {
-                    $selectedItems[] = [
+                if ((int) $order->user_id !== (int) Auth::id()) {
+                    abort(403);
+                }
+
+                if (!$order->can_request_refund) {
+                    throw new \RuntimeException('Đơn hàng này chưa đủ điều kiện hoặc không còn số tiền để yêu cầu hoàn.');
+                }
+
+                [$selectedItems, $requestedAmount] = $this->resolveRefundSelection(
+                    $request,
+                    $order,
+                    $validated['type']
+                );
+
+                if ($requestedAmount <= 0 || $requestedAmount > (float) $order->refundable_amount) {
+                    throw new \RuntimeException('Số tiền yêu cầu hoàn không hợp lệ.');
+                }
+
+                $refundRequest = RefundRequest::create([
+                    'order_id' => $order->id,
+                    'user_id' => Auth::id(),
+                    'type' => $validated['type'],
+                    'requested_amount' => $requestedAmount,
+                    'reason' => trim((string) $validated['reason']),
+                    'status' => RefundRequest::STATUS_PENDING,
+                ]);
+
+                foreach ($selectedItems as $item) {
+                    RefundRequestItem::create([
+                        'refund_request_id' => $refundRequest->id,
                         'order_detail_id' => $item['order_detail_id'],
                         'product_name_snapshot' => $item['product_name_snapshot'],
                         'variant_snapshot' => $item['variant_snapshot'],
-                        'quantity' => $item['available_quantity'],
+                        'quantity' => $item['quantity'],
                         'unit_amount' => $item['unit_amount'],
-                        'line_amount' => round($item['unit_amount'] * $item['available_quantity'], 2),
-                    ];
-                }
-            }
-
-            if (empty($selectedItems)) {
-                return back()
-                    ->withInput()
-                    ->with('error', 'Đơn hàng này không còn sản phẩm nào có thể hoàn.');
-            }
-
-            $requestedAmount = round(array_sum(array_column($selectedItems, 'line_amount')), 2);
-            $requestedAmount = min($requestedAmount, (float) $order->refundable_amount);
-        } else {
-            $requestItems = (array) $request->input('items', []);
-
-            foreach ($refundableItems as $item) {
-                $detailId = (string) $item['order_detail_id'];
-                $input = $requestItems[$detailId] ?? null;
-
-                if (!$input || (string) ($input['selected'] ?? '') !== '1') {
-                    continue;
+                        'line_amount' => $item['line_amount'],
+                    ]);
                 }
 
-                $quantity = (int) ($input['quantity'] ?? 0);
+                foreach ($request->file('evidences', []) as $file) {
+                    $mime = (string) $file->getMimeType();
+                    $fileType = Str::startsWith($mime, 'video/') ? 'video' : 'image';
+                    $path = $file->store('refund-evidences/' . now()->format('Y/m'), 'public');
 
-                if ($quantity <= 0) {
-                    continue;
+                    RefundRequestEvidence::create([
+                        'refund_request_id' => $refundRequest->id,
+                        'file_type' => $fileType,
+                        'file_path' => $path,
+                        'original_name' => $file->getClientOriginalName(),
+                        'mime_type' => $mime,
+                        'file_size' => $file->getSize() ?: 0,
+                    ]);
                 }
 
-                if ($quantity > $item['available_quantity']) {
-                    return back()
-                        ->withInput()
-                        ->with('error', 'Số lượng hoàn của sản phẩm "' . $item['product_name_snapshot'] . '" vượt quá số lượng còn có thể hoàn.');
-                }
-
-                $lineAmount = round($item['unit_amount'] * $quantity, 2);
-
-                $selectedItems[] = [
-                    'order_detail_id' => $item['order_detail_id'],
-                    'product_name_snapshot' => $item['product_name_snapshot'],
-                    'variant_snapshot' => $item['variant_snapshot'],
-                    'quantity' => $quantity,
-                    'unit_amount' => $item['unit_amount'],
-                    'line_amount' => $lineAmount,
-                ];
-            }
-
-            if (empty($selectedItems)) {
-                return back()
-                    ->withInput()
-                    ->with('error', 'Vui lòng chọn ít nhất một sản phẩm cần hoàn tiền.');
-            }
-
-            $requestedAmount = round(array_sum(array_column($selectedItems, 'line_amount')), 2);
-        }
-
-        if ($requestedAmount <= 0 || $requestedAmount > (float) $order->refundable_amount) {
-            return back()->withInput()->with('error', 'Số tiền yêu cầu hoàn không hợp lệ.');
-        }
-
-        DB::transaction(function () use ($request, $order, $validated, $requestedAmount, $selectedItems) {
-            $refundRequest = RefundRequest::create([
-                'order_id' => $order->id,
-                'user_id' => Auth::id(),
-                'type' => $validated['type'],
-                'requested_amount' => $requestedAmount,
-                'reason' => trim((string) $validated['reason']),
-                'status' => RefundRequest::STATUS_PENDING,
-            ]);
-
-            foreach ($selectedItems as $item) {
-                RefundRequestItem::create([
-                    'refund_request_id' => $refundRequest->id,
-                    'order_detail_id' => $item['order_detail_id'],
-                    'product_name_snapshot' => $item['product_name_snapshot'],
-                    'variant_snapshot' => $item['variant_snapshot'],
-                    'quantity' => $item['quantity'],
-                    'unit_amount' => $item['unit_amount'],
-                    'line_amount' => $item['line_amount'],
+                $order->update([
+                    'refund_status' => Order::REFUND_REQUESTED,
+                    'last_refund_requested_at' => now(),
                 ]);
-            }
-
-            foreach ($request->file('evidences', []) as $file) {
-                $mime = (string) $file->getMimeType();
-                $fileType = Str::startsWith($mime, 'video/') ? 'video' : 'image';
-                $path = $file->store('refund-evidences/' . now()->format('Y/m'), 'public');
-
-                RefundRequestEvidence::create([
-                    'refund_request_id' => $refundRequest->id,
-                    'file_type' => $fileType,
-                    'file_path' => $path,
-                    'original_name' => $file->getClientOriginalName(),
-                    'mime_type' => $mime,
-                    'file_size' => $file->getSize() ?: 0,
-                ]);
-            }
-
-            $order->update([
-                'refund_status' => Order::REFUND_REQUESTED,
-                'last_refund_requested_at' => now(),
-            ]);
-        });
+            });
+        } catch (\Throwable $e) {
+            return back()
+                ->withInput()
+                ->with('error', $e->getMessage() ?: 'Gửi yêu cầu hoàn tiền thất bại.');
+        }
 
         return redirect()
             ->route('client.orders.index')
@@ -214,6 +162,76 @@ class RefundRequestController extends Controller
             ->paginate(15);
 
         return view('client.wallet.index', compact('wallet', 'transactions'));
+    }
+
+    protected function resolveRefundSelection(Request $request, Order $order, string $type): array
+    {
+        $refundableItems = $this->buildRefundableItems($order);
+        $selectedItems = [];
+
+        if ($type === RefundRequest::TYPE_FULL) {
+            foreach ($refundableItems as $item) {
+                if ($item['available_quantity'] > 0) {
+                    $selectedItems[] = [
+                        'order_detail_id' => $item['order_detail_id'],
+                        'product_name_snapshot' => $item['product_name_snapshot'],
+                        'variant_snapshot' => $item['variant_snapshot'],
+                        'quantity' => $item['available_quantity'],
+                        'unit_amount' => $item['unit_amount'],
+                        'line_amount' => round($item['unit_amount'] * $item['available_quantity'], 2),
+                    ];
+                }
+            }
+
+            if (empty($selectedItems)) {
+                throw new \RuntimeException('Đơn hàng này không còn sản phẩm nào có thể hoàn.');
+            }
+
+            $requestedAmount = round(array_sum(array_column($selectedItems, 'line_amount')), 2);
+            $requestedAmount = min($requestedAmount, (float) $order->refundable_amount);
+
+            return [$selectedItems, $requestedAmount];
+        }
+
+        $requestItems = (array) $request->input('items', []);
+
+        foreach ($refundableItems as $item) {
+            $detailId = (string) $item['order_detail_id'];
+            $input = $requestItems[$detailId] ?? null;
+
+            if (!$input || (string) ($input['selected'] ?? '') !== '1') {
+                continue;
+            }
+
+            $quantity = (int) ($input['quantity'] ?? 0);
+
+            if ($quantity <= 0) {
+                continue;
+            }
+
+            if ($quantity > $item['available_quantity']) {
+                throw new \RuntimeException('Số lượng hoàn của sản phẩm "' . $item['product_name_snapshot'] . '" vượt quá số lượng còn có thể hoàn.');
+            }
+
+            $lineAmount = round($item['unit_amount'] * $quantity, 2);
+
+            $selectedItems[] = [
+                'order_detail_id' => $item['order_detail_id'],
+                'product_name_snapshot' => $item['product_name_snapshot'],
+                'variant_snapshot' => $item['variant_snapshot'],
+                'quantity' => $quantity,
+                'unit_amount' => $item['unit_amount'],
+                'line_amount' => $lineAmount,
+            ];
+        }
+
+        if (empty($selectedItems)) {
+            throw new \RuntimeException('Vui lòng chọn ít nhất một sản phẩm cần hoàn tiền.');
+        }
+
+        $requestedAmount = round(array_sum(array_column($selectedItems, 'line_amount')), 2);
+
+        return [$selectedItems, $requestedAmount];
     }
 
     protected function buildRefundableItems(Order $order): array

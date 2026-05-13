@@ -48,7 +48,7 @@
                             <th>ID</th>
                             <th>Tên size</th>
                             <th>Ngày tạo</th>
-                            <th>Action</th>
+                            <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -68,7 +68,7 @@
                                         </a>
 
                                         <form action="{{ route('listSize.deleteSize', $size->id) }}" method="POST"
-                                              onsubmit="return confirm('Chuyển size này vào thùng rác?')" class="m-0">
+                                              onsubmit="return confirm('Chuyển kích cỡ này vào thùng rác?')" class="m-0">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-soft-danger btn-sm">

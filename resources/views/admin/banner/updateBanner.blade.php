@@ -14,11 +14,11 @@
                                 $bannerImageUrl = $bannerImagePath ? asset('storage/' . $bannerImagePath) : null;
                             @endphp
                             @if ($bannerImageUrl)
-                                <img src="{{ $bannerImageUrl }}" alt="Current Image" class="avatar-xxl"
+                                <img src="{{ $bannerImageUrl }}" alt="Ảnh hiện tại" class="avatar-xxl"
                                     id="leftImagePreview">
                             @else
                                 <p>Không có ảnh hiện tại.</p>
-                                <img src="" alt="Image Placeholder" class="avatar-xxl" id="leftImagePreview"
+                                <img src="" alt="Ảnh chờ" class="avatar-xxl" id="leftImagePreview"
                                     style="display: none;">
                             @endif
                         </div>
@@ -36,9 +36,9 @@
                                 <div class="col-lg-12 mt-2">
                                     <p class="mb-1">Trạng thái:</p>
                                     @if($banner['is_active'])
-                                        <span class="badge bg-success">Active</span>
+                                        <span class="badge bg-success">Đang hoạt động</span>
                                     @else
-                                        <span class="badge bg-danger">Inactive</span>
+                                        <span class="badge bg-danger">Ngừng hoạt động</span>
                                     @endif
                                 </div>
                             </div>

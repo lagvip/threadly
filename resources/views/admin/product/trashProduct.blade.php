@@ -42,8 +42,8 @@
                                             </td>
                                             <td>{{ $loop->iteration }}</td>
                                             <td>{{ $product->name }}</td>
-                                            <td>{{ $product->brand->name ?? 'N/A' }}</td>
-                                            <td>{{ $product->category->name ?? 'N/A' }}</td>
+                                            <td>{{ $product->brand->name ?? 'Không có' }}</td>
+                                            <td>{{ $product->category->name ?? 'Không có' }}</td>
                                             <td>
                                                 @if($product->image_primary)
                                                     <img src="{{ asset('storage/' . $product->image_primary) }}" alt="{{ $product->name }}" width="50">
@@ -71,9 +71,9 @@
                         </table>
                     </div>
                     <div class="card-footer border-top">
-                        <button type="submit" class="btn btn-primary me-4" onclick="return confirm('Khôi phục các mục đã chọn?')">Khôi Phục Đã Chọn</button>
+                        <button type="submit" class="btn btn-primary me-4" onclick="return confirm('Khôi phục các mục đã chọn?')">Khôi phục đã chọn</button>
                         <a href="{{ route('product.listProduct') }}"
-                                                class="btn btn-primary me-4">Cancel</a>
+                                                class="btn btn-primary me-4">Hủy</a>
                     </div>
 
                 </div>
@@ -82,6 +82,7 @@
     </form>
 
     <script>
+        // Xử lý sự kiện cho checkbox "Chọn tất cả" và các checkbox hàng
         document.addEventListener('DOMContentLoaded', function () {
             const checkAll = document.getElementById('checkAll');
             const checkboxes = document.querySelectorAll('.checkbox-item');

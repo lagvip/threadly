@@ -233,11 +233,7 @@
                                                     {{ $product->brand->name ?? 'Đang cập nhật' }}
                                                 </a>
                                             </li>
-                                            <li>Mã sản phẩm :
-                                                <a href="javascript:void(0)" id="product-sku">
-                                                    {{ $defaultVariant->sku ?? $product->sku ?? ('SP-' . $product->id) }}
-                                                </a>
-                                            </li>
+
                                             <li>Kho :
                                                 <a href="javascript:void(0)" id="product-stock-text">
                                                     {{ $defaultVariant->quantity ?? 0 }} sản phẩm
@@ -615,6 +611,7 @@
 
 @endsection
 @php
+// Chuẩn bị dữ liệu biến thể sản phẩm để JavaScript có thể sử dụng
     $productVariantsJson = $product->variants->map(function ($v) use ($product, $galleryImages) {
         $variantImage = !empty($v->image)
             ? asset('storage/' . $v->image)
@@ -630,7 +627,6 @@
             'size_name' => optional($v->size)->name,
             'price' => $v->price,
             'quantity' => (int) $v->quantity,
-            'sku' => $v->sku ?? null,
             'image' => $variantImage,
             'slide_index' => $slideIndex !== false ? $slideIndex : 0,
         ];
@@ -759,9 +755,10 @@
 <script src="{{ asset('client/theme/themes.pixelstrap.com/fastkart/assets/js/sticky-cart-bottom.js') }}"></script>
 
 <script>
+
 document.addEventListener('DOMContentLoaded', function () {
     const variants = window.productVariants || [];
-
+    // Biến để lưu trạng thái lựa chọn hiện tại
     let selectedColorId = null;
     let selectedSizeId = null;
     let currentVariant = null;
@@ -779,27 +776,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const wishlistVariantInput = document.getElementById('wishlist-variant-id');
     const wishlistForm = document.getElementById('wishlist-form');
     const addToCartForm = document.getElementById('add-to-cart-form');
-
+    // Các nút điều chỉnh số lượng
     const btnMinus = document.querySelector('.my-qty-minus');
     const btnPlus = document.querySelector('.my-qty-plus');
 
     const $mainSlider = $('#product-main-slider');
     const $thumbSlider = $('#variant-thumbs');
-
+    // Hàm định dạng số giá tiền
     function formatPrice(number) {
         return new Intl.NumberFormat('vi-VN').format(number || 0) + ' đ';
     }
-
+    // Hàm lấy tên màu theo ID
     function getColorTextById(colorId) {
         const el = document.querySelector('.color-option[data-color-id="' + colorId + '"]');
         return el ? el.textContent.trim() : 'Chưa chọn màu';
     }
-
+    // Hàm lấy tên kích thước theo ID
     function getSizeTextById(sizeId) {
         const el = document.querySelector('.size-option[data-size-id="' + sizeId + '"]');
         return el ? el.textContent.trim() : 'Chưa chọn kích thước';
     }
-
+    // Hàm cập nhật lựa chọn hiện tại
     function updateSelectedLabel() {
         const colorText = selectedColorId ? getColorTextById(selectedColorId) : 'Chưa chọn màu';
         const sizeText = selectedSizeId ? getSizeTextById(selectedSizeId) : 'Chưa chọn kích thước';
@@ -808,7 +805,7 @@ document.addEventListener('DOMContentLoaded', function () {
             selectedVariantLabel.textContent = 'Bạn đã chọn: ' + colorText + ' / ' + sizeText;
         }
     }
-
+    // Hàm cập nhật thông tin tồn kho và số lượng
     function updateStockUI(quantity) {
         const qty = Number(quantity || 0);
 
@@ -832,7 +829,7 @@ document.addEventListener('DOMContentLoaded', function () {
             qtyInput.value = currentQtyValue;
         }
     }
-
+    // Hàm tìm biến thể khớp chính xác với lựa chọn hiện tại
     function findExactVariant() {
         if (!selectedColorId || !selectedSizeId) return null;
 
@@ -842,7 +839,7 @@ document.addEventListener('DOMContentLoaded', function () {
             Number(v.quantity) > 0
         ) || null;
     }
-
+    // Hàm chuyển slider đến biến thể tương ứng
     function slideToVariant(variant) {
         if (!variant) return;
 
@@ -856,7 +853,7 @@ document.addEventListener('DOMContentLoaded', function () {
             $thumbSlider.slick('slickGoTo', slideIndex);
         }
     }
-
+    // Hàm cập nhật thông tin khi có biến thể được chọn
     function updateVariantUI(variant) {
         if (!variant) return;
 
@@ -875,7 +872,7 @@ document.addEventListener('DOMContentLoaded', function () {
             wishlistVariantInput.value = variant.id;
         }
     }
-
+    // Hàm reset thông tin khi không có biến thể nào khớp
     function resetVariantUI() {
         currentVariant = null;
 
@@ -891,7 +888,7 @@ document.addEventListener('DOMContentLoaded', function () {
             wishlistVariantInput.value = '';
         }
     }
-
+    // Hàm hiển thị nút màu ,size đã chọn
     function renderSelectedState() {
         document.querySelectorAll('.color-option').forEach(el => {
             const isSelected = String(el.dataset.colorId) === String(selectedColorId);
@@ -907,7 +904,7 @@ document.addEventListener('DOMContentLoaded', function () {
             el.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
         });
     }
-
+    // Hàm để khóa các option không hợp lệ.
     function refreshAvailableOptions() {
     document.querySelectorAll('.size-option').forEach(el => {
         const sizeId = el.dataset.sizeId;
@@ -922,7 +919,7 @@ document.addEventListener('DOMContentLoaded', function () {
         el.style.pointerEvents = exists ? 'auto' : 'none';
         el.style.opacity = exists ? '1' : '0.45';
     });
-
+    // Nếu đã chọn kích thước, chỉ hiển thị màu có biến thể tương ứng với kích thước đó
     document.querySelectorAll('.color-option').forEach(el => {
         const colorId = el.dataset.colorId;
 
@@ -936,7 +933,7 @@ document.addEventListener('DOMContentLoaded', function () {
         el.style.opacity = exists ? '1' : '0.45';
     });
     }
-
+     // Hàm đồng bộ giao diện sau khi có thay đổi lựa chọn
     function syncUI() {
         refreshAvailableOptions();
         renderSelectedState();
@@ -950,7 +947,7 @@ document.addEventListener('DOMContentLoaded', function () {
             resetVariantUI();
         }
     }
-
+    // Xử lý sự kiện khi người dùng chọn màu
     document.querySelectorAll('.color-option').forEach(el => {
         el.addEventListener('click', function (e) {
             e.preventDefault();
@@ -972,7 +969,7 @@ document.addEventListener('DOMContentLoaded', function () {
             syncUI();
         });
     });
-
+    // Xử lý sự kiện khi người dùng chọn kích thước
     document.querySelectorAll('.size-option').forEach(el => {
         el.addEventListener('click', function (e) {
             e.preventDefault();
@@ -994,7 +991,7 @@ document.addEventListener('DOMContentLoaded', function () {
             syncUI();
         });
     });
-
+    // Xử lý sự kiện nút tăng giảm số lượng
     btnMinus?.addEventListener('click', function (e) {
         e.preventDefault();
 
@@ -1006,7 +1003,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         qtyInput.value = value;
     });
-
+    // Xử lý sự kiện nút tăng số lượng
     btnPlus?.addEventListener('click', function (e) {
         e.preventDefault();
 
@@ -1024,7 +1021,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         qtyInput.value = value;
     });
-
+    // Xử lý sự kiện khi người dùng nhập số lượng trực tiếp
     qtyInput?.addEventListener('input', function () {
         let value = parseInt(this.value || 1, 10);
         let max = parseInt(this.getAttribute('max') || 1, 10);
@@ -1035,7 +1032,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         this.value = value;
     });
-
+    // Xử lý sự kiện khi người dùng submit form thêm vào giỏ hàng
     addToCartForm?.addEventListener('submit', function (e) {
         if (!selectedVariantInput || !selectedVariantInput.value) {
             e.preventDefault();
@@ -1057,6 +1054,7 @@ document.addEventListener('DOMContentLoaded', function () {
             alert('Số lượng vượt quá tồn kho.');
         }
     });
+    // Xử lý sự kiện khi người dùng submit form thêm vào yêu thích
     wishlistForm?.addEventListener('submit', function (e) {
         if (!wishlistVariantInput || !wishlistVariantInput.value) {
             e.preventDefault();

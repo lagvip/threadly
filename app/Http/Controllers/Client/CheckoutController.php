@@ -1308,7 +1308,10 @@ class CheckoutController extends Controller
 
         try {
             Mail::to($order->email)->send(
-                new OrderPlacedMail($order->fresh('details'))
+                new OrderPlacedMail($order->fresh([
+                    'details.variant.color',
+                    'details.variant.size',
+                ]))
             );
         } catch (\Throwable $e) {
             Log::error('Send order mail error: ' . $e->getMessage(), [

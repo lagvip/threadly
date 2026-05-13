@@ -9,7 +9,7 @@
         <div class="card-body">
             <p><strong>ID:</strong> {{ $role->id }}</p>
             <p><strong>Tên:</strong> {{ $role->name }}</p>
-            <p><strong>Slug:</strong> {{ $role->slug }}</p>
+            <p><strong>Đường dẫn:</strong> {{ $role->slug }}</p>
 
             <a href="{{ route('roles.list') }}" class="btn btn-secondary">Quay lại</a>
         </div>

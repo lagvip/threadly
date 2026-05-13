@@ -29,7 +29,7 @@
                             <tr class="text-center">
                                 <td><input type="checkbox" name="ids[]" value="{{ $order->id }}"></td>
                                 <td>#{{ $order->order_code }}</td>
-                                <td>{{ $order->user->email ?? $order->email ?? 'N/A' }}</td>
+                                <td>{{ $order->user->email ?? $order->email ?? 'Không có' }}</td>
                                 <td>{{ number_format($order->total_price, 0, ',', '.') }}₫</td>
                                 <td>{{ $order->deleted_at?->format('d/m/Y H:i') }}</td>
                                 <td>

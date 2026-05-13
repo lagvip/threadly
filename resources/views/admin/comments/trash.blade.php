@@ -98,7 +98,7 @@
                                                         <span class="badge bg-light text-dark border">Màu: {{ $reviewColor }}</span>
                                                     @endif
                                                     @if($reviewSize)
-                                                        <span class="badge bg-light text-dark border">Size: {{ $reviewSize }}</span>
+                                                        <span class="badge bg-light text-dark border">Kích cỡ: {{ $reviewSize }}</span>
                                                     @endif
                                                 </div>
                                             @else
@@ -148,7 +148,7 @@
                             <button type="submit"
                                     class="btn btn-primary me-2"
                                     onclick="return confirm('Khôi phục các bình luận đã chọn?')">
-                                Khôi Phục Đã Chọn
+                                Khôi phục đã chọn
                             </button>
 
                             <a href="{{ route('reviews.index') }}" class="btn btn-light">

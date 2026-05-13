@@ -5,7 +5,7 @@
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
             </div>
         @endif
 
@@ -34,7 +34,7 @@
 
                         <div class="mb-3">
                             <label class="form-label"><strong>Số điện thoại:</strong></label>
-                            <p class="fs-15">{{ $contact->phone ?? 'N/A' }}</p>
+                            <p class="fs-15">{{ $contact->phone ?? 'Không có' }}</p>
                         </div>
 
                         <div class="mb-3">

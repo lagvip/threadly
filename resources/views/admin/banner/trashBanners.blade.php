@@ -5,7 +5,7 @@
             <div class="col-xl-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center gap-1">
-                        <h4 class="card-title flex-grow-1">Banners - Thùng rác</h4>
+                        <h4 class="card-title flex-grow-1">Banner - Thùng rác</h4>
                         <a href="{{ route('listBanner.list') }}" class="btn btn-sm btn-light">
                             Quay lại danh sách
                         </a>
@@ -16,11 +16,11 @@
                                 <thead class="bg-light-subtle">
                                     <tr>
                                         <th>Banner</th>
-                                        <th>Link</th>
-                                        <th>Position</th>
-                                        <th>Status</th>
-                                        <th>Deleted At</th>
-                                        <th>Action</th>
+                                        <th>Liên kết</th>
+                                        <th>Vị trí</th>
+                                        <th>Trạng thái</th>
+                                        <th>Ngày xóa</th>
+                                        <th>Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -44,7 +44,7 @@
                                                 @if($value->link)
                                                     <a href="{{ $value->link }}" target="_blank" class="text-primary">{{ Str::limit($value->link, 30) }}</a>
                                                 @else
-                                                    <span class="text-muted">No Link</span>
+                                                    <span class="text-muted">Không có liên kết</span>
                                                 @endif
                                             </td>
                                             <td>
@@ -52,9 +52,9 @@
                                             </td>
                                             <td>
                                                 @if($value->is_active)
-                                                    <span class="badge bg-success">Active</span>
+                                                    <span class="badge bg-success">Đang hoạt động</span>
                                                 @else
-                                                    <span class="badge bg-danger">Inactive</span>
+                                                    <span class="badge bg-danger">Ngừng hoạt động</span>
                                                 @endif
                                             </td>
                                             <td>

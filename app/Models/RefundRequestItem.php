@@ -15,12 +15,16 @@ class RefundRequestItem extends Model
         'product_name_snapshot',
         'variant_snapshot',
         'quantity',
+        'restocked_quantity',
+        'restocked_at',
         'unit_amount',
         'line_amount',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
+        'restocked_quantity' => 'integer',
+        'restocked_at' => 'datetime',
         'unit_amount' => 'float',
         'line_amount' => 'float',
     ];

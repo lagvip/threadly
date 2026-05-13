@@ -48,14 +48,14 @@
                     <div class="dropdown topbar-item">
                         <a class="topbar-button" data-bs-toggle="dropdown" href="javascript:void(0)">
                             <span class="d-flex align-items-center gap-2">
-                                <img class="rounded-circle object-fit-cover" width="32" height="32" src="{{ $avatar }}" alt="{{ $user->name ?? 'User' }}">
+                                <img class="rounded-circle object-fit-cover" width="32" height="32" src="{{ $avatar }}" alt="{{ $user->name ?? 'Người dùng' }}">
                             </span>
                         </a>
 
                         <div class="dropdown-menu dropdown-menu-end p-0 overflow-hidden" style="min-width: 260px;">
                             <div class="px-3 py-3 border-bottom">
                                 <div class="d-flex align-items-center gap-2">
-                                    <img class="rounded-circle object-fit-cover" width="48" height="48" src="{{ $avatar }}" alt="{{ $user->name ?? 'User' }}">
+                                    <img class="rounded-circle object-fit-cover" width="48" height="48" src="{{ $avatar }}" alt="{{ $user->name ?? 'Người dùng' }}">
                                     <div>
                                         <h6 class="mb-1">Xin chào, {{ $user->name ?? 'Bạn' }}!</h6>
                                         <div class="text-muted small">{{ $user->email ?? '' }}</div>
@@ -70,7 +70,7 @@
 
                             <a class="dropdown-item" href="{{ route('home') }}">
                                 <i class="bx bx-store text-muted fs-18 align-middle me-1"></i>
-                                <span>Ra trang client</span>
+                                <span>Ra trang khách hàng</span>
                             </a>
 
                             <a class="dropdown-item" href="{{ route('password.change') }}">

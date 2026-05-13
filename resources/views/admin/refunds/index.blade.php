@@ -19,7 +19,7 @@
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
         <div>
             <h3 class="fs-4 fw-semibold mb-1">Yêu cầu hoàn tiền</h3>
-            <div class="text-muted">Duyệt hoàn tiền VNPay demo vào ví người dùng.</div>
+            <div class="text-muted">Duyệt hoàn tiền demo vào ví người dùng cho đơn VNPay/COD đã thanh toán.</div>
         </div>
     </div>
 
@@ -84,7 +84,7 @@
                             <td>{{ optional($refund->user)->email ?: '-' }}</td>
                             <td>{{ $refund->type_label }}</td>
                             <td class="fw-bold text-danger">{{ number_format($refund->requested_amount, 0, ',', '.') }} đ</td>
-                            <td>{{ $refund->evidences->count() }} file</td>
+                            <td>{{ $refund->evidences->count() }} tệp</td>
                             <td><span class="badge bg-{{ $refund->status_badge }}">{{ $refund->status_label }}</span></td>
                             <td>{{ $refund->created_at->format('d/m/Y H:i') }}</td>
                             <td>

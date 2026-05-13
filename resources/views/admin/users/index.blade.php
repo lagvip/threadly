@@ -82,13 +82,13 @@
 
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center gap-1 flex-wrap">
-                    <h4 class="card-title flex-grow-1 mb-0">Danh sách Users</h4>
+                    <h4 class="card-title flex-grow-1 mb-0">Danh sách người dùng</h4>
 
                     <div class="d-flex align-items-center gap-2 flex-wrap filter-bar">
                         <a href="{{ route('users.trash') }}" class="btn btn-soft-danger btn-sm">Thùng rác</a>
 
                         <a href="{{ route('users.add') }}" class="btn btn-sm btn-primary">
-                            Thêm User
+                            Thêm người dùng
                         </a>
 
                         <form action="{{ route('users.search') }}" method="GET" class="d-flex align-items-center gap-2 flex-wrap">
@@ -134,11 +134,11 @@
                                     <th>STT</th>
                                     <th>Người dùng</th>
                                     <th>Email</th>
-                                    <th>Role</th>
+                                    <th>Vai trò</th>
                                     <th>Trạng thái</th>
                                     <th>Số đơn</th>
                                     <th>Ngày tạo</th>
-                                    <th>Action</th>
+                                    <th>Thao tác</th>
                                 </tr>
                             </thead>
 
@@ -240,7 +240,7 @@
                                                     <form action="{{ route('users.delete', $user->id) }}" method="POST" class="m-0">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button onclick="return confirm('Bạn chắc chắn muốn xóa user này?')"
+                                                        <button onclick="return confirm('Bạn chắc chắn muốn xóa người dùng này?')"
                                                                 type="submit"
                                                                 class="btn btn-soft-danger btn-sm">
                                                             <iconify-icon icon="solar:trash-bin-minimalistic-2-broken"
@@ -251,7 +251,7 @@
                                                     <button type="button"
                                                             class="btn btn-secondary btn-sm"
                                                             disabled
-                                                            title="User còn đơn hàng nên không thể xóa">
+                                                            title="Người dùng còn đơn hàng nên không thể xóa">
                                                         <iconify-icon icon="solar:trash-bin-minimalistic-2-broken"
                                                             class="align-middle fs-18"></iconify-icon>
                                                     </button>
@@ -330,7 +330,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const modalId = this.dataset.modalTarget;
 
             if (this.checked) {
-                const ok = confirm('Bỏ chặn user này?');
+                const ok = confirm('Bỏ chặn người dùng này?');
 
                 if (ok) {
                     document.getElementById('unban-form-' + userId).submit();

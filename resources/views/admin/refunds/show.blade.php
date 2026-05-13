@@ -82,6 +82,7 @@
                                     <th>Sản phẩm</th>
                                     <th>Phân loại</th>
                                     <th class="text-center">SL hoàn</th>
+                                    <th class="text-center">SL đã nhập kho</th>
                                     <th class="text-end">Đơn giá hoàn</th>
                                     <th class="text-end">Thành tiền</th>
                                 </tr>
@@ -92,12 +93,13 @@
                                         <td class="fw-semibold">{{ $item->product_name_snapshot }}</td>
                                         <td>{{ $item->variant_snapshot ?: '-' }}</td>
                                         <td class="text-center">{{ $item->quantity }}</td>
+                                        <td class="text-center">{{ $item->restocked_quantity ?? 0 }}</td>
                                         <td class="text-end">{{ number_format($item->unit_amount, 0, ',', '.') }} đ</td>
                                         <td class="text-end fw-bold text-danger">{{ number_format($item->line_amount, 0, ',', '.') }} đ</td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted">Yêu cầu hoàn toàn bộ số tiền còn lại của đơn.</td>
+                                        <td colspan="6" class="text-center text-muted">Yêu cầu hoàn toàn bộ số tiền còn lại của đơn.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -174,14 +176,58 @@
                     <p><strong>Đã hoàn sản phẩm:</strong> {{ number_format($order->refunded_amount, 0, ',', '.') }} đ</p>
                     <p><strong>Còn có thể hoàn sản phẩm:</strong> <span class="text-danger fw-bold">{{ number_format($order->refundable_amount, 0, ',', '.') }} đ</span></p>
                     <p><strong>Thanh toán:</strong> {{ strtoupper($order->payment_method) }} - {{ $order->payment_status_label }}</p>
+                    <p><strong>Cơ chế hoàn:</strong> Ví demo nội bộ website</p>
                     <p><strong>Trạng thái đơn:</strong> {{ $order->order_status_label }}</p>
                     <p><strong>Trạng thái hoàn:</strong> {{ $order->refund_status_label }}</p>
+                    <p><strong>Nhập lại kho:</strong>
+                        @if($refundRequest->restocked_at)
+                            <span class="badge bg-success">Đã nhập {{ $refundRequest->restocked_at->format('d/m/Y H:i') }}</span>
+                        @else
+                            <span class="badge bg-secondary">Chưa nhập kho</span>
+                        @endif
+                    </p>
                 </div>
             </div>
 
+
+            @if($refundRequest->status === 'approved' && !$refundRequest->restocked_at && $refundRequest->items->isNotEmpty())
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-header fw-bold text-primary">Nhập lại kho hàng hoàn</div>
+                    <div class="card-body">
+                        <div class="alert alert-warning small">
+                            Chỉ bấm nút này khi shop đã nhận hàng trả về và hàng còn đủ điều kiện bán lại.
+                            Duyệt hoàn tiền không tự động cộng kho.
+                        </div>
+
+                        <form method="POST" action="{{ route('admin.refunds.restock', $refundRequest->id) }}">
+                            @csrf
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Ghi chú nhập kho</label>
+                                <textarea name="restock_note" rows="3" class="form-control" placeholder="Ví dụ: Đã nhận hàng hoàn, sản phẩm còn nguyên vẹn..."></textarea>
+                            </div>
+                            <button type="submit"
+                                    class="btn btn-primary w-100"
+                                    onclick="return confirm('Xác nhận đã nhận hàng trả và nhập lại kho?')">
+                                Xác nhận nhập lại kho
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            @elseif($refundRequest->restocked_at)
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-header fw-bold text-success">Đã nhập lại kho</div>
+                    <div class="card-body">
+                        <p class="mb-2"><strong>Thời gian:</strong> {{ $refundRequest->restocked_at->format('d/m/Y H:i') }}</p>
+                        @if($refundRequest->restock_note)
+                            <p class="mb-0"><strong>Ghi chú:</strong> {{ $refundRequest->restock_note }}</p>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
             @if($refundRequest->status === 'pending')
                 <div class="card border-0 shadow-sm rounded-4 mb-4">
-                    <div class="card-header fw-bold text-success">Duyệt hoàn tiền vào ví demo</div>
+                    <div class="card-header fw-bold text-success">Duyệt hoàn vào ví demo</div>
                     <div class="card-body">
                         <form method="POST" action="{{ route('admin.refunds.approve', $refundRequest->id) }}">
                             @csrf
@@ -189,8 +235,8 @@
                                 <label class="form-label fw-semibold">Ghi chú admin</label>
                                 <textarea name="admin_note" rows="3" class="form-control" placeholder="Ghi chú nội bộ hoặc thông báo cho khách..."></textarea>
                             </div>
-                            <button type="submit" class="btn btn-success w-100" onclick="return confirm('Duyệt hoàn tiền và cộng vào ví demo?')">
-                                Duyệt hoàn tiền
+                            <button type="submit" class="btn btn-success w-100" onclick="return confirm('Duyệt yêu cầu và cộng tiền vào ví demo?')">
+                                Duyệt hoàn vào ví demo
                             </button>
                         </form>
                     </div>

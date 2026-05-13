@@ -90,7 +90,7 @@ class ProductVariantService
     {
         try {
             $variant = ProductVariant::with('product')->findOrFail($id);
-
+            // Nếu đang kích hoạt biến thể nhưng sản phẩm cha không hoạt động, trả về lỗi
             if ($status === 'active' && $variant->product && $variant->product->status !== 'active') {
                 return false;
             }

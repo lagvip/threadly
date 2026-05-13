@@ -7,9 +7,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderStatusLog;
 use App\Services\GhnService;
+use App\Services\OrderInventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
@@ -122,8 +124,12 @@ class OrderController extends Controller
                 return back()->with('error', 'Chỉ có thể hủy khi đơn đang chờ xử lý hoặc đang xử lý.');
             }
 
-            $order->order_status = OrderStatus::Cancelled->value;
-            $order->save();
+            DB::transaction(function () use ($order, $request) {
+                $order->order_status = OrderStatus::Cancelled->value;
+                $order->save();
+
+                app(OrderInventoryService::class)->releaseCancelledOrder($order);
+            });
 
             OrderStatusLog::create([
                 'order_id' => $order->id,
@@ -210,6 +216,10 @@ class OrderController extends Controller
             return back()->with('error', 'Đơn đã giao thành công, không thể hủy vận đơn GHN.');
         }
 
+        if ($order->payment_status === Order::PAYMENT_PAID) {
+            return back()->with('error', 'Đơn đã thanh toán không nên hủy vận đơn trực tiếp. Hãy xử lý hoàn tiền/hoàn hàng riêng để tránh lệch tiền và tồn kho.');
+        }
+
         try {
             $response = $ghnService->cancelOrder($order->ghn_order_code);
             $result = collect(data_get($response, 'data', []))->firstWhere('order_code', $order->ghn_order_code);
@@ -220,16 +230,20 @@ class OrderController extends Controller
 
             $oldStatus = $order->order_status;
 
-            $order->update([
-                'ghn_status' => 'cancel',
-                'ghn_status_name' => 'Đã hủy trên GHN',
-                'ghn_raw_response' => $response,
-                'ghn_synced_at' => now(),
-                'order_status' => OrderStatus::Cancelled->value,
-                'payment_status' => $order->payment_method === Order::PAYMENT_METHOD_COD && $order->payment_status !== Order::PAYMENT_PAID
-                    ? Order::PAYMENT_CANCELLED
-                    : $order->payment_status,
-            ]);
+            DB::transaction(function () use ($order, $response) {
+                $order->update([
+                    'ghn_status' => 'cancel',
+                    'ghn_status_name' => 'Đã hủy trên GHN',
+                    'ghn_raw_response' => $response,
+                    'ghn_synced_at' => now(),
+                    'order_status' => OrderStatus::Cancelled->value,
+                    'payment_status' => $order->payment_method === Order::PAYMENT_METHOD_COD && $order->payment_status !== Order::PAYMENT_PAID
+                        ? Order::PAYMENT_CANCELLED
+                        : $order->payment_status,
+                ]);
+
+                app(OrderInventoryService::class)->releaseCancelledOrder($order);
+            });
 
             if ($oldStatus !== OrderStatus::Cancelled->value) {
                 OrderStatusLog::create([
@@ -279,6 +293,23 @@ class OrderController extends Controller
         }
 
         $currentStatus = $order->ghn_status ?: 'ready_to_pick';
+
+        $safeDemoStatuses = [
+            'ready_to_pick',
+            'picking',
+            'picked',
+            'storing',
+            'transporting',
+            'sorting',
+            'delivering',
+            'money_collect_delivering',
+            'delivery_fail',
+            'delivered',
+        ];
+
+        if (!in_array($status, $safeDemoStatuses, true)) {
+            return back()->with('error', 'Đã tắt giả lập trạng thái GHN gây lệch nghiệp vụ như hủy, hoàn hàng, thất lạc hoặc hư hỏng.');
+        }
 
         $allowedTransitions = [
             'ready_to_pick' => [

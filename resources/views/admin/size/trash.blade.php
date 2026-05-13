@@ -57,12 +57,12 @@
                                 <td class="d-flex gap-2">
                                     <a href="{{ route('listSize.restoreSize', $size->id) }}"
                                        class="btn btn-success btn-sm"
-                                       onclick="return confirm('Khôi phục size này?')">
+                                       onclick="return confirm('Khôi phục kích cỡ này?')">
                                         Khôi phục
                                     </a>
 
                                     <form action="{{ route('listSize.forceDeleteSize', $size->id) }}" method="POST"
-                                          onsubmit="return confirm('Xóa vĩnh viễn size này?')">
+                                          onsubmit="return confirm('Xóa vĩnh viễn kích cỡ này?')">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-danger btn-sm">

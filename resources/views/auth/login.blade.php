@@ -106,7 +106,7 @@
 
                 {{-- DIVIDER --}}
                 <div class="w-full text-center p-t-30 p-b-10">
-                    <span class="txt2">or continue with</span>
+                    <span class="txt2">hoặc tiếp tục với</span>
                 </div>
 
                 {{-- SOCIAL LOGIN (ONLY UI) --}}

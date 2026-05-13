@@ -12,6 +12,7 @@ class HomeController extends Controller
 {
     public function index()
     {
+
         $banners = Banner::where('is_active', 1)
             ->orderBy('position', 'asc')
             ->get();
@@ -50,7 +51,7 @@ class HomeController extends Controller
             ->select('order_details.product_id', DB::raw('SUM(order_details.quantity) as total_sold'))
             ->groupBy('order_details.product_id')
             ->orderByDesc('total_sold')
-            ->limit(10)
+            ->limit(12)
             ->pluck('order_details.product_id')
             ->toArray();
 

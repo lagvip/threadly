@@ -268,7 +268,7 @@
                                                         @endif
 
                                                         @if($reviewSize)
-                                                            <span class="review-variant-chip">Size: {{ $reviewSize }}</span>
+                                                            <span class="review-variant-chip">Kích cỡ: {{ $reviewSize }}</span>
                                                         @endif
                                                     </div>
                                                 @endif
@@ -293,7 +293,7 @@
                                     <td>
                                         <div class="review-reply-box">
                                             @if ($review->admin_reply)
-                                                <strong>{{ $review->admin->name ?? 'Admin' }}:</strong>
+                                                <strong>{{ $review->admin->name ?? 'Quản trị viên' }}:</strong>
                                                 {{ $review->admin_reply }}
                                                 <span class="reply-meta">
                                                     {{ optional($review->updated_at)->format('d/m/Y H:i') }}

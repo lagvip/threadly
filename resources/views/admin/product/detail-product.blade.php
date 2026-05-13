@@ -66,7 +66,7 @@
                             <div class="col-lg-6">
                                 <div class="mb-3">
                                     <label class="form-label">Danh Mục</label>
-                                    <input type="text" class="form-control" value="{{ $product->category->name ?? 'N/A' }}" disabled>
+                                    <input type="text" class="form-control" value="{{ $product->category->name ?? 'Không có' }}" disabled>
                                 </div>
                             </div>
                         </div>
@@ -75,7 +75,7 @@
                             <div class="col-lg-4">
                                 <div class="mb-3">
                                     <label class="form-label">Thương Hiệu</label>
-                                    <input type="text" class="form-control" value="{{ $product->brand->name ?? 'N/A' }}" disabled>
+                                    <input type="text" class="form-control" value="{{ $product->brand->name ?? 'Không có' }}" disabled>
                                 </div>
                             </div>
 

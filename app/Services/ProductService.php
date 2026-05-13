@@ -31,6 +31,7 @@ class ProductService
 
         return $query->latest('created_at')->paginate(10);
     }
+
     public function getProductById($id)
     {
         return Product::with(['brand', 'category', 'variants.color', 'variants.size'])
@@ -52,7 +53,7 @@ class ProductService
             return false;
         }
     }
-
+    
     public function updateProduct($data, $id)
     {
         DB::beginTransaction();

@@ -41,9 +41,125 @@
         color: #dc3545;
     }
 
-    .filter-bar .form-control,
-    .filter-bar .form-select {
-        min-width: 200px;
+    .product-filter-card {
+        padding: 18px 20px;
+    }
+
+    .product-filter-form {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .product-filter-grid {
+        display: grid;
+        grid-template-columns: minmax(260px, 1.4fr) minmax(210px, 1fr) minmax(210px, 1fr) auto;
+        gap: 14px;
+        align-items: end;
+    }
+
+    .product-filter-item {
+        min-width: 0;
+    }
+
+    .product-filter-item .form-label {
+        font-size: 14px;
+        font-weight: 600;
+        color: #52637a;
+        margin-bottom: 7px;
+    }
+
+    .product-filter-item .form-control,
+    .product-filter-item .form-select {
+        width: 100%;
+        height: 42px;
+        min-width: 0;
+        font-size: 14px;
+        border-radius: 9px;
+        border-color: #d8e0ea;
+        color: #52637a;
+        box-shadow: none;
+    }
+
+    .product-filter-item .form-control:focus,
+    .product-filter-item .form-select:focus {
+        border-color: #ff6b35;
+        box-shadow: 0 0 0 0.15rem rgba(255, 107, 53, 0.12);
+    }
+
+    .product-filter-actions {
+        display: flex;
+        align-items: end;
+        gap: 10px;
+        white-space: nowrap;
+    }
+
+    .product-filter-actions .btn {
+        height: 42px;
+        min-width: 105px;
+        padding: 0 18px;
+        border-radius: 9px;
+        font-size: 14px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+
+    .product-filter-actions .btn-primary {
+        background-color: #ff6b35;
+        border-color: #ff6b35;
+    }
+
+    .product-filter-actions .btn-primary:hover {
+        background-color: #f15c25;
+        border-color: #f15c25;
+    }
+
+    .product-filter-actions .btn-light {
+        background-color: #eef2f7;
+        border-color: #eef2f7;
+        color: #334155;
+    }
+
+    .product-filter-actions .btn-light:hover {
+        background-color: #e2e8f0;
+        border-color: #e2e8f0;
+        color: #1e293b;
+    }
+
+    @media (max-width: 1199.98px) {
+        .product-filter-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .product-filter-actions {
+            grid-column: span 2;
+        }
+
+        .product-filter-actions .btn {
+            flex: 1;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .product-filter-card {
+            padding: 14px;
+        }
+
+        .product-filter-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .product-filter-actions {
+            grid-column: auto;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .product-filter-actions .btn {
+            width: 100%;
+        }
     }
 </style>
 
@@ -75,10 +191,10 @@
                     </div>
                 </div>
 
-                <div class="card-body border-bottom">
-                    <form action="{{ route('product.search') }}" method="GET">
-                        <div class="row g-2 align-items-end filter-bar">
-                            <div class="col-md-4">
+                <div class="card-body border-bottom product-filter-card">
+                    <form action="{{ route('product.search') }}" method="GET" class="product-filter-form">
+                        <div class="product-filter-grid">
+                            <div class="product-filter-item">
                                 <label class="form-label">Tên sản phẩm</label>
                                 <input type="text"
                                        name="search"
@@ -87,7 +203,7 @@
                                        value="{{ request('search', $searchTerm ?? '') }}">
                             </div>
 
-                            <div class="col-md-3">
+                            <div class="product-filter-item">
                                 <label class="form-label">Thương hiệu</label>
                                 <select name="brand_id" class="form-select">
                                     <option value="">-- Tất cả thương hiệu --</option>
@@ -100,7 +216,7 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-3">
+                            <div class="product-filter-item">
                                 <label class="form-label">Danh mục</label>
                                 <select name="category_id" class="form-select">
                                     <option value="">-- Tất cả danh mục --</option>
@@ -113,16 +229,14 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-2">
-                                <div class="d-flex gap-2">
-                                    <button type="submit" class="btn btn-primary w-100">
-                                        Tìm kiếm
-                                    </button>
+                            <div class="product-filter-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    Tìm kiếm
+                                </button>
 
-                                    <a href="{{ route('product.listProduct') }}" class="btn btn-light w-100">
-                                        Bỏ lọc
-                                    </a>
-                                </div>
+                                <a href="{{ route('product.listProduct') }}" class="btn btn-light">
+                                    Bỏ lọc
+                                </a>
                             </div>
                         </div>
                     </form>
@@ -144,9 +258,10 @@
                                 <th>Danh mục</th>
                                 <th>Trạng thái</th>
                                 <th>Ngày tạo</th>
-                                <th>Action</th>
+                                <th>Thao tác</th>
                             </tr>
                         </thead>
+
                         <tbody>
                             @forelse ($products as $product)
                                 <tr>
@@ -177,8 +292,8 @@
                                         </div>
                                     </td>
 
-                                    <td>{{ $product->brand->name ?? 'N/A' }}</td>
-                                    <td>{{ $product->category->name ?? 'N/A' }}</td>
+                                    <td>{{ $product->brand->name ?? 'Không có' }}</td>
+                                    <td>{{ $product->category->name ?? 'Không có' }}</td>
 
                                     <td class="table-status-cell">
                                         <form action="{{ route('product.toggleStatus', $product->id) }}"
@@ -250,6 +365,7 @@
 </div>
 
 <script>
+    // Xử lý sự kiện cho checkbox "Chọn tất cả" và các checkbox hàng
     document.addEventListener('DOMContentLoaded', function () {
         const checkAll = document.getElementById('check-all');
         const rowCheckboxes = document.querySelectorAll('.row-checkbox');

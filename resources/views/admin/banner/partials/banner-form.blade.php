@@ -35,12 +35,12 @@
                     <h3 class="mt-4">Kéo ảnh vào đây, hoặc <span class="text-primary">nhấp để duyệt</span>
                     </h3>
                     <span class="text-muted fs-13">
-                        1600 x 1200 (4:3) khuyến nghị. Chỉ cho phép file PNG, JPG và GIF.
+                        Khuyến nghị 1600 x 1200 (4:3). Chỉ cho phép tệp PNG, JPG và GIF.
                     </span>
                     <p id="selectedFileName{{ $idSuffix }}" class="selected-file-name mt-2"></p>
                     <div id="imagePreview{{ $idSuffix }}" class="image-preview mt-3">
                         @if ($imagePreviewUrl)
-                            <img src="{{ $imagePreviewUrl }}" alt="Current Image"
+                            <img src="{{ $imagePreviewUrl }}" alt="Ảnh hiện tại"
                                 style="max-width: 100%; max-height: 120px; display: block; margin: 0 auto; border-radius: 4px;">
                         @endif
                     </div>
@@ -70,7 +70,7 @@
                 </div>
                 <div class="col-lg-6">
                     <div class="mb-3">
-                        <label for="banner-link" class="form-label">Link</label>
+                        <label for="banner-link" class="form-label">Liên kết</label>
                         <input type="text" name="link" id="banner-link" class="form-control"
                             placeholder="Nhập link (tùy chọn)" value="{{ old('link', $banner->link ?? '') }}">
                         @error('link')

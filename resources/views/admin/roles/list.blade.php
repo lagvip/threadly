@@ -26,9 +26,9 @@
                         <tr>
                             <th>ID</th>
                             <th>Tên role</th>
-                            <th>Slug</th>
+                            <th>Đường dẫn</th>
                             <th>Số user</th>
-                            <th>Action</th>
+                            <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -55,7 +55,7 @@
                                         @if(($role->users_count ?? 0) == 0)
                                             <form action="{{ route('roles.delete', $role->id) }}"
                                                 method="POST"
-                                                onsubmit="return confirm('Xóa role này?')"
+                                                onsubmit="return confirm('Xóa vai trò này?')"
                                                 class="m-0">
                                                 @csrf
                                                 @method('DELETE')
@@ -68,7 +68,7 @@
                                             <button type="button"
                                                     class="btn btn-secondary btn-sm"
                                                     disabled
-                                                    title="Role còn user nên không thể xóa">
+                                                    title="Vai trò còn người dùng nên không thể xóa">
                                                 <iconify-icon icon="solar:trash-bin-minimalistic-2-broken"
                                                     class="align-middle fs-18"></iconify-icon>
                                             </button>
