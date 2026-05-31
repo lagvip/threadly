@@ -2,15 +2,17 @@
 
 namespace App\Services;
 
-use App\Models\Order;
-use App\Models\Product;
+use App\Contracts\Repositories\OrderRepositoryInterface;
+use App\Contracts\Repositories\ProductRepositoryInterface;
 use App\Models\User;
 use Illuminate\Support\Str;
 
 class ShopChatService
 {
     public function __construct(
-        protected GeminiService $geminiService
+        protected GeminiService $geminiService,
+        protected OrderRepositoryInterface $orders,
+        protected ProductRepositoryInterface $products,
     ) {}
 
     public function reply(User $user, string $message): string
@@ -95,15 +97,7 @@ PROMPT;
     protected function buildOrderContext(User $user): string
     {
         // Lấy 3 đơn hàng gần nhất của user hiện tại, kèm sản phẩm và biến thể màu-size.
-        $orders = Order::with([
-                'details.product',
-                'details.variant.color',
-                'details.variant.size',
-            ])
-            ->where('user_id', $user->id)
-            ->latest('id')
-            ->take(3)
-            ->get();
+        $orders = $this->orders->recentForUserWithDetails((int) $user->id, 3);
 
         // Nếu user chưa có đơn thì đưa thông tin rõ ràng vào context.
         if ($orders->isEmpty()) {
@@ -142,42 +136,12 @@ PROMPT;
         // Tách keyword từ câu hỏi để tìm sản phẩm liên quan.
         $keywords = $this->extractKeywords($message);
 
-        // Query sản phẩm active, load brand/category và các biến thể active.
-        $query = Product::with([
-                'brand:id,name',
-                'category:id,name',
-                'variants' => function ($q) {
-                    $q->where('status', 'active')->orderBy('price', 'asc');
-                },
-            ])
-            ->where('status', 'active');
-
-        // Nếu có keyword thì tìm trong name hoặc description sản phẩm.
-        if (!empty($keywords)) {
-            $query->where(function ($q) use ($keywords) {
-                foreach ($keywords as $keyword) {
-                    $q->orWhere('name', 'like', "%{$keyword}%")
-                      ->orWhere('description', 'like', "%{$keyword}%");
-                }
-            });
-        }
-
         // Lấy tối đa 6 sản phẩm mới nhất phù hợp.
-        $products = $query->latest('id')->take(6)->get();
+        $products = $this->products->activeForChat($keywords, 6);
 
         // Nếu không tìm được theo keyword thì fallback lấy 6 sản phẩm active mới nhất.
         if ($products->isEmpty()) {
-            $products = Product::with([
-                    'brand:id,name',
-                    'category:id,name',
-                    'variants' => function ($q) {
-                        $q->where('status', 'active')->orderBy('price', 'asc');
-                    },
-                ])
-                ->where('status', 'active')
-                ->latest('id')
-                ->take(6)
-                ->get();
+            $products = $this->products->activeForChat([], 6);
         }
 
         // Nếu vẫn không có sản phẩm thì báo rõ chưa lấy được dữ liệu.

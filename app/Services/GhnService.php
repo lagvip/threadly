@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\Contracts\Repositories\AddressRepositoryInterface;
+use App\Contracts\Repositories\OrderStatusLogRepositoryInterface;
 use App\Enums\OrderStatus;
-use App\Models\Address;
 use App\Models\Order;
-use App\Models\OrderStatusLog;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -17,8 +17,10 @@ class GhnService
     protected string $shopId;
     protected string $baseUrl;
 
-    public function __construct()
-    {
+    public function __construct(
+        protected AddressRepositoryInterface $addresses,
+        protected OrderStatusLogRepositoryInterface $statusLogs,
+    ) {
         // Lấy cấu hình GHN từ config/services.php, thường lấy từ file .env.
         $this->token = (string) config('services.ghn.token');
         $this->shopId = (string) config('services.ghn.shop_id');
@@ -208,7 +210,7 @@ class GhnService
         ]);
 
         // Ghi log lịch sử đơn sau khi tạo vận đơn.
-        OrderStatusLog::create([
+        $this->statusLogs->create([
             'order_id' => $order->id,
             'status' => OrderStatus::Processing->value,
             'note' => 'Đã tạo vận đơn GHN: ' . $ghnOrderCode . ' - ' . $this->statusGroup($ghnStatus),
@@ -364,7 +366,7 @@ class GhnService
 
         // Nếu trạng thái GHN hoặc trạng thái đơn thay đổi thì ghi log.
         if ($oldGhnStatus !== $status || (!empty($updates['order_status']) && $updates['order_status'] !== $oldOrderStatus)) {
-            OrderStatusLog::create([
+            $this->statusLogs->create([
                 'order_id' => $order->id,
                 'status' => $updates['order_status'] ?? $order->order_status,
                 'note' => $notePrefix . ': ' . $this->statusGroup($status) . ' - ' . $this->statusName($status) . ' (' . $status . ')',
@@ -628,37 +630,11 @@ class GhnService
             return $order;
         }
 
-        $address = null;
-
-        // Ưu tiên tìm theo shipping_address_id đã lưu trong order.
-        if (!empty($order->shipping_address_id)) {
-            $address = Address::where('id', $order->shipping_address_id)
-                ->where('user_id', $order->user_id)
-                ->whereNotNull('ghn_district_id')
-                ->whereNotNull('ghn_ward_code')
-                ->first();
-        }
-
-        // Nếu chưa tìm được thì thử khớp chuỗi địa chỉ đầy đủ.
-        if (!$address && !empty($order->address)) {
-            $address = Address::where('user_id', $order->user_id)
-                ->whereRaw(
-                    "CONCAT(detailed_address, ', ', ward, ', ', district, ', ', province) = ?",
-                    [$order->address]
-                )
-                ->whereNotNull('ghn_district_id')
-                ->whereNotNull('ghn_ward_code')
-                ->first();
-        }
-
-        // Nếu vẫn không có thì lấy địa chỉ mặc định của user.
-        if (!$address) {
-            $address = Address::where('user_id', $order->user_id)
-                ->where('is_default', 1)
-                ->whereNotNull('ghn_district_id')
-                ->whereNotNull('ghn_ward_code')
-                ->first();
-        }
+        $address = $this->addresses->findUsableGhnAddressForOrder(
+            (int) $order->user_id,
+            $order->shipping_address_id ? (int) $order->shipping_address_id : null,
+            $order->address
+        );
 
         // Không tìm được địa chỉ phù hợp thì trả order cũ.
         if (!$address) {

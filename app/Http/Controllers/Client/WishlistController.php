@@ -3,59 +3,36 @@
 namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
-use App\Models\ProductVariant;
-use App\Models\Wishlist;
-use Illuminate\Http\Request;
+use App\Http\Requests\Client\Wishlist\StoreWishlistRequest;
+use App\Services\Client\Wishlist\ClientWishlistService;
 use Illuminate\Support\Facades\Auth;
+use RuntimeException;
 
 class WishlistController extends Controller
 {
-    public function index()
+    public function __construct(protected ClientWishlistService $wishlists)
     {
-        $wishlists = Wishlist::with([
-                'variant.product.category',
-                'variant.product.brand',
-                'variant.color',
-                'variant.size',
-            ])
-            ->where('user_id', Auth::id())
-            ->latest()
-            ->get()
-            ->filter(function ($item) {
-                return $item->variant && $item->variant->product;
-            })
-            ->values();
-
-        return view('client.wishlist', compact('wishlists'));
     }
 
-    public function store(Request $request)
+    public function index()
     {
-        $request->validate([
-            'variant_id' => ['required', 'integer', 'exists:product_variants,id'],
-        ], [
-            'variant_id.required' => 'Vui lòng chọn màu và kích thước trước khi thêm vào yêu thích.',
-            'variant_id.exists' => 'Biến thể sản phẩm không tồn tại.',
-        ]);
+        return view('client.wishlist', $this->wishlists->indexData((int) Auth::id()));
+    }
 
-        $variant = ProductVariant::with('product')->findOrFail($request->variant_id);
+    public function store(StoreWishlistRequest $request)
+    {
+        try {
+            $this->wishlists->add((int) Auth::id(), (int) $request->input('variant_id'));
 
-        if ($variant->status !== 'active') {
-            return back()->with('error', 'Biến thể này hiện không khả dụng.');
+            return back()->with('success', 'Đã thêm vào danh sách yêu thích.');
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
         }
-
-        Wishlist::firstOrCreate([
-            'user_id' => Auth::id(),
-            'product_variant_id' => $variant->id,
-        ]);
-
-        return back()->with('success', 'Đã thêm vào danh sách yêu thích.');
     }
 
     public function destroy($id)
     {
-        $wishlist = Wishlist::where('user_id', Auth::id())->findOrFail($id);
-        $wishlist->delete();
+        $this->wishlists->remove((int) Auth::id(), (int) $id);
 
         return back()->with('success', 'Đã xóa khỏi danh sách yêu thích.');
     }

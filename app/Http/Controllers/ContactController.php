@@ -2,32 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Contact;
-use Illuminate\Http\Request;
+use App\Http\Requests\Contact\StoreContactRequest;
+use App\Services\Contact\ContactService;
 
 class ContactController extends Controller
 {
+    public function __construct(protected ContactService $contacts)
+    {
+    }
+
     public function index()
     {
         return view('client.contact');
     }
 
-    public function store(Request $request)
+    public function store(StoreContactRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'phone' => 'nullable|string|max:20',
-            'message' => 'required|string',
-        ]);
+        $this->contacts->create($request->validated());
 
-        Contact::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'message' => $request->message,
-        ]);
-
-        return redirect()->route('contact.index')->with('success', 'Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm nhất có thể.');
+        return redirect()
+            ->route('contact.index')
+            ->with('success', 'Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm nhất có thể.');
     }
 }

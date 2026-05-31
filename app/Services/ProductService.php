@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\Product;
-use App\Models\OrderDetail;
-use App\Models\ProductVariant;
+use App\Contracts\Repositories\OrderDetailRepositoryInterface;
+use App\Contracts\Repositories\ProductRepositoryInterface;
+use App\Contracts\Repositories\ProductVariantRepositoryInterface;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -13,9 +13,16 @@ use Illuminate\Http\Request;
 
 class ProductService
 {
+    public function __construct(
+        protected ProductRepositoryInterface $products,
+        protected ProductVariantRepositoryInterface $variants,
+        protected OrderDetailRepositoryInterface $orderDetails,
+    ) {
+    }
+
     public function getAllProducts(array $filters = [])
     {
-        $query = Product::with(['brand', 'category']);
+        $query = $this->products->adminListQuery();
 
         if (!empty($filters['search'])) {
             $query->where('name', 'like', '%' . trim($filters['search']) . '%');
@@ -34,8 +41,7 @@ class ProductService
 
     public function getProductById($id)
     {
-        return Product::with(['brand', 'category', 'variants.color', 'variants.size'])
-            ->findOrFail($id);
+        return $this->products->findWithAdminDetail((int) $id);
     }
 
     public function createProduct($data)
@@ -47,7 +53,7 @@ class ProductService
 
             unset($data['variants']);
 
-            return Product::create($data);
+            return $this->products->create($data);
         } catch (\Exception $e) {
             Log::error('Lỗi khi tạo sản phẩm: ' . $e->getMessage());
             return false;
@@ -59,7 +65,7 @@ class ProductService
         DB::beginTransaction();
 
         try {
-            $product = Product::findOrFail($id);
+            $product = $this->products->find((int) $id);
 
             $payload = $data instanceof Request ? $data->all() : $data;
             $request = $data instanceof Request ? $data : request();
@@ -86,9 +92,7 @@ class ProductService
                         continue;
                     }
 
-                    $variant = ProductVariant::where('id', $variantData['id'])
-                        ->where('id_product', $product->id)
-                        ->first();
+                    $variant = $this->variants->findForProduct((int) $variantData['id'], (int) $product->id);
 
                     if (!$variant) {
                         continue;
@@ -137,11 +141,11 @@ class ProductService
                         throw new \Exception('Biến thể mới bị trùng màu sắc và kích cỡ.');
                     }
 
-                    $exists = ProductVariant::where('id_product', $product->id)
-                        ->where('id_color', $variantNew['id_color'])
-                        ->where('id_size', $variantNew['id_size'])
-                        ->whereNull('deleted_at')
-                        ->exists();
+                    $exists = $this->variants->existsActiveCombination(
+                        (int) $product->id,
+                        (int) $variantNew['id_color'],
+                        (int) $variantNew['id_size']
+                    );
 
                     if ($exists) {
                         throw new \Exception('Biến thể mới đã tồn tại.');
@@ -182,7 +186,7 @@ class ProductService
     public function updateStatus($id, $status)
     {
         try {
-            $product = Product::findOrFail($id);
+            $product = $this->products->find((int) $id);
             $product->status = $status;
             $product->save();
 
@@ -196,9 +200,9 @@ class ProductService
     public function deleteProduct($id)
     {
         try {
-            $product = Product::findOrFail($id);
+            $product = $this->products->find((int) $id);
 
-            if (OrderDetail::where('product_id', $id)->exists()) {
+            if ($this->orderDetails->existsForProduct((int) $id)) {
                 $product->delete();
                 return true;
             }
@@ -213,13 +217,13 @@ class ProductService
 
     public function getTrashedProducts()
     {
-        return Product::onlyTrashed()->with(['brand', 'category'])->get();
+        return $this->products->trashedForAdmin();
     }
 
     public function restoreProduct($id)
     {
         try {
-            $product = Product::onlyTrashed()->findOrFail($id);
+            $product = $this->products->findTrashed((int) $id);
             $product->restore();
             return true;
         } catch (\Exception $e) {
@@ -231,9 +235,9 @@ class ProductService
     public function delete($id)
     {
         try {
-            $product = Product::onlyTrashed()->findOrFail($id);
+            $product = $this->products->findTrashed((int) $id);
 
-            if (OrderDetail::where('product_id', $id)->exists()) {
+            if ($this->orderDetails->existsForProduct((int) $id)) {
                 return false;
             }
 
@@ -253,7 +257,7 @@ class ProductService
     {
         try {
             foreach ($ids as $id) {
-                $product = Product::find($id);
+                $product = $this->products->adminListQuery()->find($id);
                 if ($product) {
                     $product->delete();
                 }
@@ -268,7 +272,7 @@ class ProductService
     public function bulkRestore(array $ids)
     {
         try {
-            Product::onlyTrashed()->whereIn('id', $ids)->restore();
+            $this->products->restoreMany($ids);
             return true;
         } catch (\Exception $e) {
             Log::error('Lỗi khi khôi phục hàng loạt sản phẩm: ' . $e->getMessage());
@@ -278,7 +282,8 @@ class ProductService
 
     public function getProductsByCategory($categoryId)
     {
-        return Product::with(['variants.color', 'variants.size'])
+        return $this->products->adminListQuery()
+            ->with(['variants.color', 'variants.size'])
             ->where('id_category', $categoryId)
             ->where('status', 'active')
             ->whereHas('variants', function ($query) {

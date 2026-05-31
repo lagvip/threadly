@@ -3,16 +3,20 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Brand;
-use Illuminate\Support\Facades\Storage; 
+use App\Http\Requests\Admin\Brands\StoreBrandRequest;
+use App\Http\Requests\Admin\Brands\UpdateBrandRequest;
+use App\Services\Admin\Brands\AdminBrandService;
+use RuntimeException;
 
 class BrandController extends Controller
 {
+    public function __construct(protected AdminBrandService $brands)
+    {
+    }
+
     public function index()
     {
-        $brands = Brand::all();
-        return view('admin.brands.index', compact('brands'));
+        return view('admin.brands.index', $this->brands->indexData());
     }
 
     public function create()
@@ -20,102 +24,56 @@ class BrandController extends Controller
         return view('admin.brands.create');
     }
 
-    public function store(Request $request)
+    public function store(StoreBrandRequest $request)
     {
-        $request->validate([
-            'name'  => 'required|unique:brands,name',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ]);
-
-        $data = $request->all();
-
-        if ($request->hasFile('image')) {
-           
-            $data['image'] = $request->file('image')->store('brands', 'public');
-        }
-
-        Brand::create($data);
+        $this->brands->create($request->validated(), $request->file('image'));
 
         return redirect()->route('brands.index')->with('success', 'Thêm thương hiệu thành công!');
     }
 
     public function edit($id)
     {
-        $brand = Brand::findOrFail($id);
-        return view('admin.brands.edit', compact('brand'));
+        return view('admin.brands.edit', ['brand' => $this->brands->find((int) $id)]);
     }
 
-    public function update(Request $request, $id) // Đổi thành $id nếu bạn không dùng Route Model Binding
+    public function update(UpdateBrandRequest $request, $id)
     {
-        $brand = Brand::findOrFail($id);
-
-        $data = $request->validate([
-            'name'  => 'required|string|max:255|unique:brands,name,' . $id, // Tránh lỗi trùng tên với chính nó khi update
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            // 'id_parent' => 'nullable|exists:categories,id' // Mở lại nếu cần thiết
-        ]);
-
-        if ($request->hasFile('image')) {
-            // SỬA LỖI TẠI ĐÂY: Dùng Storage facade để xóa ảnh cũ
-            if ($brand->image && Storage::disk('public')->exists($brand->image)) {
-                Storage::disk('public')->delete($brand->image);
-            }
-            
-            // Lưu ảnh mới
-            $data['image'] = $request->file('image')->store('brands', 'public');
-        }
-
-        $brand->update($data);
+        $this->brands->update((int) $id, $request->validated(), $request->file('image'));
 
         return redirect()->route('brands.index')->with('success', 'Cập nhật thành công!');
     }
 
     public function destroy($id)
     {
-        $brand = Brand::findOrFail($id);
+        try {
+            $this->brands->softDelete((int) $id);
 
-        if ($brand->products()->withTrashed()->exists()) {
-            return redirect()
-                ->route('brands.index')
-                ->with('error', 'Không thể xóa thương hiệu vì đang có sản phẩm sử dụng.');
+            return redirect()->route('brands.index')->with('success', 'Đã chuyển thương hiệu vào thùng rác!');
+        } catch (RuntimeException $e) {
+            return redirect()->route('brands.index')->with('error', $e->getMessage());
         }
-
-        $brand->delete();
-
-        return redirect()->route('brands.index')->with('success', 'Đã chuyển thương hiệu vào thùng rác!');
     }
 
     public function trash()
     {
-        $trashedBrands = Brand::onlyTrashed()->get();
-        return view('admin.brands.trash', compact('trashedBrands'));
+        return view('admin.brands.trash', $this->brands->trashData());
     }
 
     public function restore($id)
     {
-        $brand = Brand::withTrashed()->findOrFail($id);
-        $brand->restore();
+        $this->brands->restore((int) $id);
 
         return redirect()->route('brands.trash')->with('success', 'Khôi phục thương hiệu thành công!');
     }
 
     public function forceDelete($id)
     {
-        $brand = Brand::withTrashed()->findOrFail($id);
+        try {
+            $this->brands->forceDelete((int) $id);
 
-        if ($brand->products()->withTrashed()->exists()) {
-            return redirect()
-                ->route('brands.trash')
-                ->with('error', 'Không thể xóa vĩnh viễn thương hiệu vì đang có sản phẩm sử dụng.');
+            return redirect()->route('brands.trash')->with('success', 'Đã xóa vĩnh viễn thương hiệu!');
+        } catch (RuntimeException $e) {
+            return redirect()->route('brands.trash')->with('error', $e->getMessage());
         }
-
-        // Xóa ảnh vật lý để tránh rác server
-        if ($brand->image && Storage::disk('public')->exists($brand->image)) {
-            Storage::disk('public')->delete($brand->image);
-        }
-
-        $brand->forceDelete();
-
-        return redirect()->route('brands.trash')->with('success', 'Đã xóa vĩnh viễn thương hiệu!');
     }
 }

@@ -3,41 +3,29 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Size;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
+use App\Http\Requests\Admin\Sizes\IndexSizesRequest;
+use App\Http\Requests\Admin\Sizes\StoreSizeRequest;
+use App\Http\Requests\Admin\Sizes\UpdateSizeRequest;
+use App\Services\Admin\Sizes\AdminSizeQueryService;
+use App\Services\Admin\Sizes\AdminSizeService;
+use RuntimeException;
 
 class SizeController extends Controller
 {
-    public function index(Request $request)
-    {
-        $keyword = trim((string) $request->get('keyword', ''));
-
-        $sizes = Size::query()
-            ->when($keyword !== '', function ($query) use ($keyword) {
-                $query->where('name', 'like', '%' . $keyword . '%');
-            })
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
-
-        return view('admin.size.index', compact('sizes', 'keyword'));
+    public function __construct(
+        protected AdminSizeQueryService $queries,
+        protected AdminSizeService $sizes
+    ) {
     }
 
-    public function trash(Request $request)
+    public function index(IndexSizesRequest $request)
     {
-        $keyword = trim((string) $request->get('keyword', ''));
+        return view('admin.size.index', $this->queries->indexData($request->keyword()));
+    }
 
-        $sizes = Size::onlyTrashed()
-            ->when($keyword !== '', function ($query) use ($keyword) {
-                $query->where('name', 'like', '%' . $keyword . '%');
-            })
-            ->latest('deleted_at')
-            ->paginate(10)
-            ->withQueryString();
-
-        return view('admin.size.trash', compact('sizes', 'keyword'));
+    public function trash(IndexSizesRequest $request)
+    {
+        return view('admin.size.trash', $this->queries->trashData($request->keyword()));
     }
 
     public function create()
@@ -45,155 +33,71 @@ class SizeController extends Controller
         return view('admin.size.create');
     }
 
-    public function store(Request $request)
+    public function store(StoreSizeRequest $request)
     {
-        $name = trim((string) $request->name);
-        $request->merge(['name' => $name]);
+        $warning = $this->sizes->create($request->validated());
 
-        $request->validate([
-            'name' => [
-                'required',
-                'regex:/^[0-9]+$/',
-                'max:255',
-                Rule::unique('sizes', 'name')
-                    ->where(fn ($query) => $query->whereNull('deleted_at')),
-            ],
-        ], [
-            'name.required' => 'Tên size không được để trống',
-            'name.regex' => 'Size chỉ được nhập số',
-            'name.max' => 'Tên size tối đa 255 ký tự',
-            'name.unique' => 'Size này đã tồn tại',
-        ]);
-
-        $trashedDuplicate = Size::onlyTrashed()
-            ->where('name', $name)
-            ->first();
-
-        if ($trashedDuplicate) {
-            return back()
-                ->withInput()
-                ->with('warning', 'Size này đang nằm trong thùng rác. Hãy khôi phục thay vì tạo mới.');
+        if ($warning) {
+            return back()->withInput()->with('warning', $warning);
         }
 
-        Size::create([
-            'name' => $name,
-        ]);
-
-        return redirect()
-            ->route('listSize.list')
-            ->with('success', 'Thêm size thành công');
+        return redirect()->route('listSize.list')->with('success', 'Thêm size thành công');
     }
 
     public function show($id)
     {
-        $size = Size::findOrFail($id);
-        return view('admin.size.detail', compact('size'));
+        return view('admin.size.detail', ['size' => $this->sizes->find((int) $id)]);
     }
 
     public function edit($id)
     {
-        $size = Size::findOrFail($id);
-        return view('admin.size.edit', compact('size'));
+        return view('admin.size.edit', ['size' => $this->sizes->find((int) $id)]);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateSizeRequest $request, $id)
     {
-        $size = Size::findOrFail($id);
-        $name = trim((string) $request->name);
-        $request->merge(['name' => $name]);
+        $warning = $this->sizes->update((int) $id, $request->validated());
 
-        $request->validate([
-            'name' => [
-                'required',
-                'regex:/^[0-9]+$/',
-                'max:255',
-                Rule::unique('sizes', 'name')
-                    ->ignore($size->id)
-                    ->where(fn ($query) => $query->whereNull('deleted_at')),
-            ],
-        ], [
-            'name.required' => 'Tên size không được để trống',
-            'name.regex' => 'Size chỉ được nhập số',
-            'name.max' => 'Tên size tối đa 255 ký tự',
-            'name.unique' => 'Size này đã tồn tại',
-        ]);
-
-        $trashedDuplicate = Size::onlyTrashed()
-            ->where('name', $name)
-            ->where('id', '!=', $size->id)
-            ->first();
-
-        if ($trashedDuplicate) {
-            return back()
-                ->withInput()
-                ->with('warning', 'Đã có một size cùng tên trong thùng rác. Hãy khôi phục hoặc xóa vĩnh viễn bản cũ trước.');
+        if ($warning) {
+            return back()->withInput()->with('warning', $warning);
         }
 
-        $size->update([
-            'name' => $name,
-        ]);
-
-        return redirect()
-            ->route('listSize.list')
-            ->with('success', 'Cập nhật size thành công');
+        return redirect()->route('listSize.list')->with('success', 'Cập nhật size thành công');
     }
 
     public function destroy($id)
     {
-        $size = Size::findOrFail($id);
-        $size->delete();
+        $this->sizes->softDelete((int) $id);
 
-        return redirect()
-            ->route('listSize.list')
-            ->with('success', 'Đã chuyển size vào thùng rác');
+        return redirect()->route('listSize.list')->with('success', 'Đã chuyển size vào thùng rác');
     }
 
     public function restore($id)
     {
-        $size = Size::onlyTrashed()->findOrFail($id);
+        try {
+            $this->sizes->restore((int) $id);
 
-        $activeDuplicate = Size::where('name', $size->name)->first();
-        if ($activeDuplicate) {
-            return redirect()
-                ->route('listSize.trash')
-                ->with('error', 'Không thể khôi phục vì đã có size cùng tên đang hoạt động.');
+            return redirect()->route('listSize.trash')->with('success', 'Khôi phục size thành công');
+        } catch (RuntimeException $e) {
+            return redirect()->route('listSize.trash')->with('error', $e->getMessage());
         }
-
-        $size->restore();
-
-        return redirect()
-            ->route('listSize.trash')
-            ->with('success', 'Khôi phục size thành công');
     }
 
     public function forceDelete($id)
     {
-        $size = Size::onlyTrashed()->findOrFail($id);
+        try {
+            $this->sizes->forceDelete((int) $id);
 
-        $variantUsageCount = DB::table('product_variants')
-            ->where('id_size', $size->id)
-            ->count();
-
-        if ($variantUsageCount > 0) {
-            return redirect()
-                ->route('listSize.trash')
-                ->with('error', 'Không thể xóa vĩnh viễn vì size này vẫn đang được dùng trong biến thể sản phẩm.');
+            return redirect()->route('listSize.trash')->with('success', 'Xóa vĩnh viễn size thành công');
+        } catch (RuntimeException $e) {
+            return redirect()->route('listSize.trash')->with('error', $e->getMessage());
         }
-
-        $size->forceDelete();
-
-        return redirect()
-            ->route('listSize.trash')
-            ->with('success', 'Xóa vĩnh viễn size thành công');
     }
 
-    public function search(Request $request)
+    public function search(IndexSizesRequest $request)
     {
-        $keyword = $request->get('keyword', '');
-        $from = $request->get('from', 'list');
+        $route = $request->get('from', 'list') === 'trash' ? 'listSize.trash' : 'listSize.list';
 
-        return $from === 'trash'
-            ? redirect()->route('listSize.trash', ['keyword' => $keyword])
-            : redirect()->route('listSize.list', ['keyword' => $keyword]);
+        return redirect()->route($route, ['keyword' => $request->keyword()]);
     }
 }

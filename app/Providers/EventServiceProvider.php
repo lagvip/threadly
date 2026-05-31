@@ -2,6 +2,12 @@
 
 namespace App\Providers;
 
+use App\Events\OrderPlaced;
+use App\Events\RefundApproved;
+use App\Events\RefundRejected;
+use App\Listeners\LogRefundApproval;
+use App\Listeners\LogRefundRejection;
+use App\Listeners\QueueOrderPlacedMail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -17,6 +23,15 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         Registered::class => [
             SendEmailVerificationNotification::class,
+        ],
+        OrderPlaced::class => [
+            QueueOrderPlacedMail::class,
+        ],
+        RefundApproved::class => [
+            LogRefundApproval::class,
+        ],
+        RefundRejected::class => [
+            LogRefundRejection::class,
         ],
     ];
 

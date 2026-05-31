@@ -3,138 +3,87 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Reviews\BulkReviewIdsRequest;
+use App\Http\Requests\Admin\Reviews\IndexReviewsRequest;
+use App\Http\Requests\Admin\Reviews\UpdateReviewReplyRequest;
 use App\Models\Review;
-use Illuminate\Http\Request;
+use App\Services\Admin\Reviews\AdminReviewService;
 use Illuminate\Support\Facades\Auth;
 
 class ReviewController extends Controller
 {
-    public function index(Request $request)
+    public function __construct(protected AdminReviewService $reviews)
     {
-        $query = Review::with([
-            'user',
-            'product',
-            'variant.color',
-            'variant.size',
-            'orderDetail',
-            'admin',
-        ]);
+    }
 
-        if ($request->filled('search')) {
-            $search = trim((string) $request->search);
+    public function index(IndexReviewsRequest $request)
+    {
+        $this->authorize('viewAny', Review::class);
 
-            $query->where(function ($q) use ($search) {
-                $q->where('comment', 'like', "%{$search}%")
-                    ->orWhere('admin_reply', 'like', "%{$search}%")
-                    ->orWhereHas('product', function ($productQuery) use ($search) {
-                        $productQuery->where('name', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('user', function ($userQuery) use ($search) {
-                        $userQuery->where('name', 'like', "%{$search}%")
-                            ->orWhere('first_name', 'like', "%{$search}%")
-                            ->orWhere('last_name', 'like', "%{$search}%");
-                    });
-            });
-        }
-
-        if ($request->status === 'replied') {
-            $query->whereNotNull('admin_reply');
-        } elseif ($request->status === 'unreplied') {
-            $query->whereNull('admin_reply');
-        }
-
-        if ($request->filled('rating')) {
-            $query->where('rating', (int) $request->rating);
-        }
-
-        $reviews = $query->latest()->paginate(10);
-
-        return view('admin.comments.index', compact('reviews'));
+        return view('admin.comments.index', $this->reviews->indexData($request->filters()));
     }
 
     public function trash()
     {
-        $trashedReviews = Review::onlyTrashed()
-            ->with([
-                'user',
-                'product',
-                'variant.color',
-                'variant.size',
-                'orderDetail',
-                'admin',
-            ])
-            ->latest('deleted_at')
-            ->paginate(10);
+        $this->authorize('viewAny', Review::class);
 
-        return view('admin.comments.trash', compact('trashedReviews'));
+        return view('admin.comments.trash', $this->reviews->trashData());
     }
 
     public function edit(Review $review)
     {
-        $review->loadMissing([
-            'user',
-            'product',
-            'variant.color',
-            'variant.size',
-            'orderDetail',
-            'admin',
-        ]);
+        $this->authorize('update', $review);
 
-        return view('admin.comments.edit-reply', compact('review'));
+        return view('admin.comments.edit-reply', ['review' => $this->reviews->loadForEdit($review)]);
     }
 
-    public function update(Request $request, Review $review)
+    public function update(UpdateReviewReplyRequest $request, Review $review)
     {
-        $request->validate([
-            'admin_reply' => 'required|string|max:1000',
-        ]);
+        $this->authorize('update', $review);
 
-        $review->admin_reply = trim((string) $request->admin_reply);
-        $review->admin_id = Auth::id();
-        $review->save();
+        $this->reviews->reply($review, (string) $request->input('admin_reply'), (int) Auth::id());
 
-        return redirect()
-            ->route('reviews.index')
-            ->with('success', 'Phản hồi đã được lưu.');
+        return redirect()->route('reviews.index')->with('success', 'Phản hồi đã được lưu.');
     }
 
     public function destroy(Review $review)
     {
-        $review->delete();
+        $this->authorize('delete', $review);
+
+        $this->reviews->softDelete($review);
 
         return back()->with('success', 'Đã chuyển bình luận vào thùng rác.');
     }
 
     public function restore($id)
     {
-        $review = Review::onlyTrashed()->findOrFail($id);
-        $review->restore();
+        $this->authorize('restore', Review::class);
+
+        $this->reviews->restore((int) $id);
 
         return back()->with('success', 'Đã khôi phục bình luận.');
     }
 
-    public function bulkRestore(Request $request)
+    public function bulkRestore(BulkReviewIdsRequest $request)
     {
-        $ids = collect($request->input('ids', []))
-            ->filter()
-            ->map(fn ($id) => (int) $id)
-            ->values();
+        $this->authorize('restore', Review::class);
 
-        if ($ids->isEmpty()) {
+        $ids = $request->ids();
+
+        if (empty($ids)) {
             return back()->with('error', 'Vui lòng chọn ít nhất 1 bình luận để khôi phục.');
         }
 
-        Review::onlyTrashed()
-            ->whereIn('id', $ids)
-            ->restore();
+        $this->reviews->bulkRestore($ids);
 
         return back()->with('success', 'Đã khôi phục các bình luận đã chọn.');
     }
 
     public function forceDelete($id)
     {
-        $review = Review::onlyTrashed()->findOrFail($id);
-        $review->forceDelete();
+        $this->authorize('forceDelete', Review::class);
+
+        $this->reviews->forceDelete((int) $id);
 
         return back()->with('success', 'Đã xóa vĩnh viễn bình luận.');
     }
