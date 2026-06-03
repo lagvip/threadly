@@ -580,7 +580,7 @@ document.addEventListener('DOMContentLoaded', function () {
     toggleVoucherListBtn?.addEventListener('click', function () {
         voucherListBox?.classList.toggle('d-none');
     });
-
+    // Xử lý sự kiện khi người dùng chọn một voucher từ danh sách
     document.querySelectorAll('.voucher-select-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             const code = this.dataset.code;
@@ -590,14 +590,14 @@ document.addEventListener('DOMContentLoaded', function () {
             applyVoucherForm.submit();
         });
     });
-
+    // Xử lý sự kiện khi người dùng nhấn nút "Thêm địa chỉ mới"
     const subtotal = {{ (int) round($subtotal ?? 0) }};
     const appliedDiscount = {{ (int) round($discount ?? 0) }};
 
     function formatMoney(number) {
         return new Intl.NumberFormat('vi-VN').format(Number(number || 0)) + ' ₫';
     }
-
+    // Hiển thị form thêm địa chỉ mới
     function toggleForm(show = null) {
         if (!form) return;
 
@@ -613,7 +613,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         form.style.display = form.style.display === 'none' ? 'block' : 'none';
     }
-
+    // Xử lý sự kiện khi người dùng nhấn nút "Huỷ" trong form thêm địa chỉ mới
     function renderSelectedAddress() {
         if (!selectedAddressText) return;
 
@@ -643,7 +643,7 @@ document.addEventListener('DOMContentLoaded', function () {
             phoneInput.value = selected.dataset.phone;
         }
     }
-
+    // Cập nhật lại phí ship và tổng tiền mỗi khi địa chỉ nhận hàng thay đổi
     function updateGrandTotal() {
         const shipping = parseInt(shippingFeeInput?.value || 0, 10) || 0;
         const grandTotal = Math.max(0, subtotal + shipping - appliedDiscount);
@@ -661,7 +661,7 @@ document.addEventListener('DOMContentLoaded', function () {
             grandTotalEl.textContent = formatMoney(grandTotal);
         }
     }
-
+    // Hàm tính phí ship dựa trên địa chỉ đã chọn
     async function calculateShippingFee() {
         if (!addressSelect || !addressSelect.value) {
             if (shippingFeeInput) shippingFeeInput.value = 0;
@@ -699,7 +699,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         updateGrandTotal();
     }
-
+    // Hàm tải danh sách tỉnh/thành phố từ GHN
     async function loadProvinces() {
         try {
             const response = await fetch("{{ route('client.checkout.ghn.provinces') }}", {
@@ -723,7 +723,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Lỗi loadProvinces:', e);
         }
     }
-
+    // Hàm tải danh sách quận/huyện dựa trên tỉnh/thành đã chọn
     async function loadDistricts(provinceId) {
         districtSelect.innerHTML = '<option value="">Chọn quận / huyện</option>';
         wardSelect.innerHTML = '<option value="">Chọn phường / xã</option>';
@@ -754,7 +754,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Lỗi loadDistricts:', e);
         }
     }
-
+    // Hàm tải danh sách phường/xã dựa trên quận/huyện đã chọn
     async function loadWards(districtId) {
         wardSelect.innerHTML = '<option value="">Chọn phường / xã</option>';
         wardSelect.disabled = true;
@@ -783,7 +783,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Lỗi loadWards:', e);
         }
     }
-
+    // Hàm đảm bảo rằng select chọn địa chỉ tồn tại, nếu chưa có thì tạo mới
     function ensureAddressSelectExists() {
         if (addressSelect) return addressSelect;
 
@@ -808,7 +808,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         return addressSelect;
     }
-
+    // Hàm đặt lại form thêm địa chỉ mới
     function resetNewAddressForm() {
         const recipientInput = document.getElementById('new_recipient_name');
         const phoneNewInput = document.getElementById('new_phone');
@@ -826,7 +826,7 @@ document.addEventListener('DOMContentLoaded', function () {
         districtSelect.disabled = true;
         wardSelect.disabled = true;
     }
-
+    // Gắn sự kiện cho các phần tử
     toggleBtn?.addEventListener('click', async function () {
         toggleForm();
 
@@ -846,7 +846,7 @@ document.addEventListener('DOMContentLoaded', function () {
     districtSelect?.addEventListener('change', function () {
         loadWards(this.value);
     });
-
+    // Xử lý sự kiện khi người dùng nhấn nút "Lưu địa chỉ" trong form thêm địa chỉ mới
     saveBtn?.addEventListener('click', async function () {
         const selectedProvince = provinceSelect.options[provinceSelect.selectedIndex];
         const selectedDistrict = districtSelect.options[districtSelect.selectedIndex];
@@ -930,12 +930,12 @@ document.addEventListener('DOMContentLoaded', function () {
             saveBtn.innerText = 'Lưu địa chỉ';
         }
     });
-
+    // Gắn sự kiện khi người dùng thay đổi địa chỉ nhận hàng
     addressSelect?.addEventListener('change', async function () {
         renderSelectedAddress();
         await calculateShippingFee();
     });
-
+    // Gắn sự kiện khi người dùng submit form checkout 
     checkoutForm?.addEventListener('submit', function () {
         if (submitBtn) {
             submitBtn.disabled = true;

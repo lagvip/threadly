@@ -2,22 +2,28 @@
 
 namespace App\Services;
 
-use App\Models\ProductVariant;
-use App\Models\OrderDetail;
+use App\Contracts\Repositories\OrderDetailRepositoryInterface;
+use App\Contracts\Repositories\ProductVariantRepositoryInterface;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\UploadedFile;
 
 class ProductVariantService
 {
+    public function __construct(
+        protected ProductVariantRepositoryInterface $variants,
+        protected OrderDetailRepositoryInterface $orderDetails,
+    ) {
+    }
+
     public function getProductVariants()
     {
-        return ProductVariant::with(['product', 'color', 'size'])->get();
+        return $this->variants->allWithRelations();
     }
 
     public function getProductVariantsById($id)
     {
-        return ProductVariant::with(['product', 'color', 'size'])->findOrFail($id);
+        return $this->variants->findWithRelations((int) $id);
     }
 
     public function createProductVariant($data)
@@ -39,7 +45,7 @@ class ProductVariantService
                 $data['quantity'] = 0;
             }
 
-            return ProductVariant::create($data);
+            return $this->variants->create($data);
         } catch (\Exception $e) {
             Log::error('Lỗi khi tạo biến thể sản phẩm: ' . $e->getMessage());
             return false;
@@ -49,7 +55,7 @@ class ProductVariantService
     public function updateProductVariant($data, $id)
     {
         try {
-            $variant = ProductVariant::with('product')->findOrFail($id);
+            $variant = $this->variants->findWithProduct((int) $id);
 
             if (isset($data['status']) && $data['status'] === 'active' && $variant->product && $variant->product->status !== 'active') {
                 throw new \Exception('Không thể kích hoạt biến thể khi sản phẩm cha đang không hoạt động.');
@@ -89,7 +95,7 @@ class ProductVariantService
     public function updateStatus($id, $status)
     {
         try {
-            $variant = ProductVariant::with('product')->findOrFail($id);
+            $variant = $this->variants->findWithProduct((int) $id);
             // Nếu đang kích hoạt biến thể nhưng sản phẩm cha không hoạt động, trả về lỗi
             if ($status === 'active' && $variant->product && $variant->product->status !== 'active') {
                 return false;
@@ -108,9 +114,9 @@ class ProductVariantService
     public function deleteProductVariant($id)
     {
         try {
-            $variant = ProductVariant::findOrFail($id);
+            $variant = $this->variants->find((int) $id);
 
-            if (OrderDetail::where('variant_id', $id)->exists()) {
+            if ($this->orderDetails->existsForVariant((int) $id)) {
                 $variant->delete();
                 return true;
             }
@@ -125,13 +131,13 @@ class ProductVariantService
 
     public function getTrashedProductVariants()
     {
-        return ProductVariant::onlyTrashed()->with(['product', 'color', 'size'])->get();
+        return $this->variants->trashedWithRelations();
     }
 
     public function restoreProductVariant($id)
     {
         try {
-            $variant = ProductVariant::onlyTrashed()->findOrFail($id);
+            $variant = $this->variants->findTrashed((int) $id);
             $variant->restore();
             return true;
         } catch (\Exception $e) {
@@ -143,9 +149,9 @@ class ProductVariantService
     public function forceDeleteProductVariant($id)
     {
         try {
-            $variant = ProductVariant::onlyTrashed()->findOrFail($id);
+            $variant = $this->variants->findTrashed((int) $id);
 
-            if (OrderDetail::where('variant_id', $id)->exists()) {
+            if ($this->orderDetails->existsForVariant((int) $id)) {
                 return false;
             }
 
@@ -165,7 +171,7 @@ class ProductVariantService
     {
         try {
             foreach ($ids as $id) {
-                $variant = ProductVariant::find($id);
+                $variant = $this->variants->query()->find($id);
                 if ($variant) {
                     $variant->delete();
                 }
@@ -180,7 +186,7 @@ class ProductVariantService
     public function bulkRestore(array $ids)
     {
         try {
-            ProductVariant::onlyTrashed()->whereIn('id', $ids)->restore();
+            $this->variants->restoreMany($ids);
             return true;
         } catch (\Exception $e) {
             Log::error('Lỗi khi khôi phục hàng loạt biến thể sản phẩm: ' . $e->getMessage());

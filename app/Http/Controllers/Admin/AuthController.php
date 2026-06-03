@@ -3,18 +3,22 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Role;
-use App\Models\User;
+use App\Http\Requests\Auth\ChangePasswordRequest;
+use App\Http\Requests\Auth\ForgotPasswordOtpRequest;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\ResetPasswordOtpRequest;
+use App\Services\Auth\AdminAuthService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
+use RuntimeException;
 
 class AuthController extends Controller
 {
+    public function __construct(protected AdminAuthService $auth)
+    {
+    }
+
     public function showLogin(Request $request)
     {
         if ($request->filled('redirect')) {
@@ -29,34 +33,22 @@ class AuthController extends Controller
         return view('auth.register');
     }
 
-    public function postLogin(Request $request)
+    public function postLogin(LoginRequest $request)
     {
-        $credentials = $request->validate([
-            'email'    => ['required', 'email'],
-            'password' => ['required'],
-        ]);
+        try {
+            $user = $this->auth->attemptLogin($request->validated(), $request->boolean('remember'));
+        } catch (RuntimeException $e) {
+            if ($e->getMessage() === 'Tài khoản của bạn đang bị khóa.') {
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+            }
 
-        $remember = $request->boolean('remember');
-
-        if (!Auth::attempt($credentials, $remember)) {
-            return back()
+            return redirect()->route('login')
                 ->withInput($request->only('email'))
-                ->with('error', 'Sai email hoặc mật khẩu.');
+                ->with('error', $e->getMessage());
         }
 
         $request->session()->regenerate();
-
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        if ((int) $user->status !== 1) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            return redirect()->route('login')
-                ->with('error', 'Tài khoản của bạn đang bị khóa.');
-        }
 
         if ($user->isAdmin() || $user->isManager()) {
             return redirect()->intended(route('admin.homeAdmin'));
@@ -65,155 +57,89 @@ class AuthController extends Controller
         return redirect()->intended(route('home'));
     }
 
-    public function postRegister(Request $request)
+    public function postRegister(RegisterRequest $request)
     {
-        $data = $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'email', 'unique:users,email'],
-            'password' => ['required', 'min:6', 'confirmed'],
-        ]);
-
-        $user = User::create([
-            'name'     => $data['name'],
-            'email'    => $data['email'],
-            'password' => Hash::make($data['password']),
-            'status'   => 1,
-        ]);
-
-        $customerRole = Role::where('slug', 'customer')->first();
-
-        if ($customerRole) {
-            $user->roles()->attach($customerRole->id);
-        }
-
-        Auth::login($user);
+        $this->auth->register($request->validated());
         $request->session()->regenerate();
 
-        return redirect()->intended(route('home'))
-            ->with('success', 'Đăng ký thành công.');
+        return redirect()->intended(route('home'))->with('success', 'Đăng ký thành công.');
     }
 
     public function logout(Request $request)
     {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $this->logoutCurrentSession($request);
 
         return redirect()->route('login');
     }
+
     public function showForgotPasswordForm()
     {
         return view('auth.forgot-password');
     }
 
-    public function sendOtp(Request $request)
+    public function sendOtp(ForgotPasswordOtpRequest $request)
     {
-        $request->validate([
-            'email' => ['required', 'email', 'exists:users,email'],
-        ], [
-            'email.exists' => 'Email này chưa tồn tại trong hệ thống.',
-        ]);
+        $this->auth->sendOtp((string) $request->input('email'));
 
-        $email = $request->email;
-        $otp = (string) random_int(100000, 999999);
-
-        DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $email],
-            [
-                'token' => Hash::make($otp),
-                'created_at' => now(),
-            ]
-        );
-
-        Mail::raw("Mã OTP đặt lại mật khẩu của bạn là: {$otp}. Mã có hiệu lực trong 10 phút.", function ($message) use ($email) {
-            $message->to($email)
-                    ->subject('Mã OTP đặt lại mật khẩu');
-        });
-
-        return redirect()->route('password.reset', ['email' => $email])
+        return redirect()
+            ->route('password.reset', ['email' => $request->input('email')])
             ->with('success', 'OTP đã được gửi về email của bạn.');
     }
 
     public function showResetPasswordForm(Request $request)
     {
         return view('auth.reset-password', [
-            'email' => $request->email
+            'email' => $request->email,
         ]);
     }
 
-    public function resetPasswordWithOtp(Request $request)
+    public function resetPasswordWithOtp(ResetPasswordOtpRequest $request)
     {
-        $request->validate([
-            'email' => ['required', 'email', 'exists:users,email'],
-            'otp' => ['required', 'digits:6'],
-            'password' => ['required', 'min:6', 'confirmed'],
-        ]);
-
-        $record = DB::table('password_reset_tokens')
-            ->where('email', $request->email)
-            ->first();
-
-        if (!$record) {
-            return back()->withInput($request->only('email'))
-                ->with('error', 'OTP không tồn tại hoặc đã hết hạn.');
+        try {
+            $this->auth->resetPasswordWithOtp(
+                (string) $request->input('email'),
+                (string) $request->input('otp'),
+                (string) $request->input('password')
+            );
+        } catch (RuntimeException $e) {
+            return back()
+                ->withInput($request->only('email'))
+                ->with('error', $e->getMessage());
         }
 
-        if (Carbon::parse($record->created_at)->addMinutes(10)->isPast()) {
-            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
-
-            return back()->withInput($request->only('email'))
-                ->with('error', 'OTP đã hết hạn. Vui lòng yêu cầu mã mới.');
-        }
-
-        if (!Hash::check($request->otp, $record->token)) {
-            return back()->withInput($request->only('email'))
-                ->with('error', 'OTP không đúng.');
-        }
-
-        $user = User::where('email', $request->email)->first();
-
-        $user->update([
-            'password' => Hash::make($request->password),
-        ]);
-
-        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
-
-        return redirect()->route('login')->with('success', 'Đặt lại mật khẩu thành công. Bạn hãy đăng nhập lại.');
+        return redirect()
+            ->route('login')
+            ->with('success', 'Đặt lại mật khẩu thành công. Bạn hãy đăng nhập lại.');
     }
+
     public function showChangePasswordForm()
     {
         return view('auth.change-password');
     }
 
-    public function changePassword(Request $request)
+    public function changePassword(ChangePasswordRequest $request)
     {
-        $request->validate([
-            'current_password' => ['required'],
-            'password' => ['required', 'min:6', 'confirmed'],
-        ], [
-            'current_password.required' => 'Vui lòng nhập mật khẩu hiện tại.',
-            'password.required' => 'Vui lòng nhập mật khẩu mới.',
-            'password.confirmed' => 'Xác nhận mật khẩu không khớp.',
-        ]);
-
-        $user = Auth::user();
-
-        if (!Hash::check($request->current_password, $user->password)) {
-            return back()->with('error', 'Mật khẩu hiện tại không đúng.');
-        }
-        if (Hash::check($request->password, $user->password)) {
-            return back()->with('error', 'Mật khẩu mới không được trùng mật khẩu hiện tại.');
+        try {
+            $this->auth->changePassword(
+                $request->user(),
+                (string) $request->input('current_password'),
+                (string) $request->input('password')
+            );
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
         }
 
-        $user->update([
-            'password' => Hash::make($request->password),
-        ]);
+        $this->logoutCurrentSession($request);
 
+        return redirect()
+            ->route('login')
+            ->with('success', 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại.');
+    }
+
+    protected function logoutCurrentSession(Request $request): void
+    {
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
-        return redirect()->route('login')
-            ->with('success', 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại.');
     }
 }

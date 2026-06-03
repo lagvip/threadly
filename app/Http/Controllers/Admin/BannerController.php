@@ -3,30 +3,32 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Banners\BulkBannerIdsRequest;
 use App\Http\Requests\StoreBannerRequest;
 use App\Http\Requests\UpdateBannerRequest;
-use App\Models\Banner;
+use App\Services\Admin\Banners\AdminBannerService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 class BannerController extends Controller
 {
+    public function __construct(protected AdminBannerService $banners)
+    {
+    }
+
     public function index()
     {
-        $banners = Banner::query()->latest('id')->paginate(10);
-        return view('admin.banner.listBanners', compact('banners'));
+        return view('admin.banner.listBanners', $this->banners->indexData());
     }
 
     public function trash()
     {
-        $banners = Banner::onlyTrashed()->latest('id')->paginate(10);
-        return view('admin.banner.trashBanners', compact('banners'));
+        return view('admin.banner.trashBanners', $this->banners->trashData());
     }
 
     public function restore(string $id)
     {
-        $banner = Banner::onlyTrashed()->findOrFail($id);
-        $banner->restore();
+        $this->banners->restore((int) $id);
 
         return redirect()->route('listBanner.trash')->with('success', 'Khôi phục thành công');
     }
@@ -38,93 +40,52 @@ class BannerController extends Controller
 
     public function store(StoreBannerRequest $request)
     {
-        $data = $request->validated();
-
-        if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('banner', 'public');
-        }
-
-        $data['is_active'] = $request->boolean('is_active');
-
-        Banner::create($data);
+        $this->banners->create($request->validated(), $request->file('image'), $request->boolean('is_active'));
 
         return redirect()->route('listBanner.list')->with('success', 'Thêm thành công');
     }
 
     public function show(string $id)
     {
-        $banner = Banner::findOrFail($id);
-        return view('admin.banner.detailBanner', compact('banner'));
+        return view('admin.banner.detailBanner', ['banner' => $this->banners->find((int) $id)]);
     }
 
     public function edit(string $id)
     {
-        $banner = Banner::findOrFail($id);
-        return view('admin.banner.updateBanner', compact('banner'));
+        return view('admin.banner.updateBanner', ['banner' => $this->banners->find((int) $id)]);
     }
 
     public function update(UpdateBannerRequest $request, string $id)
     {
-        $banner = Banner::findOrFail($id);
+        try {
+            $this->banners->update((int) $id, $request->validated(), $request->file('image'), $request->boolean('is_active'));
 
-        $data = $request->validated();
-        unset($data['image']);
-
-        $currentImage = $banner->image;
-        $newImagePath = null;
-
-        if ($request->hasFile('image')) {
-            $newImagePath = $request->file('image')->store('banner', 'public');
-            $data["image"] = $newImagePath;
-        }
-
-        $data['is_active'] = $request->boolean('is_active');
-
-        $is_update = $banner->update($data);
-
-        if ($is_update && $newImagePath) {
-            if ($currentImage && Storage::disk('public')->exists($currentImage)) {
-                Storage::disk('public')->delete($currentImage);
-            }
-        }
-
-        if ($is_update) {
-            return redirect()->route("listBanner.list")->with("success", "Cập nhật thành công!");
-        } else {
-            return redirect()->route("listBanner.list")->with("error", "Cập nhật không thành công!");
+            return redirect()->route('listBanner.list')->with('success', 'Cập nhật thành công!');
+        } catch (RuntimeException $e) {
+            return redirect()->route('listBanner.list')->with('error', $e->getMessage());
         }
     }
 
     public function destroy(string $id)
     {
-        $banner = Banner::findOrFail($id);
+        $this->banners->softDelete((int) $id);
 
-        $banner->delete();
         return redirect()->route('listBanner.list')->with('success', 'Xóa thành công');
     }
 
-    public function bulkDestroy(Request $request)
+    public function bulkDestroy(BulkBannerIdsRequest $request)
     {
-        $ids = $request->input('ids', []);
+        try {
+            $this->banners->bulkDelete($request->ids());
 
-        if (!is_array($ids) || empty($ids)) {
-            return redirect()->route('listBanner.list')->with('error', 'Chưa chọn banner nào để xoá');
+            return redirect()->route('listBanner.list')->with('success', 'Đã xóa các banner đã chọn');
+        } catch (RuntimeException $e) {
+            return redirect()->route('listBanner.list')->with('error', $e->getMessage());
         }
-
-        $ids = array_values(array_filter($ids, fn($id) => is_numeric($id)));
-        if (empty($ids)) {
-            return redirect()->route('listBanner.list')->with('error', 'Danh sách banner không hợp lệ');
-        }
-
-        Banner::whereIn('id', $ids)->delete();
-
-        return redirect()->route('listBanner.list')->with('success', 'Đã xoá các banner đã chọn');
     }
 
     public function search(Request $request)
     {
-        $search = $request->input('search');
-        $banners = Banner::where('title', 'like', '%' . $search . '%')->paginate(10);
-        return view('admin.banner.listBanners', compact('banners'));
+        return view('admin.banner.listBanners', $this->banners->indexData(trim((string) $request->input('search'))));
     }
 }

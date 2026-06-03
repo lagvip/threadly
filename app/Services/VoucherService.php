@@ -2,153 +2,164 @@
 
 namespace App\Services;
 
-
-use App\Models\Voucher;
+use App\Contracts\Repositories\VoucherRepositoryInterface;
+use Exception;
 
 class VoucherService
 {
-    //
-    protected $voucher;
-    public function __construct(Voucher $voucher)
+    public function __construct(protected VoucherRepositoryInterface $vouchers)
     {
-        $this->voucher = $voucher;
     }
 
     public function getAllVoucher()
     {
-        $voucher = Voucher::all();
-        return $voucher;
+        return $this->vouchers->query()->get();
     }
 
     public function createVoucher(array $data)
     {
-        return Voucher::create($data);
+        return $this->vouchers->create($data);
     }
 
     public function updateVoucher($data, $id)
     {
-        $voucher = Voucher::findOrFail($id);
+        $voucher = $this->vouchers->query()->findOrFail($id);
+
         return $voucher->update($data);
     }
 
     public function deleteVoucher($id)
     {
-        $voucher = Voucher::find($id);
+        $voucher = $this->vouchers->find((int) $id);
+
         if (!$voucher) {
-            throw new \Exception('Voucher không tồn tại');
+            throw new Exception('Voucher không tồn tại');
         }
+
         if ($voucher->isInUse()) {
-            throw new \Exception('Không thể xóa voucher đang áp dụng');
+            throw new Exception('Không thể xóa voucher đang áp dụng');
         }
+
         $voucher->delete();
+
         return $voucher;
     }
 
     public function softDeleteWithStatus($id)
     {
-        $voucher = Voucher::findOrFail($id);
+        $voucher = $this->vouchers->query()->findOrFail($id);
         $voucher->status = 'inactive';
         $voucher->save();
+
         return $voucher->delete();
     }
 
     public function getVoucherById($id)
     {
-        $voucher = Voucher::find($id);
-        return $voucher;
+        return $this->vouchers->find((int) $id);
     }
 
     public function getVoucherByName($name)
     {
-        $voucher = Voucher::where('name', $name)->first();
-        return $voucher;
+        return $this->vouchers->query()->where('name', $name)->first();
     }
-    public function type($type){
-        if($type == 0){
+
+    public function type($type)
+    {
+        if ($type == 0) {
             return 'Free Shipping';
-        }elseif($type == 1){
-            return 'Percentage';
-        }elseif($type == 2){
-            return 'Fixed Amount';
-        }else{
-            return 'Unknown';
         }
+
+        if ($type == 1) {
+            return 'Percentage';
+        }
+
+        if ($type == 2) {
+            return 'Fixed Amount';
+        }
+
+        return 'Unknown';
     }
+
     public function find($id)
     {
-        return Voucher::findOrFail($id);
+        return $this->vouchers->query()->findOrFail($id);
     }
-    public function getStatus($status){
-        if($status === 'active'){
+
+    public function getStatus($status)
+    {
+        if ($status === 'active') {
             return 'Hoạt động';
-        }elseif($status === 'inactive'){
-            return 'Không hoạt động';
-        }elseif($status === 'expired'){
-            return 'Hết hạn';
-        }else{
-            return 'Không xác định';
         }
-    }
-    public function countCoupons(){
-        return Voucher::count();
-    }
-    public function getCouponsByStatus($status){
-        return Voucher::where('status', $status)->get();
-    }
-    public function getCouponsByType($type){
-        return Voucher::where('type', $type)->get();
-    }
-    public function getCouponsByDate($start_date, $end_date){
-        return Voucher::whereBetween('start_date', [$start_date, $end_date])->get();
+
+        if ($status === 'inactive') {
+            return 'Không hoạt động';
+        }
+
+        if ($status === 'expired') {
+            return 'Hết hạn';
+        }
+
+        return 'Không xác định';
     }
 
-    public function getTrashedList(){
-        $list = Voucher::onlyTrashed()->get();
-        return $list;
+    public function countCoupons()
+    {
+        return $this->vouchers->query()->count();
     }
+
+    public function getCouponsByStatus($status)
+    {
+        return $this->vouchers->query()->where('status', $status)->get();
+    }
+
+    public function getCouponsByType($type)
+    {
+        return $this->vouchers->query()->where('type', $type)->get();
+    }
+
+    public function getCouponsByDate($start_date, $end_date)
+    {
+        return $this->vouchers->query()->whereBetween('start_date', [$start_date, $end_date])->get();
+    }
+
+    public function getTrashedList()
+    {
+        return $this->vouchers->trashedQuery()->get();
+    }
+
     public function restore($id)
-{
-    $voucher = Voucher::withTrashed()->findOrFail($id);
-    return $voucher->restore();
-}
+    {
+        return $this->vouchers->findWithTrashed((int) $id)->restore();
+    }
 
-public function forceDelete($id)
-{
-    $voucher = Voucher::withTrashed()->findOrFail($id);
-    return $voucher->forceDelete();
-}
+    public function forceDelete($id)
+    {
+        return $this->vouchers->findWithTrashed((int) $id)->forceDelete();
+    }
 
-public function bulkDelete(array $ids)
-{
-    return Voucher::whereIn('id', $ids)->delete(); // soft delete
-}
+    public function bulkDelete(array $ids)
+    {
+        return $this->vouchers->query()->whereIn('id', $ids)->delete();
+    }
 
-public function bulkRestoreVoucher(array $ids)
-{
-    return Voucher::onlyTrashed()->whereIn('id', $ids)->restore();
-}
+    public function bulkRestoreVoucher(array $ids)
+    {
+        return $this->vouchers->trashedQuery()->whereIn('id', $ids)->restore();
+    }
 
-/**
- * Lấy tất cả voucher hoạt động (active hoặc expired)
- */
-public function getActiveVouchers()
-{
-    return Voucher::whereIn('status', ['active', 'expired'])->get();
-}
+    public function getActiveVouchers()
+    {
+        return $this->vouchers->query()->whereIn('status', ['active', 'expired'])->get();
+    }
 
-/**
- * Lấy tất cả voucher chưa hết hạn
- */
-public function getValidVouchers()
-{
-    return Voucher::where('status', 'active')->get();
-}
+    public function getValidVouchers()
+    {
+        return $this->vouchers->query()->where('status', 'active')->get();
+    }
 
-/**
- * Lấy tất cả voucher hết hạn
- */
-public function getExpiredVouchers()
-{
-    return Voucher::where('status', 'expired')->get();
-}
+    public function getExpiredVouchers()
+    {
+        return $this->vouchers->query()->where('status', 'expired')->get();
+    }
 }

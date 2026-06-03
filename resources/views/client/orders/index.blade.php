@@ -599,7 +599,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const reasonOtherWrap = document.getElementById('cancel_reason_other_wrap');
     const reasonOther = document.getElementById('cancel_reason_other');
     const reasonFinal = document.getElementById('cancel_reason_final');
-
+    // Khi modal hủy đơn được mở, lấy dữ liệu từ button kích hoạt và cập nhật nội dung modal tương ứng.
     cancelModal.addEventListener('show.bs.modal', function (event) {
         const button = event.relatedTarget;
 
@@ -633,7 +633,7 @@ document.addEventListener('DOMContentLoaded', function () {
             cancelOrderNote.innerHTML = '';
         }
     });
-
+    // Xử lý logic hiển thị trường nhập lý do khác nếu chọn "Khác" và đảm bảo trường này được yêu cầu khi cần.
     reasonSelect.addEventListener('change', function () {
         if (this.value === 'Khác') {
             reasonOtherWrap.classList.remove('d-none');
@@ -646,7 +646,7 @@ document.addEventListener('DOMContentLoaded', function () {
             reasonFinal.value = this.value;
         }
     });
-
+    // Trước khi submit form hủy đơn, kiểm tra xem khách đã chọn lý do hủy chưa và nếu chọn "Khác" thì phải nhập lý do cụ thể. 
     cancelForm.addEventListener('submit', function (e) {
         if (!reasonSelect.value) {
             e.preventDefault();

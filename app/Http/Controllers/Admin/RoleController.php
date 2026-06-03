@@ -3,35 +3,30 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Role;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
+use App\Http\Requests\Admin\Roles\StoreRoleRequest;
+use App\Http\Requests\Admin\Roles\UpdateRoleRequest;
+use App\Services\Admin\Roles\AdminRoleService;
+use RuntimeException;
 
 class RoleController extends Controller
 {
+    public function __construct(protected AdminRoleService $roles)
+    {
+    }
+
     public function index()
     {
-        $roles = Role::withCount(['usersWithTrashed as users_count'])
-            ->latest()
-            ->paginate(10);
-
-        return view('admin.roles.list', compact('roles'));
+        return view('admin.roles.list', $this->roles->indexData());
     }
 
     public function trash()
     {
-        $roles = Role::onlyTrashed()
-            ->withCount(['usersWithTrashed as users_count'])
-            ->latest()
-            ->paginate(10);
-
-        return view('admin.roles.trash', compact('roles'));
+        return view('admin.roles.trash', $this->roles->trashData());
     }
 
     public function show($id)
     {
-        $role = Role::findOrFail($id);
-        return view('admin.roles.detail', compact('role'));
+        return view('admin.roles.detail', ['role' => $this->roles->find((int) $id)]);
     }
 
     public function create()
@@ -39,93 +34,51 @@ class RoleController extends Controller
         return view('admin.roles.add');
     }
 
-    public function store(Request $request)
+    public function store(StoreRoleRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:roles,slug',
-        ], [
-            'name.required' => 'Tên role không được để trống',
-            'slug.unique' => 'Slug đã tồn tại',
-        ]);
-
-        $slug = $request->slug ?: Str::slug($request->name);
-
-        Role::create([
-            'name' => $request->name,
-            'slug' => $slug,
-            'permissions' => $request->permissions ?? null,
-        ]);
+        $this->roles->create($request->validated());
 
         return redirect()->route('roles.list')->with('success', 'Thêm role thành công');
     }
 
     public function edit($id)
     {
-        $role = Role::findOrFail($id);
-        return view('admin.roles.edit', compact('role'));
+        return view('admin.roles.edit', ['role' => $this->roles->find((int) $id)]);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateRoleRequest $request, $id)
     {
-        $role = Role::findOrFail($id);
-
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:roles,slug,' . $id,
-        ], [
-            'name.required' => 'Tên role không được để trống',
-            'slug.unique' => 'Slug đã tồn tại',
-        ]);
-
-        $slug = $request->slug ?: Str::slug($request->name);
-
-        $role->update([
-            'name' => $request->name,
-            'slug' => $slug,
-            'permissions' => $request->permissions ?? $role->permissions,
-        ]);
+        $this->roles->update((int) $id, $request->validated());
 
         return redirect()->route('roles.list')->with('success', 'Cập nhật role thành công');
     }
 
     public function destroy($id)
     {
-        $role = Role::withCount(['usersWithTrashed as users_count'])->findOrFail($id);
+        try {
+            $this->roles->softDelete((int) $id);
 
-        if ($role->users_count > 0) {
-            return redirect()
-                ->route('roles.list')
-                ->with('error', 'Role này vẫn còn user, không thể xóa.');
+            return redirect()->route('roles.list')->with('success', 'Đã chuyển role vào thùng rác');
+        } catch (RuntimeException $e) {
+            return redirect()->route('roles.list')->with('error', $e->getMessage());
         }
-
-        $role->delete();
-
-        return redirect()->route('roles.list')->with('success', 'Đã chuyển role vào thùng rác');
     }
 
     public function restore($id)
     {
-        $role = Role::onlyTrashed()->findOrFail($id);
-        $role->restore();
+        $this->roles->restore((int) $id);
 
         return redirect()->route('roles.trash')->with('success', 'Khôi phục role thành công');
     }
 
     public function forceDelete($id)
     {
-        $role = Role::onlyTrashed()
-            ->withCount(['usersWithTrashed as users_count'])
-            ->findOrFail($id);
+        try {
+            $this->roles->forceDelete((int) $id);
 
-        if ($role->users_count > 0) {
-            return redirect()
-                ->route('roles.trash')
-                ->with('error', 'Role này vẫn còn user, không thể xóa vĩnh viễn.');
+            return redirect()->route('roles.trash')->with('success', 'Xóa vĩnh viễn role thành công');
+        } catch (RuntimeException $e) {
+            return redirect()->route('roles.trash')->with('error', $e->getMessage());
         }
-
-        $role->forceDelete();
-
-        return redirect()->route('roles.trash')->with('success', 'Xóa vĩnh viễn role thành công');
     }
 }

@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function formatMoney(value) {
         return new Intl.NumberFormat('vi-VN').format(Math.max(value, 0)) + ' đ';
     }
-
+    // Giới hạn số lượng nhập vào input và trả về giá trị đã được điều chỉnh nếu vượt giới hạn.
     function clampQuantity(input) {
         const min = parseInt(input.getAttribute('min') || '1', 10);
         const max = parseInt(input.getAttribute('max') || '1', 10);
@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         return value;
     }
-
+    // Cập nhật lại tổng tiền hoàn dựa trên các sản phẩm đã chọn và số lượng nhập vào.
     function updateTotals() {
         let total = 0;
 
@@ -285,20 +285,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
         totalEl.textContent = formatMoney(total);
     }
-
+    // Hiển thị hoặc ẩn phần chọn sản phẩm và tổng tiền khi thay đổi hình thức hoàn tiền.
     function toggleMode() {
         const isPartial = typeSelect.value === 'partial';
         itemsWrap.style.display = isPartial ? 'block' : 'none';
         partialTotalBox.style.display = isPartial ? 'block' : 'none';
         updateTotals();
     }
-
+    // Gắn sự kiện khi thay đổi hình thức hoàn tiền, khi chọn sản phẩm cần hoàn và khi nhập số lượng cần hoàn.
     typeSelect.addEventListener('change', toggleMode);
-
+    // Khi checkbox sản phẩm được thay đổi trạng thái (chọn hoặc bỏ chọn), cập nhật lại tổng tiền hoàn.
     document.querySelectorAll('.refund-item-checkbox').forEach(function (checkbox) {
         checkbox.addEventListener('change', updateTotals);
     });
-
+    // Khi số lượng hoàn của một sản phẩm được thay đổi, cập nhật lại tổng tiền hoàn
     document.querySelectorAll('.refund-item-quantity').forEach(function (input) {
         input.addEventListener('input', function () {
             clampQuantity(input);
@@ -315,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function () {
             updateTotals();
         });
     });
-
+    // Trước khi submit form, kiểm tra nếu là hoàn một phần thì phải có ít nhất một sản phẩm được chọn và số lượng hợp lệ.
     form.addEventListener('submit', function (event) {
         if (typeSelect.value !== 'partial') {
             return;

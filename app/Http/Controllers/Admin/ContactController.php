@@ -4,14 +4,17 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Contact;
-use Illuminate\Support\Carbon;
+use App\Services\Contact\ContactService;
 
 class ContactController extends Controller
 {
+    public function __construct(protected ContactService $contacts)
+    {
+    }
+
     public function index()
     {
-        $contacts = Contact::orderBy('created_at', 'desc')->paginate(10);
-        return view('admin.contacts.index', compact('contacts'));
+        return view('admin.contacts.index', $this->contacts->adminIndexData());
     }
 
     public function show(Contact $contact)
@@ -21,14 +24,10 @@ class ContactController extends Controller
 
     public function toggleReplied(Contact $contact)
     {
-        $newRepliedStatus = !$contact->replied;
-        
-        $contact->update([
-            'replied' => $newRepliedStatus,
-            'replied_at' => $newRepliedStatus ? Carbon::now() : null,
-        ]);
+        $this->contacts->toggleReplied($contact);
 
-        return redirect()->route('listContact.show', $contact->id)
+        return redirect()
+            ->route('listContact.show', $contact->id)
             ->with('success', 'Đã cập nhật trạng thái liên hệ');
     }
 }

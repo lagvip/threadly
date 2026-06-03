@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Client\Chatbot\AskChatbotRequest;
 use App\Services\ShopChatService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class ChatbotController extends Controller
 {
@@ -18,13 +17,9 @@ class ChatbotController extends Controller
         return view('client.ai.chat');
     }
 
-    public function ask(Request $request)
+    public function ask(AskChatbotRequest $request)
     {
-        $data = $request->validate([
-            'message' => ['required', 'string', 'max:1000'],
-        ]);
-
-        $reply = $this->shopChatService->reply(Auth::user(), $data['message']);
+        $reply = $this->shopChatService->reply($request->user(), (string) $request->input('message'));
 
         return response()->json([
             'reply' => $reply,

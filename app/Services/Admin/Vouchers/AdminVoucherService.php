@@ -1,0 +1,81 @@
+<?php
+
+namespace App\Services\Admin\Vouchers;
+
+use App\Contracts\Repositories\VoucherRepositoryInterface;
+use App\Models\Voucher;
+use Carbon\Carbon;
+use RuntimeException;
+
+class AdminVoucherService
+{
+    public function __construct(protected VoucherRepositoryInterface $vouchers)
+    {
+    }
+
+    public function create(array $data): void
+    {
+        $this->assertBusinessRules($data);
+
+        $this->vouchers->create(array_merge($this->payload($data), [
+            'status' => 'active',
+        ]));
+    }
+
+    public function update(Voucher $voucher, array $data): void
+    {
+        $this->assertBusinessRules($data);
+
+        $voucher->update($this->payload($data));
+    }
+
+    public function softDelete(Voucher $voucher): void
+    {
+        if ($voucher->hasAppliedOrders()) {
+            throw new RuntimeException('Không thể xóa voucher đang áp dụng cho đơn hàng');
+        }
+
+        $voucher->delete();
+    }
+
+    public function restore(int $id): void
+    {
+        $this->vouchers->findWithTrashed($id)->restore();
+    }
+
+    public function forceDelete(int $id): void
+    {
+        $this->vouchers->findWithTrashed($id)->forceDelete();
+    }
+
+    protected function assertBusinessRules(array $data): void
+    {
+        if (!empty($data['start_date']) && !empty($data['end_date']) && Carbon::parse($data['end_date'])->lte(Carbon::parse($data['start_date']))) {
+            throw new RuntimeException('Ngày kết thúc phải sau ngày bắt đầu');
+        }
+
+        if (($data['type'] ?? null) === 'percent' && (float) $data['value'] > 100) {
+            throw new RuntimeException('Phần trăm giảm không được vượt quá 100%');
+        }
+    }
+
+    protected function payload(array $data): array
+    {
+        return [
+            'code' => $data['code'],
+            'type' => $data['type'],
+            'value' => $data['value'],
+            'max_discount' => $data['max_discount'] ?? null,
+            'min_order_value' => $data['min_order_value'] ?? null,
+            'start_date' => !empty($data['start_date'])
+                ? Carbon::parse($data['start_date'])->format('Y-m-d H:i:s')
+                : Carbon::now()->format('Y-m-d H:i:s'),
+            'end_date' => !empty($data['end_date'])
+                ? Carbon::parse($data['end_date'])->format('Y-m-d H:i:s')
+                : Carbon::now()->addYears(10)->format('Y-m-d H:i:s'),
+            'quantity' => isset($data['quantity']) && $data['quantity'] !== '' ? (int) $data['quantity'] : 0,
+            'max_uses_per_user' => $data['max_uses_per_user'],
+            'max_uses_per_order' => $data['max_uses_per_order'],
+        ];
+    }
+}

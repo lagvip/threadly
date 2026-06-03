@@ -3,375 +3,224 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Brand;
-use App\Models\Category;
-use App\Models\Color;
+use App\Http\Requests\Admin\Products\BulkProductIdsRequest;
+use App\Http\Requests\Admin\Products\IndexProductsRequest;
+use App\Http\Requests\Admin\Products\StoreProductRequest;
+use App\Http\Requests\Admin\Products\ToggleProductStatusRequest;
+use App\Http\Requests\Admin\Products\UpdateProductRequest;
+use App\Services\Admin\Products\AdminProductPageService;
+use App\Services\Admin\Products\AdminProductVariantWriteService;
+use App\Services\Admin\Products\AdminProductWriteService;
 use App\Models\Product;
-use App\Models\Size;
-use App\Services\ProductService;
-use App\Services\ProductVariantService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class ProductController extends Controller
 {
-    protected $productService;
-    protected $productVariantService;
-
-    public function __construct(ProductService $productService, ProductVariantService $productVariantService)
-    {
-        $this->productService = $productService;
-        $this->productVariantService = $productVariantService;
+    public function __construct(
+        protected AdminProductPageService $pages,
+        protected AdminProductWriteService $products,
+        protected AdminProductVariantWriteService $variants,
+    ) {
     }
 
-    public function list(Request $request)
+    public function list(IndexProductsRequest $request)
     {
-        $filters = [
-            'search' => $request->input('search'),
-            'brand_id' => $request->input('brand_id'),
-            'category_id' => $request->input('category_id'),
-        ];
+        $this->authorize('viewAny', Product::class);
 
-        $products = $this->productService->getAllProducts($filters)->appends($filters);
+        return view('admin.product.list-product', $this->pages->indexData($request->filters()));
+    }
 
-        $brands = Brand::orderBy('name')->get();
-
-        $categories = Category::with('parent')
-            ->whereNotNull('id_parent')
-            ->orderBy('name')
-            ->get();
-
-        return view('admin.product.list-product', compact(
-            'products',
-            'brands',
-            'categories'
-        ));
+    public function search(IndexProductsRequest $request)
+    {
+        return $this->list($request);
     }
 
     public function create()
     {
-        $brands = Brand::all();
-        $categories = Category::with('parent')
-            ->whereNotNull('id_parent')
-            ->get();
-        $colors = Color::all();
-        $sizes = Size::all();
+        $this->authorize('create', Product::class);
 
-        return view('admin.product.create-product', compact('brands', 'categories', 'colors', 'sizes'));
+        return view('admin.product.create-product', $this->pages->createData());
     }
 
-    public function postCreate(Request $request)
+    public function postCreate(StoreProductRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:250|unique:products,name',
-            'description' => 'nullable|string',
-            'id_brand' => 'required|exists:brands,id',
-            'id_category' => 'required|exists:categories,id',
-            'image_primary' => 'required|image|mimes:jpg,png,jpeg|max:2048',
-            'status' => 'required|in:active,inactive',
-
-            'variants' => 'required|array|min:1',
-            'variants.*.id_color' => 'required|exists:colors,id',
-            'variants.*.id_size' => 'required|exists:sizes,id',
-            'variants.*.price' => 'nullable|numeric|min:0',
-            'variants.*.quantity' => 'nullable|integer|min:0',
-            'variants.*.status' => 'nullable|in:active,inactive',
-            'variants.*.image' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
-        ]);
-
-        $combinations = [];
-        foreach ($request->variants as $variant) {
-            $key = $variant['id_color'] . '-' . $variant['id_size'];
-
-            if (in_array($key, $combinations)) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Biến thể bị trùng màu sắc và kích cỡ');
-            }
-
-            $combinations[] = $key;
-        }
-
-        DB::beginTransaction();
+        $this->authorize('create', Product::class);
 
         try {
-            $product = $this->productService->createProduct($request->all());
+            $this->products->create($request);
 
-            if (!$product) {
-                throw new \Exception('Không thể tạo sản phẩm');
-            }
-
-            foreach ($request->variants as $index => $variant) {
-                $variant['id_product'] = $product->id;
-                $variant['price'] = $variant['price'] ?? 0;
-                $variant['quantity'] = $variant['quantity'] ?? 0;
-                $variant['status'] = $variant['status'] ?? 'active';
-
-                if ($request->hasFile("variants.$index.image")) {
-                    $variant['image'] = $request->file("variants.$index.image");
-                }
-
-                $created = $this->productVariantService->createProductVariant($variant);
-
-                if (!$created) {
-                    throw new \Exception('Không thể tạo biến thể sản phẩm');
-                }
-            }
-
-            DB::commit();
-
-            return redirect()->route('product.listProduct')
-                ->with('success', 'Thêm sản phẩm và biến thể thành công');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Lỗi khi thêm sản phẩm: ' . $e->getMessage());
-
-            return redirect()->back()
+            return redirect()->route('product.listProduct')->with('success', 'Thêm sản phẩm và biến thể thành công');
+        } catch (\Throwable $e) {
+            return redirect()
+                ->back()
                 ->withInput()
-                ->with('error', 'Thêm sản phẩm thất bại');
+                ->with('error', $e instanceof RuntimeException ? $e->getMessage() : 'Thêm sản phẩm thất bại');
         }
     }
 
     public function edit($id)
     {
-        $product = $this->productService->getProductById($id);
-        $brands = Brand::all();
-        $categories = Category::with('parent')
-            ->whereNotNull('id_parent')
-            ->get();
-        $colors = Color::all();
-        $sizes = Size::all();
+        $this->authorize('updateAny', Product::class);
 
-        return view('admin.product.edit-product', compact('product', 'brands', 'categories', 'colors', 'sizes'));
+        return view('admin.product.edit-product', $this->pages->editData((int) $id));
     }
 
-    public function postEdit(Request $request, $id)
+    public function postEdit(UpdateProductRequest $request, $id)
     {
-        $request->validate([
-            'name' => 'required|string|max:250|unique:products,name,' . $id,
-            'description' => 'nullable|string',
-            'id_brand' => 'required|exists:brands,id',
-            'id_category' => 'required|exists:categories,id',
-            'image_primary' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
-            'status' => 'required|in:active,inactive',
+        $this->authorize('updateAny', Product::class);
 
-            'variants' => 'nullable|array',
-            'variants.*.id' => 'nullable|exists:product_variants,id',
-            'variants.*.id_color' => 'required|exists:colors,id',
-            'variants.*.id_size' => 'required|exists:sizes,id',
-            'variants.*.price' => 'nullable|numeric|min:0',
-            'variants.*.quantity' => 'nullable|integer|min:0',
-            'variants.*.status' => 'nullable|in:active,inactive',
-            'variants.*.image' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
-            'variants.*.delete' => 'nullable|in:0,1',
+        try {
+            $this->products->update($request, (int) $id);
 
-            'variants_new' => 'nullable|array',
-            'variants_new.*.id_color' => 'required|exists:colors,id',
-            'variants_new.*.id_size' => 'required|exists:sizes,id',
-            'variants_new.*.price' => 'nullable|numeric|min:0',
-            'variants_new.*.quantity' => 'nullable|integer|min:0',
-            'variants_new.*.status' => 'nullable|in:active,inactive',
-            'variants_new.*.image' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
-        ]);
-
-        $product = $this->productService->updateProduct($request, $id);
-
-        if ($product) {
-            return redirect()->route('product.listProduct')
-                ->with('success', 'Cập nhật sản phẩm thành công');
+            return redirect()->route('product.listProduct')->with('success', 'Cập nhật sản phẩm thành công');
+        } catch (\Throwable $e) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', $e instanceof RuntimeException ? $e->getMessage() : 'Cập nhật sản phẩm thất bại');
         }
-
-        return redirect()->back()
-            ->withInput()
-            ->with('error', 'Cập nhật sản phẩm thất bại');
     }
 
     public function detail($id)
     {
-        $product = $this->productService->getProductById($id);
-        $brands = Brand::all();
-        $categories = Category::with('parent')
-            ->whereNotNull('id_parent')
-            ->get();
-        return view('admin.product.detail-product', compact('product', 'brands', 'categories'));
+        $this->authorize('viewAny', Product::class);
+
+        return view('admin.product.detail-product', $this->pages->detailData((int) $id));
     }
 
-    public function toggleStatus(Request $request, $id)
+    public function show($id)
     {
-        $status = $request->boolean('status') ? 'active' : 'inactive';
-
-        if ($this->productService->updateStatus($id, $status)) {
-            return redirect()->back()->with(
-                'success',
-                $status === 'active' ? 'Đã bật sản phẩm' : 'Đã tắt sản phẩm'
-            );
-        }
-
-        return redirect()->back()->with('error', 'Cập nhật trạng thái sản phẩm thất bại');
+        return $this->detail($id);
     }
 
-    public function toggleVariantStatus(Request $request, $id)
+    public function toggleStatus(ToggleProductStatusRequest $request, $id)
     {
-        $status = $request->boolean('status') ? 'active' : 'inactive';
+        $this->authorize('updateAny', Product::class);
 
-        if ($this->productVariantService->updateStatus($id, $status)) {
-            return redirect()->back()->with(
-                'success',
-                $status === 'active' ? 'Đã bật biến thể' : 'Đã tắt biến thể'
-            );
+        try {
+            $message = $this->products->updateProductStatus((int) $id, $request->statusValue());
+
+            return redirect()->back()->with('success', $message);
+        } catch (RuntimeException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
         }
-
-        return redirect()->back()->with(
-            'error',
-            $status === 'active'
-                ? 'Không thể bật biến thể khi sản phẩm cha đang không hoạt động'
-                : 'Cập nhật trạng thái biến thể thất bại'
-        );
     }
 
     public function trash()
     {
-        $trashedProducts = $this->productService->getTrashedProducts();
-        return view('admin.product.trashProduct', compact('trashedProducts'));
+        $this->authorize('viewAny', Product::class);
+
+        return view('admin.product.trashProduct', $this->pages->trashData());
     }
 
     public function restore($id)
     {
-        if ($this->productService->restoreProduct($id)) {
+        $this->authorize('restore', Product::class);
+
+        try {
+            $this->products->restore((int) $id);
+
             return redirect()->route('product.listProduct')->with('success', 'Khôi phục sản phẩm thành công');
+        } catch (RuntimeException $e) {
+            return redirect()->route('product.trash')->with('error', $e->getMessage());
         }
-        return redirect()->route('product.trash')->with('error', 'Khôi phục sản phẩm thất bại');
     }
 
     public function destroy($id)
     {
-        if ($this->productService->deleteProduct($id)) {
+        $this->authorize('deleteAny', Product::class);
+
+        try {
+            $this->products->softDelete((int) $id);
+
             return redirect()->route('product.listProduct')->with('success', 'Xóa sản phẩm thành công');
+        } catch (RuntimeException $e) {
+            return redirect()->route('product.listProduct')->with('error', $e->getMessage());
         }
-        return redirect()->route('product.listProduct')->with('error', 'Xóa sản phẩm thất bại');
     }
 
     public function forceDelete($id)
     {
-        if ($this->productService->delete($id)) {
+        $this->authorize('forceDelete', Product::class);
+
+        try {
+            $this->products->forceDelete((int) $id);
+
             return redirect()->route('product.trash')->with('success', 'Xóa vĩnh viễn sản phẩm thành công');
+        } catch (RuntimeException $e) {
+            return redirect()->route('product.trash')->with('error', $e->getMessage());
         }
-        return redirect()->route('product.trash')->with('error', 'Xóa vĩnh viễn sản phẩm thất bại');
     }
 
-    public function bulkDelete(Request $request)
+    public function bulkDelete(BulkProductIdsRequest $request)
     {
-        $ids = $request->input('ids', []);
-        if (empty($ids)) {
-            return redirect()->route('product.trash')->with('error', 'Chưa chọn sản phẩm nào');
-        }
-        if ($this->productService->bulkDelete($ids)) {
+        $this->authorize('deleteAny', Product::class);
+
+        try {
+            $this->products->bulkDelete($request->ids());
+
             return redirect()->route('product.listProduct')->with('success', 'Xóa hàng loạt thành công');
+        } catch (RuntimeException $e) {
+            return redirect()->route('product.listProduct')->with('error', $e->getMessage());
         }
-        return redirect()->route('product.listProduct')->with('error', 'Xóa hàng loạt thất bại');
     }
 
-    public function bulkRestore(Request $request)
+    public function bulkRestore(BulkProductIdsRequest $request)
     {
-        $ids = $request->input('ids', []);
-        if (empty($ids)) {
-            return redirect()->route('product.trash')->with('error', 'Chưa chọn sản phẩm nào');
-        }
-        if ($this->productService->bulkRestore($ids)) {
+        $this->authorize('restore', Product::class);
+
+        try {
+            $this->products->bulkRestore($request->ids());
+
             return redirect()->route('product.listProduct')->with('success', 'Khôi phục hàng loạt thành công');
+        } catch (RuntimeException $e) {
+            return redirect()->route('product.trash')->with('error', $e->getMessage());
         }
-        return redirect()->route('product.trash')->with('error', 'Khôi phục hàng loạt thất bại');
-    }
-
-    public function search(Request $request)
-    {
-        $searchTerm = trim($request->input('search'));
-        $brandId = $request->input('brand_id');
-        $categoryId = $request->input('category_id');
-
-        $products = Product::with(['brand', 'category'])
-            ->when($searchTerm, function ($query) use ($searchTerm) {
-                $query->where('name', 'like', '%' . $searchTerm . '%');
-            })
-            ->when($brandId, function ($query) use ($brandId) {
-                $query->where('id_brand', $brandId);
-            })
-            ->when($categoryId, function ($query) use ($categoryId) {
-                $query->where('id_category', $categoryId);
-            })
-            ->orderByDesc('created_at')
-            ->paginate(10)
-            ->appends([
-                'search' => $searchTerm,
-                'brand_id' => $brandId,
-                'category_id' => $categoryId,
-            ]);
-
-        $brands = Brand::orderBy('name')->get();
-        $categories = Category::with('parent')
-            ->whereNotNull('id_parent')
-            ->orderBy('name')
-            ->get();
-
-        return view('admin.product.list-product', compact(
-            'products',
-            'brands',
-            'categories',
-            'searchTerm',
-            'brandId',
-            'categoryId'
-        ));
     }
 
     public function variantTrash()
     {
-        $trashedVariants = $this->productVariantService->getTrashedProductVariants();
-        return view('admin.product.variant-trash', compact('trashedVariants'));
+        $this->authorize('manageVariants', Product::class);
+
+        return view('admin.product.variant-trash', $this->pages->variantTrashData());
     }
 
-    public function variantRestore(Request $request)
+    public function toggleVariantStatus(ToggleProductStatusRequest $request, $id)
     {
-        $ids = $request->input('ids', []);
-        if (empty($ids)) {
-            return redirect()->route('product.variant.trash')->with('error', 'Chưa chọn biến thể nào');
-        }
+        $this->authorize('manageVariants', Product::class);
 
-        if ($this->productVariantService->bulkRestore($ids)) {
+        try {
+            $message = $this->variants->updateStatus((int) $id, $request->statusValue());
+
+            return redirect()->back()->with('success', $message);
+        } catch (RuntimeException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function variantRestore(BulkProductIdsRequest $request)
+    {
+        $this->authorize('manageVariants', Product::class);
+
+        try {
+            $this->variants->bulkRestore($request->ids());
+
             return redirect()->route('product.variant.trash')->with('success', 'Khôi phục biến thể thành công');
+        } catch (RuntimeException $e) {
+            return redirect()->route('product.variant.trash')->with('error', $e->getMessage());
         }
-
-        return redirect()->route('product.variant.trash')->with('error', 'Khôi phục biến thể thất bại');
     }
 
-    public function variantForceDelete(Request $request)
+    public function variantForceDelete(BulkProductIdsRequest $request)
     {
-        $ids = $request->input('ids', []);
-        if (empty($ids)) {
-            return redirect()->route('product.variant.trash')->with('error', 'Chưa chọn biến thể nào');
+        $this->authorize('forceDelete', Product::class);
+
+        $redirect = redirect()->route('product.variant.trash');
+
+        foreach ($this->variants->bulkForceDelete($request->ids()) as $type => $message) {
+            $redirect->with($type, $message);
         }
 
-        $success = [];
-        $failed = [];
-
-        foreach ($ids as $id) {
-            if ($this->productVariantService->forceDeleteProductVariant($id)) {
-                $success[] = $id;
-            } else {
-                $failed[] = $id;
-            }
-        }
-
-        if (!empty($success) && empty($failed)) {
-            return redirect()->route('product.variant.trash')
-                ->with('success', 'Đã xoá vĩnh viễn các biến thể đã chọn');
-        } elseif (!empty($success) && !empty($failed)) {
-            return redirect()->route('product.variant.trash')
-                ->with('success', 'Một số biến thể đã được xoá vĩnh viễn')
-                ->with('error', 'Một số biến thể không thể xoá do đã có trong đơn hàng');
-        } else {
-            return redirect()->route('product.variant.trash')
-                ->with('error', 'Không thể xoá vĩnh viễn biến thể nào (đã có trong đơn hàng)');
-        }
+        return $redirect;
     }
 }

@@ -3,94 +3,30 @@
 namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
-use App\Models\Address;
-use App\Models\Order;
-use Illuminate\Http\Request;
+use App\Http\Requests\Client\Account\UpdateAccountRequest;
+use App\Services\Client\Account\ClientAccountService;
 use Illuminate\Support\Facades\Auth;
 
 class AccountController extends Controller
 {
+    public function __construct(protected ClientAccountService $accounts)
+    {
+    }
+
     public function index()
     {
-        $user = Auth::user();
-
-        $defaultAddress = Address::where('user_id', $user->id)
-            ->orderByDesc('is_default')
-            ->orderByDesc('id')
-            ->first();
-
-        $recentOrders = Order::where('user_id', $user->id)
-            ->latest('id')
-            ->take(5)
-            ->get();
-
-        $stats = [
-            'total_orders' => Order::where('user_id', $user->id)->count(),
-            'pending_orders' => Order::where('user_id', $user->id)
-                ->whereIn('order_status', ['pending', 'processing', 'waiting_for_cancellation'])
-                ->count(),
-            'delivered_orders' => Order::where('user_id', $user->id)
-                ->where('order_status', 'delivered')
-                ->count(),
-            'cancelled_orders' => Order::where('user_id', $user->id)
-                ->where('order_status', 'cancelled')
-                ->count(),
-        ];
-
-        return view('client.account.index', compact(
-            'user',
-            'defaultAddress',
-            'recentOrders',
-            'stats'
-        ));
+        return view('client.account.index', $this->accounts->overviewData(Auth::user()));
     }
 
     public function detail()
     {
-        $user = Auth::user();
-
-        $defaultAddress = Address::where('user_id', $user->id)
-            ->orderByDesc('is_default')
-            ->orderByDesc('id')
-            ->first();
-
-        $addressCount = Address::where('user_id', $user->id)->count();
-
-        return view('client.account.detail', compact(
-            'user',
-            'defaultAddress',
-            'addressCount'
-        ));
+        return view('client.account.detail', $this->accounts->detailData(Auth::user()));
     }
 
-    public function update(Request $request)
+    public function update(UpdateAccountRequest $request)
     {
-        $user = Auth::user();
+        $this->accounts->update($request->user(), $request->validated(), $request->file('avatar'));
 
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-        ], [
-            'name.required' => 'Vui lòng nhập họ tên.',
-            'avatar.image' => 'File tải lên phải là hình ảnh.',
-            'avatar.mimes' => 'Avatar chỉ chấp nhận JPG, JPEG, PNG hoặc WEBP.',
-            'avatar.max' => 'Avatar tối đa 2MB.',
-        ]);
-
-        $user->name = $data['name'];
-
-        if ($request->hasFile('avatar')) {
-            if (!empty($user->avatar) && !str_starts_with($user->avatar, 'http')) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
-            }
-
-            $user->avatar = $request->file('avatar')->store('users', 'public');
-        }
-
-        $user->save();
-
-        return redirect()
-            ->route('client.account.detail')
-            ->with('success', 'Cập nhật hồ sơ thành công.');
+        return redirect()->route('client.account.detail')->with('success', 'Cập nhật hồ sơ thành công.');
     }
 }

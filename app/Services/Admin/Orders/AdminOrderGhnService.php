@@ -1,0 +1,234 @@
+<?php
+
+namespace App\Services\Admin\Orders;
+
+use App\Contracts\Repositories\OrderStatusLogRepositoryInterface;
+use App\Enums\OrderStatus;
+use App\Models\Order;
+use App\Services\GhnService;
+use App\Services\OrderInventoryService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
+
+class AdminOrderGhnService
+{
+    public function __construct(
+        protected GhnService $ghn,
+        protected OrderInventoryService $inventory,
+        protected OrderStatusLogRepositoryInterface $statusLogs,
+    ) {
+    }
+
+    public function create(Order $order): string
+    {
+        try {
+            $this->ghn->createOrder($order);
+
+            return 'Đã tạo vận đơn GHN thành công. Mã vận đơn: ' . $order->fresh()->ghn_order_code;
+        } catch (\Throwable $e) {
+            Log::error('Create GHN order failed: ' . $e->getMessage(), $this->logContext($order));
+            throw new RuntimeException($e->getMessage() ?: 'Tạo vận đơn GHN thất bại.');
+        }
+    }
+
+    public function sync(Order $order, int $adminId): string
+    {
+        if (empty($order->ghn_order_code)) {
+            throw new RuntimeException('Đơn này chưa có mã vận đơn GHN để đồng bộ.');
+        }
+
+        try {
+            $response = $this->ghn->getOrderInfo($order->ghn_order_code);
+            $this->ghn->syncOrderFromGhnInfo($order, $response, $adminId, 'Admin đồng bộ GHN');
+
+            return 'Đã đồng bộ trạng thái GHN thành công.';
+        } catch (\Throwable $e) {
+            Log::error('Sync GHN order failed: ' . $e->getMessage(), $this->logContext($order));
+            throw new RuntimeException($e->getMessage() ?: 'Đồng bộ GHN thất bại.');
+        }
+    }
+
+    public function cancel(Order $order, int $adminId): string
+    {
+        if (empty($order->ghn_order_code)) {
+            throw new RuntimeException('Đơn này chưa có mã vận đơn GHN để hủy.');
+        }
+
+        if ($order->order_status === OrderStatus::Delivered->value) {
+            throw new RuntimeException('Đơn đã giao thành công, không thể hủy vận đơn GHN.');
+        }
+
+        if ($order->payment_status === Order::PAYMENT_PAID) {
+            throw new RuntimeException('Đơn đã thanh toán không nên hủy vận đơn trực tiếp. Hãy xử lý hoàn tiền/hoàn hàng riêng để tránh lệch tiền và tồn kho.');
+        }
+
+        try {
+            $response = $this->ghn->cancelOrder($order->ghn_order_code);
+            $result = collect(data_get($response, 'data', []))->firstWhere('order_code', $order->ghn_order_code);
+
+            if ($result && isset($result['result']) && !$result['result']) {
+                throw new RuntimeException($result['message'] ?? 'GHN không cho hủy vận đơn này.');
+            }
+
+            $oldStatus = $order->order_status;
+
+            DB::transaction(function () use ($order, $response) {
+                $order->update([
+                    'ghn_status' => 'cancel',
+                    'ghn_status_name' => 'Đã hủy trên GHN',
+                    'ghn_raw_response' => $response,
+                    'ghn_synced_at' => now(),
+                    'order_status' => OrderStatus::Cancelled->value,
+                    'payment_status' => $order->payment_method === Order::PAYMENT_METHOD_COD && $order->payment_status !== Order::PAYMENT_PAID
+                        ? Order::PAYMENT_CANCELLED
+                        : $order->payment_status,
+                ]);
+
+                $this->inventory->releaseCancelledOrder($order);
+            });
+
+            if ($oldStatus !== OrderStatus::Cancelled->value) {
+                $this->statusLogs->create([
+                    'order_id' => $order->id,
+                    'status' => OrderStatus::Cancelled->value,
+                    'note' => 'Admin hủy vận đơn GHN: ' . $order->ghn_order_code,
+                    'changed_by' => $adminId,
+                ]);
+            }
+
+            return 'Đã gửi yêu cầu hủy vận đơn GHN thành công.';
+        } catch (RuntimeException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error('Cancel GHN order failed: ' . $e->getMessage(), $this->logContext($order));
+            throw new RuntimeException($e->getMessage() ?: 'Hủy vận đơn GHN thất bại.');
+        }
+    }
+
+    public function printUrl(Order $order): string
+    {
+        if (empty($order->ghn_order_code)) {
+            throw new RuntimeException('Đơn này chưa có mã vận đơn GHN để in.');
+        }
+
+        try {
+            return $this->ghn->printOrderUrl($order->ghn_order_code);
+        } catch (\Throwable $e) {
+            Log::error('Print GHN order failed: ' . $e->getMessage(), $this->logContext($order));
+            throw new RuntimeException($e->getMessage() ?: 'Không in được vận đơn GHN.');
+        }
+    }
+
+    public function simulate(Order $order, string $status, int $adminId): string
+    {
+        if (empty($order->ghn_order_code)) {
+            throw new RuntimeException('Đơn này chưa có mã vận đơn GHN, không thể giả lập trạng thái.');
+        }
+
+        $currentStatus = $order->ghn_status ?: 'ready_to_pick';
+        $this->assertSafeSimulation($currentStatus, $status);
+
+        try {
+            $fakeGhnResponse = [
+                'code' => 200,
+                'message' => 'Local simulated GHN status',
+                'data' => [
+                    'order_code' => $order->ghn_order_code,
+                    'client_order_code' => $order->ghn_client_order_code,
+                    'status' => $status,
+                    'leadtime' => now()->addDays(2)->toISOString(),
+                ],
+            ];
+
+            $this->ghn->syncOrderFromGhnInfo($order, $fakeGhnResponse, $adminId, 'Giả lập GHN local');
+
+            return 'Đã giả lập trạng thái GHN: ' . $this->ghn->statusGroup($status) . ' - ' . $this->ghn->statusName($status);
+        } catch (\Throwable $e) {
+            Log::error('Simulate GHN status failed: ' . $e->getMessage(), array_merge($this->logContext($order), [
+                'from_status' => $currentStatus,
+                'to_status' => $status,
+            ]));
+
+            throw new RuntimeException($e->getMessage() ?: 'Giả lập trạng thái GHN thất bại.');
+        }
+    }
+
+    protected function assertSafeSimulation(string $currentStatus, string $status): void
+    {
+        $safeDemoStatuses = [
+            'ready_to_pick',
+            'picking',
+            'picked',
+            'storing',
+            'transporting',
+            'sorting',
+            'delivering',
+            'money_collect_delivering',
+            'delivery_fail',
+            'delivered',
+        ];
+
+        if (!in_array($status, $safeDemoStatuses, true)) {
+            throw new RuntimeException('Đã tắt giả lập trạng thái GHN gây lệch nghiệp vụ như hủy, hoàn hàng, thất lạc hoặc hư hỏng.');
+        }
+
+        $allowedTransitions = $this->allowedTransitions();
+        $allowedNextStatuses = $allowedTransitions[$currentStatus] ?? [
+            'picked',
+            'delivering',
+            'delivery_fail',
+            'delivered',
+            'cancel',
+            'lost',
+            'damage',
+        ];
+
+        if (!in_array($status, $allowedNextStatuses, true)) {
+            throw new RuntimeException(
+                'Không thể giả lập từ trạng thái "' .
+                $this->ghn->statusName($currentStatus) .
+                '" sang "' .
+                $this->ghn->statusName($status) .
+                '".'
+            );
+        }
+    }
+
+    protected function allowedTransitions(): array
+    {
+        return [
+            'ready_to_pick' => ['picking', 'picked', 'cancel'],
+            'picking' => ['picked', 'cancel'],
+            'money_collect_picking' => ['picked', 'cancel'],
+            'picked' => ['storing', 'delivering', 'cancel', 'lost', 'damage'],
+            'storing' => ['transporting', 'sorting', 'delivering', 'lost', 'damage'],
+            'transporting' => ['sorting', 'delivering', 'lost', 'damage'],
+            'sorting' => ['delivering', 'lost', 'damage'],
+            'delivering' => ['delivered', 'delivery_fail', 'waiting_to_return', 'lost', 'damage'],
+            'money_collect_delivering' => ['delivered', 'delivery_fail', 'waiting_to_return'],
+            'delivery_fail' => ['delivering', 'waiting_to_return', 'cancel'],
+            'waiting_to_return' => ['return', 'return_transporting', 'returning'],
+            'return' => ['return_transporting', 'return_sorting', 'returning'],
+            'return_transporting' => ['return_sorting', 'returning'],
+            'return_sorting' => ['returning'],
+            'returning' => ['returned', 'return_fail'],
+            'return_fail' => ['returning', 'returned'],
+            'delivered' => [],
+            'cancel' => [],
+            'returned' => [],
+            'lost' => [],
+            'damage' => [],
+            'exception' => [],
+        ];
+    }
+
+    protected function logContext(Order $order): array
+    {
+        return [
+            'order_id' => $order->id,
+            'order_code' => $order->order_code,
+            'ghn_order_code' => $order->ghn_order_code,
+        ];
+    }
+}
