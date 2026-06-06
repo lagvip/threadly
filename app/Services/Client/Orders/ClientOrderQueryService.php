@@ -3,6 +3,7 @@
 namespace App\Services\Client\Orders;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
+use App\Support\Pagination;
 
 class ClientOrderQueryService
 {
@@ -38,7 +39,7 @@ class ClientOrderQueryService
         }
 
         return [
-            'orders' => $query->latest('id')->paginate(10)->withQueryString(),
+            'orders' => Pagination::withQueryString($query->latest('id')->paginate(10)),
         ];
     }
 

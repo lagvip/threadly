@@ -32,9 +32,13 @@ interface ProductVariantRepositoryInterface
 
     public function create(array $data): ProductVariant;
 
+    public function update(ProductVariant $variant, array $data): bool;
+
     public function restoreMany(array $ids): int;
 
     public function totalStock(): int;
 
     public function lowStock(int $limit = 10): Collection;
+
+    public function forProductInventoryOptions(int $productId): Collection;
 }

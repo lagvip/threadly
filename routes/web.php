@@ -29,6 +29,7 @@ use App\Http\Controllers\Client\WishlistController;
 use App\Http\Controllers\Client\ChatbotController;
 use App\Http\Controllers\Client\RefundRequestController as ClientRefundRequestController;
 use App\Http\Controllers\Admin\RefundRequestController as AdminRefundRequestController;
+use App\Http\Controllers\Admin\InventoryReceiptController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\Client\ChatController as ClientChatController;
 use App\Http\Controllers\Admin\ChatController as AdminChatController;
@@ -303,6 +304,19 @@ Route::middleware(['auth'])->group(function () {
 
             Route::post('/{id}/toggle-status', [AdminProductController::class, 'toggleStatus'])->name('toggleStatus');
             Route::post('/variants/{id}/toggle-status', [AdminProductController::class, 'toggleVariantStatus'])->name('variant.toggleStatus');
+        });
+
+        // INVENTORY
+        Route::prefix('admin/inventory')->name('admin.inventory.')->group(function () {
+            Route::get('/products/search', [InventoryReceiptController::class, 'searchProducts'])->name('products.search');
+            Route::get('/products/variants', [InventoryReceiptController::class, 'productVariants'])->name('products.variants');
+            Route::get('/receipts', [InventoryReceiptController::class, 'index'])->name('receipts.index');
+            Route::get('/receipts/create', [InventoryReceiptController::class, 'create'])->name('receipts.create');
+            Route::post('/receipts', [InventoryReceiptController::class, 'store'])->name('receipts.store');
+            Route::get('/receipts/{receipt}', [InventoryReceiptController::class, 'show'])->name('receipts.show');
+            Route::post('/receipts/{receipt}/post', [InventoryReceiptController::class, 'post'])->name('receipts.post');
+            Route::post('/receipts/{receipt}/cancel', [InventoryReceiptController::class, 'cancel'])->name('receipts.cancel');
+            Route::get('/movements', [InventoryReceiptController::class, 'movements'])->name('movements.index');
         });
 
         // ORDER

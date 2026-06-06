@@ -39,19 +39,19 @@ class ColorController extends Controller
         return redirect()->route('listColor.list')->with('success', 'Thêm màu thành công.');
     }
 
-    public function show($id)
+    public function show(int $id)
     {
-        return view('admin.color.detailColor', ['color' => $this->colors->find((int) $id)]);
+        return view('admin.color.detailColor', ['color' => $this->colors->find($id)]);
     }
 
-    public function edit($id)
+    public function edit(int $id)
     {
-        return view('admin.color.updateColor', ['color' => $this->colors->find((int) $id)]);
+        return view('admin.color.updateColor', ['color' => $this->colors->find($id)]);
     }
 
-    public function update(UpdateColorRequest $request, $id)
+    public function update(UpdateColorRequest $request, int $id)
     {
-        $warning = $this->colors->update((int) $id, $request->validated());
+        $warning = $this->colors->update($id, $request->validated());
 
         if ($warning) {
             return back()->withInput()->with('warning', $warning);
@@ -60,9 +60,9 @@ class ColorController extends Controller
         return redirect()->route('listColor.list')->with('success', 'Cập nhật màu thành công.');
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
-        $this->colors->softDelete((int) $id);
+        $this->colors->softDelete($id);
 
         return redirect()->route('listColor.list')->with('success', 'Đã chuyển màu vào thùng rác.');
     }
@@ -79,10 +79,10 @@ class ColorController extends Controller
         return view('admin.color.bin', $this->queries->binData($request->keyword()));
     }
 
-    public function restore($id)
+    public function restore(int $id)
     {
         try {
-            $this->colors->restore((int) $id);
+            $this->colors->restore($id);
 
             return redirect()->route('listColor.bin')->with('success', 'Khôi phục màu thành công.');
         } catch (RuntimeException $e) {
@@ -90,10 +90,10 @@ class ColorController extends Controller
         }
     }
 
-    public function forceDelete($id)
+    public function forceDelete(int $id)
     {
         try {
-            $this->colors->forceDelete((int) $id);
+            $this->colors->forceDelete($id);
 
             return redirect()->route('listColor.bin')->with('success', 'Xóa vĩnh viễn màu thành công.');
         } catch (RuntimeException $e) {

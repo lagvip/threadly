@@ -4,6 +4,7 @@ namespace App\Services\Admin\Banners;
 
 use App\Contracts\Repositories\BannerRepositoryInterface;
 use App\Models\Banner;
+use App\Support\Pagination;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -19,8 +20,9 @@ class AdminBannerService
         $banners = $this->banners->query()
             ->when($search !== null && $search !== '', fn ($query) => $query->where('title', 'like', '%' . $search . '%'))
             ->latest('id')
-            ->paginate(10)
-            ->withQueryString();
+            ->paginate(10);
+
+        $banners = Pagination::withQueryString($banners);
 
         return compact('banners');
     }

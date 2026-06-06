@@ -4,6 +4,7 @@ namespace App\Services\Admin\Refunds;
 
 use App\Contracts\Repositories\RefundRequestRepositoryInterface;
 use App\Models\RefundRequest;
+use App\Support\Pagination;
 
 class AdminRefundQueryService
 {
@@ -33,7 +34,7 @@ class AdminRefundQueryService
         }
 
         return [
-            'refundRequests' => $query->paginate(10)->withQueryString(),
+            'refundRequests' => Pagination::withQueryString($query->paginate(10)),
             'counts' => $this->counts(),
         ];
     }

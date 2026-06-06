@@ -4,11 +4,15 @@ namespace App\Services\Checkout;
 
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
 use App\Models\Order;
+use App\Models\StockMovement;
+use App\Services\Inventory\StockMovementService;
 
 class CheckoutInventoryService
 {
-    public function __construct(protected ProductVariantRepositoryInterface $variants)
-    {
+    public function __construct(
+        protected ProductVariantRepositoryInterface $variants,
+        protected StockMovementService $stockMovements
+    ) {
     }
 
     public function decreaseStockFromOrder(Order $order): void
@@ -26,7 +30,23 @@ class CheckoutInventoryService
                 throw new \Exception('Tồn kho không đủ để xử lý đơn hàng.');
             }
 
-            $variant->decrement('quantity', $detail->quantity);
+            $stockBefore = (int) $variant->quantity;
+            $quantity = (int) $detail->quantity;
+            $stockAfter = $stockBefore - $quantity;
+
+            $variant->update(['quantity' => $stockAfter]);
+
+            $this->stockMovements->record(
+                $variant,
+                StockMovement::TYPE_SALE,
+                -$quantity,
+                $stockBefore,
+                $stockAfter,
+                Order::class,
+                $order->id,
+                $order->user_id ? (int) $order->user_id : null,
+                'Xuất kho từ đơn ' . ($order->order_code ?? ('#' . $order->id))
+            );
         }
     }
 }

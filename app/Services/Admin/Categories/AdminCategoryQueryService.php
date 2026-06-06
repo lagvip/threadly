@@ -4,6 +4,7 @@ namespace App\Services\Admin\Categories;
 
 use App\Contracts\Repositories\CategoryRepositoryInterface;
 use App\Contracts\Repositories\ProductRepositoryInterface;
+use App\Support\Pagination;
 
 class AdminCategoryQueryService
 {
@@ -19,8 +20,9 @@ class AdminCategoryQueryService
             ->with('parent')
             ->when($search, fn ($query) => $query->where('name', 'like', '%' . $search . '%'))
             ->latest('id')
-            ->paginate(10)
-            ->withQueryString();
+            ->paginate(10);
+
+        $category = Pagination::withQueryString($category);
 
         return compact('category');
     }

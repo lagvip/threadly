@@ -4,10 +4,16 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\ProductVariant;
+use App\Models\StockMovement;
 use App\Models\Voucher;
+use App\Services\Inventory\StockMovementService;
 
 class OrderInventoryService
 {
+    public function __construct(protected StockMovementService $stockMovements)
+    {
+    }
+
     public function releaseCancelledOrder(Order $order): void
     {
         // Load chi tiết đơn để biết cần hoàn kho cho biến thể nào, số lượng bao nhiêu.
@@ -50,7 +56,23 @@ class OrderInventoryService
             }
 
             // Cộng lại số lượng đã mua vào tồn kho của biến thể.
-            $variant->increment('quantity', (int) $detail->quantity);
+            $stockBefore = (int) $variant->quantity;
+            $quantity = (int) $detail->quantity;
+            $stockAfter = $stockBefore + $quantity;
+
+            $variant->update(['quantity' => $stockAfter]);
+
+            $this->stockMovements->record(
+                $variant,
+                StockMovement::TYPE_CANCEL_RELEASE,
+                $quantity,
+                $stockBefore,
+                $stockAfter,
+                Order::class,
+                $order->id,
+                null,
+                'Hoàn tồn do hủy đơn ' . ($order->order_code ?? ('#' . $order->id))
+            );
         }
 
         // Đánh dấu đơn đã hoàn kho để lần sau không cộng lại nữa.

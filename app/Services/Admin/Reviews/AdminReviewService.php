@@ -4,6 +4,7 @@ namespace App\Services\Admin\Reviews;
 
 use App\Contracts\Repositories\ReviewRepositoryInterface;
 use App\Models\Review;
+use App\Support\Pagination;
 
 class AdminReviewService
 {
@@ -50,7 +51,7 @@ class AdminReviewService
         }
 
         return [
-            'reviews' => $query->latest()->paginate(10)->withQueryString(),
+            'reviews' => Pagination::withQueryString($query->latest()->paginate(10)),
         ];
     }
 

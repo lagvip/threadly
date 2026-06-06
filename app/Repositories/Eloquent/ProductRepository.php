@@ -147,4 +147,14 @@ class ProductRepository implements ProductRepositoryInterface
 
         return $query->latest('id')->take($limit)->get();
     }
+
+    public function searchForInventory(string $keyword = '', int $limit = 20): Collection
+    {
+        return Product::query()
+            ->select('id', 'name')
+            ->when($keyword !== '', fn ($query) => $query->where('name', 'like', '%' . $keyword . '%'))
+            ->latest('id')
+            ->limit($limit)
+            ->get();
+    }
 }
