@@ -11,7 +11,9 @@ use App\Events\RefundApproved;
 use App\Events\RefundRejected;
 use App\Models\Order;
 use App\Models\RefundRequest;
+use App\Models\StockMovement;
 use App\Models\WalletTransaction;
+use App\Services\Inventory\StockMovementService;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -23,6 +25,7 @@ class AdminRefundWorkflowService
         protected RefundRequestRepositoryInterface $refundRequests,
         protected WalletRepositoryInterface $wallets,
         protected WalletTransactionRepositoryInterface $walletTransactions,
+        protected StockMovementService $stockMovements,
     ) {
     }
 
@@ -144,7 +147,22 @@ class AdminRefundWorkflowService
                     throw new RuntimeException('Biến thể sản phẩm không còn tồn tại: ' . $item->product_name_snapshot);
                 }
 
-                $variant->increment('quantity', $quantityToRestock);
+                $stockBefore = (int) $variant->quantity;
+                $stockAfter = $stockBefore + $quantityToRestock;
+
+                $variant->update(['quantity' => $stockAfter]);
+
+                $this->stockMovements->record(
+                    $variant,
+                    StockMovement::TYPE_REFUND_RESTOCK,
+                    $quantityToRestock,
+                    $stockBefore,
+                    $stockAfter,
+                    RefundRequest::class,
+                    $refundRequest->id,
+                    $adminId,
+                    'Nhập lại kho từ yêu cầu hoàn #' . $refundRequest->id
+                );
 
                 $item->update([
                     'restocked_quantity' => $restockedQuantity + $quantityToRestock,

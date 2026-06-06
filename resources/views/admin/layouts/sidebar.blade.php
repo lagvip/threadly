@@ -84,6 +84,23 @@
                 </li>
 
                 <li class="nav-item">
+                    <a class="nav-link menu-arrow" href="#sidebarInventory" data-bs-toggle="collapse" role="button"
+                        aria-expanded="false" aria-controls="sidebarInventory">
+                        <span class="nav-text"> Kho hàng </span>
+                    </a>
+                    <div class="collapse" id="sidebarInventory">
+                        <ul class="nav sub-navbar-nav">
+                            <li class="sub-nav-item">
+                                <a class="sub-nav-link" href="{{ route('admin.inventory.receipts.index') }}">Phiếu nhập kho</a>
+                            </li>
+                            <li class="sub-nav-item">
+                                <a class="sub-nav-link" href="{{ route('admin.inventory.movements.index') }}">Lịch sử kho</a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+                <li class="nav-item">
                     <a class="nav-link menu-arrow" href="#sidebarColor" data-bs-toggle="collapse" role="button"
                         aria-expanded="false" aria-controls="sidebarColor">
                         <span class="nav-text"> Màu sắc </span>

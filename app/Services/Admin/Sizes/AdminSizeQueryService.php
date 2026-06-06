@@ -3,6 +3,7 @@
 namespace App\Services\Admin\Sizes;
 
 use App\Contracts\Repositories\SizeRepositoryInterface;
+use App\Support\Pagination;
 
 class AdminSizeQueryService
 {
@@ -13,7 +14,7 @@ class AdminSizeQueryService
     public function indexData(string $keyword): array
     {
         return [
-            'sizes' => $this->filteredQuery($keyword)->latest()->paginate(10)->withQueryString(),
+            'sizes' => Pagination::withQueryString($this->filteredQuery($keyword)->latest()->paginate(10)),
             'keyword' => $keyword,
         ];
     }
@@ -21,7 +22,7 @@ class AdminSizeQueryService
     public function trashData(string $keyword): array
     {
         return [
-            'sizes' => $this->filteredQuery($keyword, true)->latest('deleted_at')->paginate(10)->withQueryString(),
+            'sizes' => Pagination::withQueryString($this->filteredQuery($keyword, true)->latest('deleted_at')->paginate(10)),
             'keyword' => $keyword,
         ];
     }

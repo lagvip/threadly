@@ -37,4 +37,6 @@ interface ProductRepositoryInterface
     public function topSoldProductIds(int $limit = 12): array;
 
     public function activeForChat(array $keywords = [], int $limit = 6): Collection;
+
+    public function searchForInventory(string $keyword = '', int $limit = 20): Collection;
 }

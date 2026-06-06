@@ -75,6 +75,11 @@ class ProductVariantRepository implements ProductVariantRepositoryInterface
         return ProductVariant::create($data);
     }
 
+    public function update(ProductVariant $variant, array $data): bool
+    {
+        return $variant->update($data);
+    }
+
     public function restoreMany(array $ids): int
     {
         return ProductVariant::onlyTrashed()->whereIn('id', $ids)->restore();
@@ -92,6 +97,17 @@ class ProductVariantRepository implements ProductVariantRepositoryInterface
             ->where('quantity', '<=', 5)
             ->orderBy('quantity')
             ->limit($limit)
+            ->get();
+    }
+
+    public function forProductInventoryOptions(int $productId): Collection
+    {
+        return ProductVariant::query()
+            ->with(['color', 'size'])
+            ->where('id_product', $productId)
+            ->whereNull('deleted_at')
+            ->orderBy('id_color')
+            ->orderBy('id_size')
             ->get();
     }
 }

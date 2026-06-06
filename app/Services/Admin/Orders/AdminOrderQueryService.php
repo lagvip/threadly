@@ -5,6 +5,7 @@ namespace App\Services\Admin\Orders;
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Enums\OrderStatus;
 use App\Models\Order;
+use App\Support\Pagination;
 
 class AdminOrderQueryService
 {
@@ -42,7 +43,7 @@ class AdminOrderQueryService
         }
 
         return [
-            'orders' => $query->latest()->paginate(10)->withQueryString(),
+            'orders' => Pagination::withQueryString($query->latest()->paginate(10)),
             'orderCancel' => $this->orders->countByStatus(OrderStatus::Cancelled->value),
             'orderDelivering' => $this->orders->countByStatus(OrderStatus::Shipped->value),
             'pendingPayment' => $this->orders->countPendingPayment(),

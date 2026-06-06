@@ -3,6 +3,7 @@
 namespace App\Services\Admin\Colors;
 
 use App\Contracts\Repositories\ColorRepositoryInterface;
+use App\Support\Pagination;
 
 class AdminColorQueryService
 {
@@ -13,7 +14,7 @@ class AdminColorQueryService
     public function indexData(string $keyword): array
     {
         return [
-            'colors' => $this->filteredQuery($keyword)->latest('id')->paginate(10)->withQueryString(),
+            'colors' => Pagination::withQueryString($this->filteredQuery($keyword)->latest('id')->paginate(10)),
             'keyword' => $keyword,
         ];
     }
@@ -21,7 +22,7 @@ class AdminColorQueryService
     public function binData(string $keyword): array
     {
         return [
-            'colors' => $this->filteredQuery($keyword, true)->latest('deleted_at')->paginate(10)->withQueryString(),
+            'colors' => Pagination::withQueryString($this->filteredQuery($keyword, true)->latest('deleted_at')->paginate(10)),
             'keyword' => $keyword,
         ];
     }
