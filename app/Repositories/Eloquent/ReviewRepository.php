@@ -38,6 +38,26 @@ class ReviewRepository implements ReviewRepositoryInterface
         return Review::onlyTrashed()->findOrFail($id);
     }
 
+    public function update(Review $review, array $data): bool
+    {
+        return $review->update($data);
+    }
+
+    public function delete(Review $review): bool
+    {
+        return (bool) $review->delete();
+    }
+
+    public function restore(Review $review): bool
+    {
+        return (bool) $review->restore();
+    }
+
+    public function forceDelete(Review $review): bool
+    {
+        return (bool) $review->forceDelete();
+    }
+
     public function restoreMany(array $ids): int
     {
         return Review::onlyTrashed()->whereIn('id', $ids)->restore();

@@ -8,9 +8,7 @@ use RuntimeException;
 
 class AdminSizeService
 {
-    public function __construct(protected SizeRepositoryInterface $sizes)
-    {
-    }
+    public function __construct(protected SizeRepositoryInterface $sizes) {}
 
     public function create(array $data): ?string
     {
@@ -31,7 +29,7 @@ class AdminSizeService
             return 'Đã có một size cùng tên trong thùng rác. Hãy khôi phục hoặc xóa vĩnh viễn bản cũ trước.';
         }
 
-        $size->update(['name' => $data['name']]);
+        $this->sizes->update($size, ['name' => $data['name']]);
 
         return null;
     }
@@ -43,7 +41,7 @@ class AdminSizeService
 
     public function softDelete(int $id): void
     {
-        $this->sizes->find($id)->delete();
+        $this->sizes->delete($this->sizes->find($id));
     }
 
     public function restore(int $id): void
@@ -54,7 +52,7 @@ class AdminSizeService
             throw new RuntimeException('Không thể khôi phục vì đã có size cùng tên đang hoạt động.');
         }
 
-        $size->restore();
+        $this->sizes->restore($size);
     }
 
     public function forceDelete(int $id): void
@@ -65,6 +63,6 @@ class AdminSizeService
             throw new RuntimeException('Không thể xóa vĩnh viễn vì size này vẫn đang được dùng trong biến thể sản phẩm.');
         }
 
-        $size->forceDelete();
+        $this->sizes->forceDelete($size);
     }
 }

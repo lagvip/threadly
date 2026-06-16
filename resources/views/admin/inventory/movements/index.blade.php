@@ -20,7 +20,7 @@
                 <div class="col-md-3">
                     <select name="type" class="form-select">
                         <option value="">Tất cả loại</option>
-                        @foreach(['import' => 'Nhập kho', 'sale' => 'Bán hàng', 'cancel_release' => 'Hoàn tồn do hủy', 'refund_restock' => 'Hoàn hàng nhập lại', 'adjustment' => 'Điều chỉnh'] as $value => $label)
+                        @foreach($movementTypeLabels as $value => $label)
                             <option value="{{ $value }}" {{ ($filters['type'] ?? '') === $value ? 'selected' : '' }}>{{ $label }}</option>
                         @endforeach
                     </select>
@@ -53,7 +53,7 @@
                         @forelse($movements as $movement)
                             @php
                                 $unitCost = $movement->unit_cost
-                                    ?? ($movement->type === \App\Models\StockMovement::TYPE_IMPORT ? $movement->receipt_unit_cost : null);
+                                    ?? ($movement->type === $importMovementType ? $movement->receipt_unit_cost : null);
                             @endphp
                             <tr>
                                 <td>{{ $movement->created_at?->format('d/m/Y H:i') }}</td>
@@ -63,7 +63,7 @@
                                     | {{ $movement->variant?->color?->name ?? '-' }}
                                     | {{ $movement->variant?->size?->name ?? '-' }}
                                 </td>
-                                <td>{{ ['import' => 'Nhập kho', 'sale' => 'Bán hàng', 'cancel_release' => 'Hoàn tồn do hủy', 'refund_restock' => 'Hoàn hàng nhập lại', 'adjustment' => 'Điều chỉnh'][$movement->type] ?? $movement->type }}</td>
+                                <td>{{ $movementTypeLabels[$movement->type] ?? $movement->type }}</td>
                                 <td class="{{ $movement->quantity_change >= 0 ? 'text-success' : 'text-danger' }}">
                                     {{ $movement->quantity_change > 0 ? '+' : '' }}{{ number_format((int) $movement->quantity_change, 0, ',', '.') }}
                                 </td>

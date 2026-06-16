@@ -24,10 +24,10 @@ class CartRepository implements CartRepositoryInterface
     public function detailsForCart(int $cartId): Collection
     {
         return CartDetail::with([
-                'variant.product',
-                'variant.color',
-                'variant.size',
-            ])
+            'variant.product',
+            'variant.color',
+            'variant.size',
+        ])
             ->where('id_cart', $cartId)
             ->get();
     }
@@ -45,10 +45,10 @@ class CartRepository implements CartRepositoryInterface
     public function selectedDetails(int $cartId, array $selectedIds): Collection
     {
         return CartDetail::with([
-                'variant.product',
-                'variant.color',
-                'variant.size',
-            ])
+            'variant.product',
+            'variant.color',
+            'variant.size',
+        ])
             ->where('id_cart', $cartId)
             ->whereIn('id', $selectedIds)
             ->get();
@@ -87,6 +87,16 @@ class CartRepository implements CartRepositoryInterface
     public function createDetail(array $data): CartDetail
     {
         return CartDetail::create($data);
+    }
+
+    public function updateDetail(CartDetail $detail, array $data): bool
+    {
+        return $detail->update($data);
+    }
+
+    public function deleteDetail(CartDetail $detail): bool
+    {
+        return (bool) $detail->delete();
     }
 
     public function deleteDetails(int $cartId, array $detailIds): int

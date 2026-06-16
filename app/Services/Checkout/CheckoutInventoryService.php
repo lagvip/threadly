@@ -3,17 +3,15 @@
 namespace App\Services\Checkout;
 
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
+use App\Events\Inventory\StockMovementRecorded;
 use App\Models\Order;
 use App\Models\StockMovement;
-use App\Services\Inventory\StockMovementService;
 
 class CheckoutInventoryService
 {
     public function __construct(
         protected ProductVariantRepositoryInterface $variants,
-        protected StockMovementService $stockMovements
-    ) {
-    }
+    ) {}
 
     public function decreaseStockFromOrder(Order $order): void
     {
@@ -22,7 +20,7 @@ class CheckoutInventoryService
         foreach ($order->details as $detail) {
             $variant = $this->variants->lockById($detail->variant_id);
 
-            if (!$variant) {
+            if (! $variant) {
                 throw new \Exception('Không tìm thấy biến thể sản phẩm.');
             }
 
@@ -34,10 +32,10 @@ class CheckoutInventoryService
             $quantity = (int) $detail->quantity;
             $stockAfter = $stockBefore - $quantity;
 
-            $variant->update(['quantity' => $stockAfter]);
+            $this->variants->update($variant, ['quantity' => $stockAfter]);
 
-            $this->stockMovements->record(
-                $variant,
+            StockMovementRecorded::dispatch(
+                (int) $variant->id,
                 StockMovement::TYPE_SALE,
                 -$quantity,
                 $stockBefore,
@@ -45,7 +43,7 @@ class CheckoutInventoryService
                 Order::class,
                 $order->id,
                 $order->user_id ? (int) $order->user_id : null,
-                'Xuất kho từ đơn ' . ($order->order_code ?? ('#' . $order->id))
+                'Xuất kho từ đơn '.($order->order_code ?? ('#'.$order->id))
             );
         }
     }

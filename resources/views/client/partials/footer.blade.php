@@ -1,18 +1,6 @@
 <footer class="section-t-space footer-section-2 footer-color-3 threadly-footer">
     @php
-        $footerCategories = collect();
-
-        if (isset($headerCategories) && $headerCategories->count() > 0) {
-            $footerCategories = $headerCategories->take(6);
-        } elseif (isset($categories) && $categories->count() > 0) {
-            $footerCategories = $categories->take(6);
-        } else {
-            $footerCategories = \App\Models\Category::query()
-                ->whereNull('deleted_at')
-                ->orderBy('id', 'asc')
-                ->take(6)
-                ->get();
-        }
+        $footerCategories = $footerCategories ?? collect();
     @endphp
 
     <style>

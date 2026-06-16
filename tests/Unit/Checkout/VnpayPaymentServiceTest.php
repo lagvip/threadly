@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Checkout;
 
+use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Models\Order;
 use App\Services\Checkout\CheckoutVoucherService;
 use App\Services\Checkout\VnpayPaymentService;
@@ -50,7 +51,10 @@ class VnpayPaymentServiceTest extends TestCase
 
     protected function service(): VnpayPaymentService
     {
-        return new VnpayPaymentService($this->createMock(CheckoutVoucherService::class));
+        return new VnpayPaymentService(
+            $this->createMock(OrderRepositoryInterface::class),
+            $this->createMock(CheckoutVoucherService::class)
+        );
     }
 
     protected function hashPayload(array $payload, string $secret): string
@@ -60,7 +64,7 @@ class VnpayPaymentServiceTest extends TestCase
 
         $hashData = [];
         foreach ($payload as $key => $value) {
-            $hashData[] = urlencode($key) . '=' . urlencode($value);
+            $hashData[] = urlencode($key).'='.urlencode($value);
         }
 
         return hash_hmac('sha512', implode('&', $hashData), $secret);

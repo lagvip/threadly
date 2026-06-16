@@ -20,6 +20,11 @@ class ChatRepository implements ChatRepositoryInterface
             ]);
     }
 
+    public function findConversation(int $id): ?ChatConversation
+    {
+        return ChatConversation::find($id);
+    }
+
     public function firstOrCreateOpenConversationForUser(int $userId): ChatConversation
     {
         return ChatConversation::firstOrCreate(
@@ -46,6 +51,11 @@ class ChatRepository implements ChatRepositoryInterface
             'sender_role' => $senderRole,
             'body' => $body,
         ]);
+    }
+
+    public function updateConversation(ChatConversation $conversation, array $data): bool
+    {
+        return $conversation->update($data);
     }
 
     public function markUserMessagesAsRead(ChatConversation $conversation): int

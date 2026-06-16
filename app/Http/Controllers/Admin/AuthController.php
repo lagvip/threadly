@@ -6,23 +6,24 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\ForgotPasswordOtpRequest;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\LogoutRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ResetPasswordOtpRequest;
+use App\Http\Requests\Auth\ShowLoginRequest;
+use App\Http\Requests\Auth\ShowResetPasswordRequest;
 use App\Services\Auth\AdminAuthService;
-use Illuminate\Http\Request;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
 class AuthController extends Controller
 {
-    public function __construct(protected AdminAuthService $auth)
-    {
-    }
+    public function __construct(protected AdminAuthService $auth) {}
 
-    public function showLogin(Request $request)
+    public function showLogin(ShowLoginRequest $request)
     {
-        if ($request->filled('redirect')) {
-            session(['url.intended' => $request->redirect]);
+        if ($redirect = $request->intendedRedirect()) {
+            session(['url.intended' => $redirect]);
         }
 
         return view('auth.login');
@@ -65,7 +66,7 @@ class AuthController extends Controller
         return redirect()->intended(route('home'))->with('success', 'Đăng ký thành công.');
     }
 
-    public function logout(Request $request)
+    public function logout(LogoutRequest $request)
     {
         $this->logoutCurrentSession($request);
 
@@ -86,7 +87,7 @@ class AuthController extends Controller
             ->with('success', 'OTP đã được gửi về email của bạn.');
     }
 
-    public function showResetPasswordForm(Request $request)
+    public function showResetPasswordForm(ShowResetPasswordRequest $request)
     {
         return view('auth.reset-password', [
             'email' => $request->email,
@@ -136,7 +137,7 @@ class AuthController extends Controller
             ->with('success', 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại.');
     }
 
-    protected function logoutCurrentSession(Request $request): void
+    protected function logoutCurrentSession(FormRequest $request): void
     {
         Auth::logout();
         $request->session()->invalidate();

@@ -12,6 +12,14 @@ interface OrderRepositoryInterface
 
     public function create(array $data): Order;
 
+    public function update(Order $order, array $data): bool;
+
+    public function delete(Order $order): bool;
+
+    public function restore(Order $order): bool;
+
+    public function forceDelete(Order $order): bool;
+
     public function findOrFail(int $id): Order;
 
     public function findByCode(string $orderCode): ?Order;

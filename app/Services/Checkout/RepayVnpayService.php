@@ -16,10 +16,9 @@ class RepayVnpayService
         protected ProductVariantRepositoryInterface $variants,
         protected CheckoutVoucherService $vouchers,
         protected VnpayPaymentService $vnpay,
-    ) {
-    }
+    ) {}
 
-    public function execute(User $user, int $orderId): string
+    public function execute(User $user, int $orderId, ?string $clientIp = null): string
     {
         $order = $this->orders->findForUserWithDetails($orderId, (int) $user->id);
 
@@ -27,7 +26,7 @@ class RepayVnpayService
             throw new RuntimeException('Đơn này không phải thanh toán VNPay.');
         }
 
-        if (!$order->can_repay) {
+        if (! $order->can_repay) {
             throw new RuntimeException('Đơn này không thuộc trạng thái cho phép thanh toán lại.');
         }
 
@@ -38,24 +37,24 @@ class RepayVnpayService
         try {
             DB::transaction(function () use ($order) {
                 foreach ($order->details as $detail) {
-                    if (!$detail->variant_id) {
+                    if (! $detail->variant_id) {
                         throw new RuntimeException('Có sản phẩm trong đơn không còn biến thể hợp lệ.');
                     }
 
                     $variant = $this->variants->lockById((int) $detail->variant_id);
 
-                    if (!$variant) {
+                    if (! $variant) {
                         throw new RuntimeException('Có sản phẩm trong đơn không còn tồn tại.');
                     }
 
                     if ((int) $variant->quantity < (int) $detail->quantity) {
-                        throw new RuntimeException('Sản phẩm "' . ($detail->product_name ?? 'N/A') . '" không đủ tồn kho để thanh toán lại.');
+                        throw new RuntimeException('Sản phẩm "'.($detail->product_name ?? 'N/A').'" không đủ tồn kho để thanh toán lại.');
                     }
                 }
 
                 $this->vouchers->reserveVoucherForRepay($order);
 
-                $order->update([
+                $this->orders->update($order, [
                     'previous_status' => $order->order_status,
                     'order_status' => 'pending',
                     'payment_status' => 'pending',
@@ -63,11 +62,11 @@ class RepayVnpayService
                 ]);
             });
 
-            return $this->vnpay->createPaymentUrl($order);
+            return $this->vnpay->createPaymentUrl($order, $clientIp);
         } catch (RuntimeException $e) {
             throw $e;
         } catch (\Throwable $e) {
-            Log::error('Repay VNPay error: ' . $e->getMessage());
+            Log::error('Repay VNPay error: '.$e->getMessage());
             throw new RuntimeException('Có lỗi xảy ra khi tạo thanh toán lại.');
         }
     }

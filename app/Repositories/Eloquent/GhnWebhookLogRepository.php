@@ -11,4 +11,9 @@ class GhnWebhookLogRepository implements GhnWebhookLogRepositoryInterface
     {
         return GhnWebhookLog::create($data);
     }
+
+    public function update(GhnWebhookLog $log, array $data): bool
+    {
+        return $log->update($data);
+    }
 }

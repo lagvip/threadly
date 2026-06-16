@@ -6,9 +6,7 @@ use App\Contracts\Repositories\AddressRepositoryInterface;
 
 class ClientAddressService
 {
-    public function __construct(protected AddressRepositoryInterface $addresses)
-    {
-    }
+    public function __construct(protected AddressRepositoryInterface $addresses) {}
 
     public function indexData(int $userId): array
     {
@@ -38,7 +36,7 @@ class ClientAddressService
             $this->addresses->unsetDefaultForUser($userId, $address->id);
         }
 
-        $address->update($data);
+        $this->addresses->update($address, $data);
     }
 
     public function delete(int $userId, int $id): void
@@ -46,16 +44,16 @@ class ClientAddressService
         $address = $this->addresses->findForUser($id, $userId);
         $wasDefault = (bool) $address->is_default;
 
-        $address->delete();
+        $this->addresses->delete($address);
 
-        if (!$wasDefault) {
+        if (! $wasDefault) {
             return;
         }
 
         $next = $this->addresses->latestForUser($userId);
 
         if ($next) {
-            $next->update(['is_default' => 1]);
+            $this->addresses->update($next, ['is_default' => 1]);
         }
     }
 
@@ -64,6 +62,6 @@ class ClientAddressService
         $address = $this->addresses->findForUser($id, $userId);
 
         $this->addresses->unsetDefaultForUser($userId);
-        $address->update(['is_default' => 1]);
+        $this->addresses->update($address, ['is_default' => 1]);
     }
 }

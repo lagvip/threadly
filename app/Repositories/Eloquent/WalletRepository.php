@@ -19,4 +19,9 @@ class WalletRepository implements WalletRepositoryInterface
     {
         return Wallet::whereKey($id)->lockForUpdate()->firstOrFail();
     }
+
+    public function update(Wallet $wallet, array $data): bool
+    {
+        return $wallet->update($data);
+    }
 }

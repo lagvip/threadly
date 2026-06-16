@@ -6,7 +6,6 @@ use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Contracts\Repositories\RefundRequestEvidenceRepositoryInterface;
 use App\Contracts\Repositories\RefundRequestItemRepositoryInterface;
 use App\Contracts\Repositories\RefundRequestRepositoryInterface;
-use App\Http\Requests\Client\Refunds\StoreRefundRequest;
 use App\Models\Order;
 use App\Models\RefundRequest;
 use Illuminate\Support\Facades\DB;
@@ -20,24 +19,23 @@ class ClientRefundRequestService
         protected RefundRequestRepositoryInterface $refundRequests,
         protected RefundRequestItemRepositoryInterface $refundItems,
         protected RefundRequestEvidenceRepositoryInterface $refundEvidences,
-    ) {
-    }
+    ) {}
 
-    public function submit(StoreRefundRequest $request, Order $order, int $userId): void
+    public function submit(array $data, array $evidenceFiles, Order $order, int $userId): void
     {
-        DB::transaction(function () use ($request, $order, $userId) {
+        DB::transaction(function () use ($data, $evidenceFiles, $order, $userId) {
             $order = $this->orders->lockForRefundRequest($order->id);
 
             $this->assertOrderOwner($order, $userId);
 
-            if (!$order->can_request_refund) {
+            if (! $order->can_request_refund) {
                 throw new RuntimeException('Đơn hàng này chưa đủ điều kiện hoặc không còn số tiền để yêu cầu hoàn.');
             }
 
             [$selectedItems, $requestedAmount] = $this->resolveRefundSelection(
-                $request->input('items', []),
+                $data['items'] ?? [],
                 $order,
-                (string) $request->input('type')
+                (string) $data['type']
             );
 
             if ($requestedAmount <= 0 || $requestedAmount > (float) $order->refundable_amount) {
@@ -47,16 +45,16 @@ class ClientRefundRequestService
             $refundRequest = $this->refundRequests->create([
                 'order_id' => $order->id,
                 'user_id' => $userId,
-                'type' => $request->input('type'),
+                'type' => $data['type'],
                 'requested_amount' => $requestedAmount,
-                'reason' => trim((string) $request->input('reason')),
+                'reason' => trim((string) $data['reason']),
                 'status' => RefundRequest::STATUS_PENDING,
             ]);
 
             $this->storeItems($refundRequest, $selectedItems);
-            $this->storeEvidences($refundRequest, $request->file('evidences', []));
+            $this->storeEvidences($refundRequest, $evidenceFiles);
 
-            $order->update([
+            $this->orders->update($order, [
                 'refund_status' => Order::REFUND_REQUESTED,
                 'last_refund_requested_at' => now(),
             ]);
@@ -128,7 +126,7 @@ class ClientRefundRequestService
             $detailId = (string) $item['order_detail_id'];
             $input = $requestItems[$detailId] ?? null;
 
-            if (!$input || (string) ($input['selected'] ?? '') !== '1') {
+            if (! $input || (string) ($input['selected'] ?? '') !== '1') {
                 continue;
             }
 
@@ -139,7 +137,7 @@ class ClientRefundRequestService
             }
 
             if ($quantity > $item['available_quantity']) {
-                throw new RuntimeException('Số lượng hoàn của sản phẩm "' . $item['product_name_snapshot'] . '" vượt quá số lượng còn có thể hoàn.');
+                throw new RuntimeException('Số lượng hoàn của sản phẩm "'.$item['product_name_snapshot'].'" vượt quá số lượng còn có thể hoàn.');
             }
 
             $selectedItems[] = $this->selectedItemPayload($item, $quantity);
@@ -187,7 +185,7 @@ class ClientRefundRequestService
             $this->refundEvidences->create([
                 'refund_request_id' => $refundRequest->id,
                 'file_type' => Str::startsWith($mime, 'video/') ? 'video' : 'image',
-                'file_path' => $file->store('refund-evidences/' . now()->format('Y/m'), 'public'),
+                'file_path' => $file->store('refund-evidences/'.now()->format('Y/m'), 'public'),
                 'original_name' => $file->getClientOriginalName(),
                 'mime_type' => $mime,
                 'file_size' => $file->getSize() ?: 0,
@@ -213,11 +211,11 @@ class ClientRefundRequestService
         $variantParts = [];
 
         if (optional($detail->variant?->color)->name) {
-            $variantParts[] = 'Màu: ' . $detail->variant->color->name;
+            $variantParts[] = 'Màu: '.$detail->variant->color->name;
         }
 
         if (optional($detail->variant?->size)->name) {
-            $variantParts[] = 'Size: ' . $detail->variant->size->name;
+            $variantParts[] = 'Size: '.$detail->variant->size->name;
         }
 
         return implode(' | ', $variantParts);

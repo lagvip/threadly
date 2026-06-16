@@ -9,4 +9,6 @@ interface WalletRepositoryInterface
     public function firstOrCreateForUser(int $userId): Wallet;
 
     public function lockById(int $id): Wallet;
+
+    public function update(Wallet $wallet, array $data): bool;
 }

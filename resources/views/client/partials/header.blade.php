@@ -616,28 +616,9 @@
                                                     ? route('client.products.search')
                                                     : url('/tim-kiem');
 
-                                                $cartCount = 0;
-                                                $cartTotal = 0;
-                                                $cartItems = collect();
-
-                                                if (auth()->check()) {
-                                                    $cartModel = \App\Models\Cart::with(['details.variant.product'])
-                                                        ->where('id_user', auth()->id())
-                                                        ->first();
-
-                                                    if ($cartModel) {
-                                                        $cartItems = $cartModel->details;
-
-                                                        foreach ($cartItems as $item) {
-                                                            $qty = $item->quantity ?? 1;
-                                                            $variant = $item->variant;
-                                                            $price = $variant->price_sale ?? ($variant->price ?? 0);
-
-                                                            $cartCount += $qty;
-                                                            $cartTotal += $price * $qty;
-                                                        }
-                                                    }
-                                                }
+                                                $cartCount = $headerCartCount ?? 0;
+                                                $cartTotal = $headerCartTotal ?? 0;
+                                                $cartItems = $headerCartItems ?? collect();
                                             @endphp
 
                                             {!! $headerMenuHtml !!}

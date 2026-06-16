@@ -14,8 +14,7 @@ class AdminUserService
     public function __construct(
         protected RoleRepositoryInterface $roles,
         protected UserRepositoryInterface $users,
-    ) {
-    }
+    ) {}
 
     public function create(array $data, ?UploadedFile $avatar = null): void
     {
@@ -32,7 +31,7 @@ class AdminUserService
         }
 
         $user = $this->users->create($payload);
-        $user->roles()->sync([(int) $data['role_id']]);
+        $this->users->syncRoles($user, [(int) $data['role_id']]);
     }
 
     public function update(int $id, array $data, ?UploadedFile $avatar = null): void
@@ -43,11 +42,11 @@ class AdminUserService
         $isNewAdminRole = $this->isAdminRoleId((int) $data['role_id']);
         $adminCount = $this->countAdminUsers();
 
-        if (!$isCurrentAdmin && $isNewAdminRole && $adminCount >= 1) {
+        if (! $isCurrentAdmin && $isNewAdminRole && $adminCount >= 1) {
             throw new RuntimeException('Hệ thống chỉ cho phép tồn tại 1 tài khoản Admin duy nhất.');
         }
 
-        if ($isCurrentAdmin && !$isNewAdminRole && $adminCount <= 1) {
+        if ($isCurrentAdmin && ! $isNewAdminRole && $adminCount <= 1) {
             throw new RuntimeException('Không thể đổi role của Admin duy nhất sang quyền khác.');
         }
 
@@ -56,7 +55,7 @@ class AdminUserService
             'email' => $data['email'],
         ];
 
-        if (!empty($data['password'])) {
+        if (! empty($data['password'])) {
             $payload['password'] = bcrypt($data['password']);
         }
 
@@ -65,8 +64,8 @@ class AdminUserService
             $payload['avatar'] = $avatar->store('users', 'public');
         }
 
-        $user->update($payload);
-        $user->roles()->sync([(int) $data['role_id']]);
+        $this->users->update($user, $payload);
+        $this->users->syncRoles($user, [(int) $data['role_id']]);
     }
 
     public function assignRole(int $id, int $roleId): void
@@ -76,44 +75,44 @@ class AdminUserService
         $isNewAdminRole = $this->isAdminRoleId($roleId);
         $adminCount = $this->countAdminUsers();
 
-        if (!$isCurrentAdmin && $isNewAdminRole && $adminCount >= 1) {
+        if (! $isCurrentAdmin && $isNewAdminRole && $adminCount >= 1) {
             throw new RuntimeException('Hệ thống chỉ cho phép tồn tại 1 tài khoản Admin duy nhất.');
         }
 
-        if ($isCurrentAdmin && !$isNewAdminRole && $adminCount <= 1) {
+        if ($isCurrentAdmin && ! $isNewAdminRole && $adminCount <= 1) {
             throw new RuntimeException('Không thể đổi role của Admin duy nhất sang quyền khác.');
         }
 
-        $user->roles()->sync([$roleId]);
+        $this->users->syncRoles($user, [$roleId]);
     }
 
     public function softDelete(int $id): void
     {
         $user = $this->users->findWithRoles($id);
 
-        if ($user->allOrders()->exists()) {
+        if ($this->users->hasOrders($user)) {
             throw new RuntimeException('User này vẫn còn đơn hàng, không thể xóa.');
         }
 
-        $user->delete();
+        $this->users->delete($user);
     }
 
     public function restore(int $id): void
     {
-        $this->users->findTrashedWithRoles($id)->restore();
+        $this->users->restore($this->users->findTrashedWithRoles($id));
     }
 
     public function forceDelete(int $id): void
     {
         $user = $this->users->findTrashedWithRoles($id);
 
-        if ($user->allOrders()->exists()) {
+        if ($this->users->hasOrders($user)) {
             throw new RuntimeException('User này vẫn còn đơn hàng, không thể xóa vĩnh viễn.');
         }
 
         $this->deleteAvatar($user);
-        $user->roles()->detach();
-        $user->forceDelete();
+        $this->users->detachRoles($user);
+        $this->users->forceDelete($user);
     }
 
     public function ban(int $id, string $reasonOption, ?string $customReason, int $adminId): void
@@ -134,7 +133,7 @@ class AdminUserService
             }
         }
 
-        $user->update([
+        $this->users->update($user, [
             'status' => User::STATUS_BANNED,
             'ban_reason' => $reason,
             'banned_at' => now(),
@@ -144,7 +143,7 @@ class AdminUserService
 
     public function unban(int $id): void
     {
-        $this->users->findWithRoles($id)->update([
+        $this->users->update($this->users->findWithRoles($id), [
             'status' => User::STATUS_ACTIVE,
             'ban_reason' => null,
             'banned_at' => null,

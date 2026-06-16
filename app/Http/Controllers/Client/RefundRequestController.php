@@ -16,8 +16,7 @@ class RefundRequestController extends Controller
     public function __construct(
         protected ClientRefundPageService $pages,
         protected ClientRefundRequestService $refunds
-    ) {
-    }
+    ) {}
 
     public function create(Order $order)
     {
@@ -37,7 +36,7 @@ class RefundRequestController extends Controller
         $this->authorize('createForOrder', [RefundRequest::class, $order]);
 
         try {
-            $this->refunds->submit($request, $order, (int) Auth::id());
+            $this->refunds->submit($request->validated(), $request->file('evidences', []), $order, (int) Auth::id());
         } catch (\Throwable $e) {
             return back()
                 ->withInput()

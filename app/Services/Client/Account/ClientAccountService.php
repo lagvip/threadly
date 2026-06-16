@@ -4,6 +4,7 @@ namespace App\Services\Client\Account;
 
 use App\Contracts\Repositories\AddressRepositoryInterface;
 use App\Contracts\Repositories\OrderRepositoryInterface;
+use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Models\Address;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -14,8 +15,8 @@ class ClientAccountService
     public function __construct(
         protected AddressRepositoryInterface $addresses,
         protected OrderRepositoryInterface $orders,
-    ) {
-    }
+        protected UserRepositoryInterface $users,
+    ) {}
 
     public function overviewData(User $user): array
     {
@@ -43,14 +44,16 @@ class ClientAccountService
 
     public function update(User $user, array $data, ?UploadedFile $avatar = null): void
     {
-        $user->name = $data['name'];
+        $payload = [
+            'name' => $data['name'],
+        ];
 
         if ($avatar) {
             $this->deleteLocalAvatar($user);
-            $user->avatar = $avatar->store('users', 'public');
+            $payload['avatar'] = $avatar->store('users', 'public');
         }
 
-        $user->save();
+        $this->users->update($user, $payload);
     }
 
     protected function defaultAddress(int $userId): ?Address
@@ -60,7 +63,7 @@ class ClientAccountService
 
     protected function deleteLocalAvatar(User $user): void
     {
-        if (!empty($user->avatar) && !str_starts_with($user->avatar, 'http')) {
+        if (! empty($user->avatar) && ! str_starts_with($user->avatar, 'http')) {
             Storage::disk('public')->delete($user->avatar);
         }
     }

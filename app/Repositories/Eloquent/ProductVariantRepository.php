@@ -70,6 +70,11 @@ class ProductVariantRepository implements ProductVariantRepositoryInterface
         return ProductVariant::onlyTrashed()->findOrFail($id);
     }
 
+    public function findOrNull(int $id): ?ProductVariant
+    {
+        return ProductVariant::find($id);
+    }
+
     public function create(array $data): ProductVariant
     {
         return ProductVariant::create($data);
@@ -78,6 +83,26 @@ class ProductVariantRepository implements ProductVariantRepositoryInterface
     public function update(ProductVariant $variant, array $data): bool
     {
         return $variant->update($data);
+    }
+
+    public function delete(ProductVariant $variant): bool
+    {
+        return (bool) $variant->delete();
+    }
+
+    public function restore(ProductVariant $variant): bool
+    {
+        return (bool) $variant->restore();
+    }
+
+    public function forceDelete(ProductVariant $variant): bool
+    {
+        return (bool) $variant->forceDelete();
+    }
+
+    public function deleteMany(array $ids): int
+    {
+        return ProductVariant::whereIn('id', $ids)->delete();
     }
 
     public function restoreMany(array $ids): int

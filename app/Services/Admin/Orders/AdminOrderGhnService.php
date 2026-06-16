@@ -2,11 +2,12 @@
 
 namespace App\Services\Admin\Orders;
 
-use App\Contracts\Repositories\OrderStatusLogRepositoryInterface;
+use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Enums\OrderStatus;
+use App\Events\Sales\OrderStatusChanged;
 use App\Models\Order;
-use App\Services\GhnService;
-use App\Services\OrderInventoryService;
+use App\Services\Integrations\Ghn\GhnService;
+use App\Services\Inventory\OrderInventoryService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -16,18 +17,17 @@ class AdminOrderGhnService
     public function __construct(
         protected GhnService $ghn,
         protected OrderInventoryService $inventory,
-        protected OrderStatusLogRepositoryInterface $statusLogs,
-    ) {
-    }
+        protected OrderRepositoryInterface $orders,
+    ) {}
 
     public function create(Order $order): string
     {
         try {
             $this->ghn->createOrder($order);
 
-            return 'Đã tạo vận đơn GHN thành công. Mã vận đơn: ' . $order->fresh()->ghn_order_code;
+            return 'Đã tạo vận đơn GHN thành công. Mã vận đơn: '.$order->fresh()->ghn_order_code;
         } catch (\Throwable $e) {
-            Log::error('Create GHN order failed: ' . $e->getMessage(), $this->logContext($order));
+            Log::error('Create GHN order failed: '.$e->getMessage(), $this->logContext($order));
             throw new RuntimeException($e->getMessage() ?: 'Tạo vận đơn GHN thất bại.');
         }
     }
@@ -44,7 +44,7 @@ class AdminOrderGhnService
 
             return 'Đã đồng bộ trạng thái GHN thành công.';
         } catch (\Throwable $e) {
-            Log::error('Sync GHN order failed: ' . $e->getMessage(), $this->logContext($order));
+            Log::error('Sync GHN order failed: '.$e->getMessage(), $this->logContext($order));
             throw new RuntimeException($e->getMessage() ?: 'Đồng bộ GHN thất bại.');
         }
     }
@@ -67,14 +67,14 @@ class AdminOrderGhnService
             $response = $this->ghn->cancelOrder($order->ghn_order_code);
             $result = collect(data_get($response, 'data', []))->firstWhere('order_code', $order->ghn_order_code);
 
-            if ($result && isset($result['result']) && !$result['result']) {
+            if ($result && isset($result['result']) && ! $result['result']) {
                 throw new RuntimeException($result['message'] ?? 'GHN không cho hủy vận đơn này.');
             }
 
             $oldStatus = $order->order_status;
 
             DB::transaction(function () use ($order, $response) {
-                $order->update([
+                $this->orders->update($order, [
                     'ghn_status' => 'cancel',
                     'ghn_status_name' => 'Đã hủy trên GHN',
                     'ghn_raw_response' => $response,
@@ -89,19 +89,19 @@ class AdminOrderGhnService
             });
 
             if ($oldStatus !== OrderStatus::Cancelled->value) {
-                $this->statusLogs->create([
-                    'order_id' => $order->id,
-                    'status' => OrderStatus::Cancelled->value,
-                    'note' => 'Admin hủy vận đơn GHN: ' . $order->ghn_order_code,
-                    'changed_by' => $adminId,
-                ]);
+                OrderStatusChanged::dispatch(
+                    (int) $order->id,
+                    OrderStatus::Cancelled->value,
+                    'Admin hủy vận đơn GHN: '.$order->ghn_order_code,
+                    $adminId
+                );
             }
 
             return 'Đã gửi yêu cầu hủy vận đơn GHN thành công.';
         } catch (RuntimeException $e) {
             throw $e;
         } catch (\Throwable $e) {
-            Log::error('Cancel GHN order failed: ' . $e->getMessage(), $this->logContext($order));
+            Log::error('Cancel GHN order failed: '.$e->getMessage(), $this->logContext($order));
             throw new RuntimeException($e->getMessage() ?: 'Hủy vận đơn GHN thất bại.');
         }
     }
@@ -115,7 +115,7 @@ class AdminOrderGhnService
         try {
             return $this->ghn->printOrderUrl($order->ghn_order_code);
         } catch (\Throwable $e) {
-            Log::error('Print GHN order failed: ' . $e->getMessage(), $this->logContext($order));
+            Log::error('Print GHN order failed: '.$e->getMessage(), $this->logContext($order));
             throw new RuntimeException($e->getMessage() ?: 'Không in được vận đơn GHN.');
         }
     }
@@ -143,9 +143,9 @@ class AdminOrderGhnService
 
             $this->ghn->syncOrderFromGhnInfo($order, $fakeGhnResponse, $adminId, 'Giả lập GHN local');
 
-            return 'Đã giả lập trạng thái GHN: ' . $this->ghn->statusGroup($status) . ' - ' . $this->ghn->statusName($status);
+            return 'Đã giả lập trạng thái GHN: '.$this->ghn->statusGroup($status).' - '.$this->ghn->statusName($status);
         } catch (\Throwable $e) {
-            Log::error('Simulate GHN status failed: ' . $e->getMessage(), array_merge($this->logContext($order), [
+            Log::error('Simulate GHN status failed: '.$e->getMessage(), array_merge($this->logContext($order), [
                 'from_status' => $currentStatus,
                 'to_status' => $status,
             ]));
@@ -169,7 +169,7 @@ class AdminOrderGhnService
             'delivered',
         ];
 
-        if (!in_array($status, $safeDemoStatuses, true)) {
+        if (! in_array($status, $safeDemoStatuses, true)) {
             throw new RuntimeException('Đã tắt giả lập trạng thái GHN gây lệch nghiệp vụ như hủy, hoàn hàng, thất lạc hoặc hư hỏng.');
         }
 
@@ -184,12 +184,12 @@ class AdminOrderGhnService
             'damage',
         ];
 
-        if (!in_array($status, $allowedNextStatuses, true)) {
+        if (! in_array($status, $allowedNextStatuses, true)) {
             throw new RuntimeException(
-                'Không thể giả lập từ trạng thái "' .
-                $this->ghn->statusName($currentStatus) .
-                '" sang "' .
-                $this->ghn->statusName($status) .
+                'Không thể giả lập từ trạng thái "'.
+                $this->ghn->statusName($currentStatus).
+                '" sang "'.
+                $this->ghn->statusName($status).
                 '".'
             );
         }

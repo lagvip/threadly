@@ -3,42 +3,44 @@
 namespace App\Services\Admin\Orders;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
+use App\Contracts\Repositories\RefundRequestItemRepositoryInterface;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Support\Pagination;
 
 class AdminOrderQueryService
 {
-    public function __construct(protected OrderRepositoryInterface $orders)
-    {
-    }
+    public function __construct(
+        protected OrderRepositoryInterface $orders,
+        protected RefundRequestItemRepositoryInterface $refundItems,
+    ) {}
 
     public function indexData(array $filters): array
     {
         $query = $this->orders->adminIndexQuery();
 
-        if (!empty($filters['order_code'])) {
-            $query->where('order_code', 'like', '%' . $filters['order_code'] . '%');
+        if (! empty($filters['order_code'])) {
+            $query->where('order_code', 'like', '%'.$filters['order_code'].'%');
         }
 
-        if (!empty($filters['customer'])) {
+        if (! empty($filters['customer'])) {
             $customer = $filters['customer'];
 
             $query->where(function ($q) use ($customer) {
-                $q->where('email', 'like', '%' . $customer . '%')
-                    ->orWhere('name', 'like', '%' . $customer . '%')
+                $q->where('email', 'like', '%'.$customer.'%')
+                    ->orWhere('name', 'like', '%'.$customer.'%')
                     ->orWhereHas('user', function ($subQuery) use ($customer) {
-                        $subQuery->where('email', 'like', '%' . $customer . '%')
-                            ->orWhere('name', 'like', '%' . $customer . '%');
+                        $subQuery->where('email', 'like', '%'.$customer.'%')
+                            ->orWhere('name', 'like', '%'.$customer.'%');
                     });
             });
         }
 
-        if (!empty($filters['payment_status'])) {
+        if (! empty($filters['payment_status'])) {
             $query->where('payment_status', $filters['payment_status']);
         }
 
-        if (!empty($filters['order_status'])) {
+        if (! empty($filters['order_status'])) {
             $query->where('order_status', $filters['order_status']);
         }
 
@@ -60,6 +62,16 @@ class AdminOrderQueryService
             'details.variant.size',
             'details.variant.color',
         ]);
+    }
+
+    public function showData(Order $order): array
+    {
+        $order = $this->loadForShow($order);
+
+        return [
+            'order' => $order,
+            'approvedRefundByDetail' => $this->refundItems->approvedSummaryForOrder((int) $order->id),
+        ];
     }
 
     public function findForStatusUpdate(int $id): Order

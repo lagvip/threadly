@@ -30,9 +30,19 @@ interface ProductVariantRepositoryInterface
 
     public function findTrashed(int $id): ProductVariant;
 
+    public function findOrNull(int $id): ?ProductVariant;
+
     public function create(array $data): ProductVariant;
 
     public function update(ProductVariant $variant, array $data): bool;
+
+    public function delete(ProductVariant $variant): bool;
+
+    public function restore(ProductVariant $variant): bool;
+
+    public function forceDelete(ProductVariant $variant): bool;
+
+    public function deleteMany(array $ids): int;
 
     public function restoreMany(array $ids): int;
 

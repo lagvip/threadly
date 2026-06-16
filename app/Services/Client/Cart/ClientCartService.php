@@ -12,8 +12,7 @@ class ClientCartService
     public function __construct(
         protected CartRepositoryInterface $carts,
         protected ProductVariantRepositoryInterface $variants,
-    ) {
-    }
+    ) {}
 
     public function indexData(int $userId): array
     {
@@ -47,7 +46,8 @@ class ClientCartService
         }
 
         if ($cartDetail) {
-            $cartDetail->update(['quantity' => $newQty]);
+            $this->carts->updateDetail($cartDetail, ['quantity' => $newQty]);
+
             return;
         }
 
@@ -62,7 +62,7 @@ class ClientCartService
     {
         $cart = $this->carts->findForUser($userId);
 
-        if (!$cart) {
+        if (! $cart) {
             throw new RuntimeException('Không tìm thấy giỏ hàng.');
         }
 
@@ -73,15 +73,16 @@ class ClientCartService
             $stock = (int) ($item->variant->quantity ?? 0);
 
             if ($stock < 1) {
-                $item->delete();
+                $this->carts->deleteDetail($item);
+
                 continue;
             }
 
             if ($newQty > $stock) {
-                throw new RuntimeException('Sản phẩm "' . ($item->variant->product->name ?? 'N/A') . '" vượt quá tồn kho.');
+                throw new RuntimeException('Sản phẩm "'.($item->variant->product->name ?? 'N/A').'" vượt quá tồn kho.');
             }
 
-            $item->update(['quantity' => $newQty]);
+            $this->carts->updateDetail($item, ['quantity' => $newQty]);
         }
 
         $this->syncSelectedCheckoutItems($cart);
@@ -91,18 +92,18 @@ class ClientCartService
     {
         $cart = $this->carts->findForUser($userId);
 
-        if (!$cart) {
+        if (! $cart) {
             throw new RuntimeException('Không tìm thấy giỏ hàng.');
         }
 
-        $this->carts->findDetailForCart($cart->id, $id)->delete();
+        $this->carts->deleteDetail($this->carts->findDetailForCart($cart->id, $id));
 
         $this->removeSelectedCheckoutItem($id);
     }
 
     protected function selectedCartItemIds($cartItems): array
     {
-        $selectedCartItemIds = collect(session('checkout_selected_items', []))
+        $selectedCartItemIds = collect(session($this->checkoutCartSessionKey(), []))
             ->map(fn ($id) => (int) $id)
             ->filter(fn ($id) => $cartItems->contains('id', $id))
             ->values()
@@ -117,7 +118,7 @@ class ClientCartService
 
     protected function syncSelectedCheckoutItems(Cart $cart): void
     {
-        $selectedIds = collect(session('checkout_selected_items', []))
+        $selectedIds = collect(session($this->checkoutCartSessionKey(), []))
             ->map(fn ($id) => (int) $id)
             ->values();
 
@@ -128,20 +129,25 @@ class ClientCartService
         $validIds = $this->carts->validDetailIds($cart->id, $selectedIds->all());
 
         empty($validIds)
-            ? session()->forget('checkout_selected_items')
-            : session(['checkout_selected_items' => $validIds]);
+            ? session()->forget($this->checkoutCartSessionKey())
+            : session([$this->checkoutCartSessionKey() => $validIds]);
     }
 
     protected function removeSelectedCheckoutItem(int $id): void
     {
-        $selectedIds = collect(session('checkout_selected_items', []))
+        $selectedIds = collect(session($this->checkoutCartSessionKey(), []))
             ->map(fn ($itemId) => (int) $itemId)
             ->reject(fn ($itemId) => $itemId === $id)
             ->values()
             ->toArray();
 
         empty($selectedIds)
-            ? session()->forget('checkout_selected_items')
-            : session(['checkout_selected_items' => $selectedIds]);
+            ? session()->forget($this->checkoutCartSessionKey())
+            : session([$this->checkoutCartSessionKey() => $selectedIds]);
+    }
+
+    protected function checkoutCartSessionKey(): string
+    {
+        return config('threadly.checkout.cart_session_key');
     }
 }

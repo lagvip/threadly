@@ -3,14 +3,13 @@
 namespace App\Services\Checkout;
 
 use App\Models\Address;
-use App\Services\GhnService;
+use App\Services\Integrations\Ghn\GhnService;
 
 class CheckoutPricingService
 {
     public function __construct(
         protected GhnService $ghn,
-    ) {
-    }
+    ) {}
 
     public function calculateSubtotal($cartItems): float
     {
@@ -19,7 +18,7 @@ class CheckoutPricingService
         foreach ($cartItems as $item) {
             $variant = $item->variant;
 
-            if (!$variant) {
+            if (! $variant) {
                 continue;
             }
 
@@ -31,7 +30,7 @@ class CheckoutPricingService
 
     public function calculateShippingFromCart($cartItems, Address $address): int
     {
-        if (!$address->ghn_district_id || !$address->ghn_ward_code) {
+        if (! $address->ghn_district_id || ! $address->ghn_ward_code) {
             return 0;
         }
 

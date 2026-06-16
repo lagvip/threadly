@@ -14,15 +14,27 @@ interface ProductRepositoryInterface
 
     public function findWithAdminDetail(int $id): Product;
 
+    public function findForAdminOrNull(int $id): ?Product;
+
     public function findTrashed(int $id): Product;
 
     public function create(array $data): Product;
+
+    public function update(Product $product, array $data): bool;
+
+    public function delete(Product $product): bool;
+
+    public function restore(Product $product): bool;
+
+    public function forceDelete(Product $product): bool;
 
     public function adminListQuery(): Builder;
 
     public function trashedForAdmin();
 
     public function restoreMany(array $ids): int;
+
+    public function deleteMany(array $ids): int;
 
     public function byCategoryIdsQuery(array $categoryIds): Builder;
 

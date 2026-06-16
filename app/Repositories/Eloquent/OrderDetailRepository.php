@@ -23,6 +23,11 @@ class OrderDetailRepository implements OrderDetailRepositoryInterface
         return OrderDetail::findOrFail($id);
     }
 
+    public function delete(OrderDetail $orderDetail): bool
+    {
+        return (bool) $orderDetail->delete();
+    }
+
     public function existsForProduct(int $productId): bool
     {
         return OrderDetail::where('product_id', $productId)->exists();

@@ -2,15 +2,19 @@
 
 namespace App\Actions\Checkout;
 
+use App\Contracts\Repositories\AddressRepositoryInterface;
 use App\DTOs\Checkout\CheckoutAddressData;
 use App\Models\Address;
 
 class StoreCheckoutAddressAction
 {
+    public function __construct(
+        protected AddressRepositoryInterface $addresses,
+    ) {}
+
     public function execute(int $userId, CheckoutAddressData $data): Address
     {
-        return Address::create([
-            'user_id' => $userId,
+        return $this->addresses->createForUser($userId, [
             'recipient_name' => $data->recipientName,
             'phone_number' => $data->phone,
             'province' => $data->province,
@@ -21,7 +25,7 @@ class StoreCheckoutAddressAction
             'ghn_district_id' => $data->ghnDistrictId,
             'ghn_ward_code' => $data->ghnWardCode,
             'address_type' => 'Home',
-            'is_default' => Address::where('user_id', $userId)->count() === 0 ? 1 : 0,
+            'is_default' => $this->addresses->countForUser($userId) === 0 ? 1 : 0,
         ]);
     }
 }

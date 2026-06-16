@@ -274,16 +274,7 @@
                 'expired' => 'Thanh toán hết hạn',
             ];
 
-            $approvedRefundByDetail = \App\Models\RefundRequestItem::query()
-                ->join('refund_requests', 'refund_requests.id', '=', 'refund_request_items.refund_request_id')
-                ->where('refund_requests.order_id', $order->id)
-                ->where('refund_requests.status', \App\Models\RefundRequest::STATUS_APPROVED)
-                ->groupBy('refund_request_items.order_detail_id')
-                ->selectRaw('refund_request_items.order_detail_id')
-                ->selectRaw('COALESCE(SUM(refund_request_items.quantity), 0) as refunded_quantity')
-                ->selectRaw('COALESCE(SUM(refund_request_items.line_amount), 0) as refunded_amount')
-                ->get()
-                ->keyBy('order_detail_id');
+            $approvedRefundByDetail = $approvedRefundByDetail ?? collect();
 
             $subtotal = $order->details->sum(fn($d) => (float) $d->total);
             $discount = (float) ($order->discount ?? 0);

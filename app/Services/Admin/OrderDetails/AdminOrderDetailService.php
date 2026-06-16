@@ -10,8 +10,7 @@ class AdminOrderDetailService
     public function __construct(
         protected OrderDetailRepositoryInterface $orderDetails,
         protected ProductVariantRepositoryInterface $variants,
-    ) {
-    }
+    ) {}
 
     public function indexData(): array
     {
@@ -23,7 +22,7 @@ class AdminOrderDetailService
     public function create(array $data): void
     {
         $variantId = (int) ($data['variant_id'] ?? $data['id_variant']);
-        $variant = $this->variants->query()->with('product')->find($variantId);
+        $variant = $this->variants->findWithProduct($variantId);
 
         $this->orderDetails->create([
             'order_id' => $data['order_id'] ?? $data['id_order'],
@@ -38,6 +37,6 @@ class AdminOrderDetailService
 
     public function delete(int $id): void
     {
-        $this->orderDetails->find($id)->delete();
+        $this->orderDetails->delete($this->orderDetails->find($id));
     }
 }

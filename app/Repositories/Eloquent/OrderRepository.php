@@ -2,8 +2,8 @@
 
 namespace App\Repositories\Eloquent;
 
-use App\Models\Order;
 use App\Contracts\Repositories\OrderRepositoryInterface;
+use App\Models\Order;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -17,6 +17,26 @@ class OrderRepository implements OrderRepositoryInterface
     public function create(array $data): Order
     {
         return Order::create($data);
+    }
+
+    public function update(Order $order, array $data): bool
+    {
+        return $order->update($data);
+    }
+
+    public function delete(Order $order): bool
+    {
+        return (bool) $order->delete();
+    }
+
+    public function restore(Order $order): bool
+    {
+        return (bool) $order->restore();
+    }
+
+    public function forceDelete(Order $order): bool
+    {
+        return (bool) $order->forceDelete();
     }
 
     public function findOrFail(int $id): Order
@@ -77,10 +97,10 @@ class OrderRepository implements OrderRepositoryInterface
     public function recentForUserWithDetails(int $userId, int $limit = 3): Collection
     {
         return Order::with([
-                'details.product',
-                'details.variant.color',
-                'details.variant.size',
-            ])
+            'details.product',
+            'details.variant.color',
+            'details.variant.size',
+        ])
             ->where('user_id', $userId)
             ->latest('id')
             ->take($limit)
@@ -105,26 +125,26 @@ class OrderRepository implements OrderRepositoryInterface
     public function clientIndexQuery(int $userId): Builder
     {
         return Order::with([
-                'details.variant',
-                'details.product',
-                'reviews.variant.color',
-                'reviews.variant.size',
-                'refundRequests.admin',
-            ])
+            'details.variant',
+            'details.product',
+            'reviews.variant.color',
+            'reviews.variant.size',
+            'refundRequests.admin',
+        ])
             ->where('user_id', $userId);
     }
 
     public function findForUserWithDetail(int $id, int $userId): Order
     {
         return Order::with([
-                'details.variant.color',
-                'details.variant.size',
-                'details.product',
-                'reviews.variant.color',
-                'reviews.variant.size',
-                'refundRequests.admin',
-                'refundRequests.items',
-            ])
+            'details.variant.color',
+            'details.variant.size',
+            'details.product',
+            'reviews.variant.color',
+            'reviews.variant.size',
+            'refundRequests.admin',
+            'refundRequests.items',
+        ])
             ->where('user_id', $userId)
             ->findOrFail($id);
     }
@@ -160,11 +180,11 @@ class OrderRepository implements OrderRepositoryInterface
     public function lockForRefundRequest(int $id): Order
     {
         return Order::with([
-                'details.variant.color',
-                'details.variant.size',
-                'details.product',
-                'refundRequests.items',
-            ])
+            'details.variant.color',
+            'details.variant.size',
+            'details.product',
+            'refundRequests.items',
+        ])
             ->whereKey($id)
             ->lockForUpdate()
             ->firstOrFail();

@@ -28,6 +28,10 @@ interface CartRepositoryInterface
 
     public function createDetail(array $data): CartDetail;
 
+    public function updateDetail(CartDetail $detail, array $data): bool;
+
+    public function deleteDetail(CartDetail $detail): bool;
+
     public function deleteDetails(int $cartId, array $detailIds): int;
 
     public function deleteAllDetails(int $cartId): int;

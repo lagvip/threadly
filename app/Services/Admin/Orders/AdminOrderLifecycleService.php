@@ -3,10 +3,10 @@
 namespace App\Services\Admin\Orders;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
-use App\Contracts\Repositories\OrderStatusLogRepositoryInterface;
 use App\Enums\OrderStatus;
+use App\Events\Sales\OrderStatusChanged;
 use App\Models\Order;
-use App\Services\OrderInventoryService;
+use App\Services\Inventory\OrderInventoryService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -16,9 +16,7 @@ class AdminOrderLifecycleService
     public function __construct(
         protected OrderInventoryService $inventory,
         protected OrderRepositoryInterface $orders,
-        protected OrderStatusLogRepositoryInterface $statusLogs,
-    ) {
-    }
+    ) {}
 
     public function updateStatus(Order $order, string $newStatus, ?string $note, int $adminId): void
     {
@@ -43,30 +41,29 @@ class AdminOrderLifecycleService
 
         if ($newStatus === OrderStatus::Cancelled->value) {
             $this->cancel($order, $note ?: 'Admin hủy đơn.', $adminId);
+
             return;
         }
 
-        if (!$currentEnum->canTransitionTo($newEnum)) {
+        if (! $currentEnum->canTransitionTo($newEnum)) {
             throw new RuntimeException('Chỉ có thể cập nhật trạng thái lần lượt theo đúng quy trình.');
         }
+
+        $payload = [
+            'order_status' => $newStatus,
+        ];
 
         if (
             $newStatus === OrderStatus::Delivered->value &&
             $order->payment_method === 'cod' &&
             in_array($order->payment_status, ['unpaid', 'pending'], true)
         ) {
-            $order->payment_status = 'paid';
+            $payload['payment_status'] = 'paid';
         }
 
-        $order->order_status = $newStatus;
-        $order->save();
+        $this->orders->update($order, $payload);
 
-        $this->statusLogs->create([
-            'order_id' => $order->id,
-            'status' => $newStatus,
-            'note' => $note,
-            'changed_by' => $adminId,
-        ]);
+        OrderStatusChanged::dispatch((int) $order->id, $newStatus, $note, $adminId);
     }
 
     public function softDelete(Order $order): void
@@ -75,7 +72,7 @@ class AdminOrderLifecycleService
             throw new RuntimeException('Chỉ có thể xóa đơn hàng đã hủy.');
         }
 
-        $order->delete();
+        $this->orders->delete($order);
     }
 
     public function restore(array $ids): void
@@ -88,7 +85,7 @@ class AdminOrderLifecycleService
         try {
             $this->orders->forceDeleteManyWithTrashed($ids);
         } catch (\Throwable $e) {
-            Log::error('Xóa vĩnh viễn đơn hàng thất bại: ' . $e->getMessage());
+            Log::error('Xóa vĩnh viễn đơn hàng thất bại: '.$e->getMessage());
             throw new RuntimeException('Có lỗi xảy ra khi xóa vĩnh viễn.');
         }
     }
@@ -99,7 +96,7 @@ class AdminOrderLifecycleService
             throw new RuntimeException('Đơn hàng đã thanh toán không thể hủy.');
         }
 
-        if (!in_array($order->order_status, [
+        if (! in_array($order->order_status, [
             OrderStatus::Pending->value,
             OrderStatus::Processing->value,
         ], true)) {
@@ -107,17 +104,13 @@ class AdminOrderLifecycleService
         }
 
         DB::transaction(function () use ($order) {
-            $order->order_status = OrderStatus::Cancelled->value;
-            $order->save();
+            $this->orders->update($order, [
+                'order_status' => OrderStatus::Cancelled->value,
+            ]);
 
             $this->inventory->releaseCancelledOrder($order);
         });
 
-        $this->statusLogs->create([
-            'order_id' => $order->id,
-            'status' => OrderStatus::Cancelled->value,
-            'note' => $note,
-            'changed_by' => $adminId,
-        ]);
+        OrderStatusChanged::dispatch((int) $order->id, OrderStatus::Cancelled->value, $note, $adminId);
     }
 }

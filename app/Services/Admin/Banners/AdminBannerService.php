@@ -11,16 +11,11 @@ use RuntimeException;
 
 class AdminBannerService
 {
-    public function __construct(protected BannerRepositoryInterface $banners)
-    {
-    }
+    public function __construct(protected BannerRepositoryInterface $banners) {}
 
     public function indexData(?string $search = null): array
     {
-        $banners = $this->banners->query()
-            ->when($search !== null && $search !== '', fn ($query) => $query->where('title', 'like', '%' . $search . '%'))
-            ->latest('id')
-            ->paginate(10);
+        $banners = $this->banners->paginatedForAdmin($search);
 
         $banners = Pagination::withQueryString($banners);
 
@@ -30,7 +25,7 @@ class AdminBannerService
     public function trashData(): array
     {
         return [
-            'banners' => $this->banners->trashedQuery()->latest('id')->paginate(10),
+            'banners' => $this->banners->trashedPaginatedForAdmin(),
         ];
     }
 
@@ -65,7 +60,7 @@ class AdminBannerService
 
         $data['is_active'] = $isActive;
 
-        if (!$banner->update($data)) {
+        if (! $this->banners->update($banner, $data)) {
             throw new RuntimeException('Cập nhật không thành công!');
         }
 
@@ -76,7 +71,7 @@ class AdminBannerService
 
     public function softDelete(int $id): void
     {
-        $this->banners->find($id)->delete();
+        $this->banners->delete($this->banners->find($id));
     }
 
     public function bulkDelete(array $ids): void
@@ -90,6 +85,6 @@ class AdminBannerService
 
     public function restore(int $id): void
     {
-        $this->banners->findTrashed($id)->restore();
+        $this->banners->restore($this->banners->findTrashed($id));
     }
 }

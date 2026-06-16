@@ -4,10 +4,10 @@ namespace Tests\Unit\Api;
 
 use App\Contracts\Repositories\GhnWebhookLogRepositoryInterface;
 use App\Contracts\Repositories\OrderRepositoryInterface;
+use App\DTOs\Integrations\Ghn\GhnWebhookData;
 use App\Models\GhnWebhookLog;
 use App\Services\Api\GhnWebhookService;
-use App\Services\GhnService;
-use Illuminate\Http\Request;
+use App\Services\Integrations\Ghn\GhnService;
 use Tests\TestCase;
 
 class GhnWebhookServiceTest extends TestCase
@@ -16,35 +16,26 @@ class GhnWebhookServiceTest extends TestCase
     {
         config(['services.ghn.webhook_secret' => '']);
 
-        $request = Request::create('/api/ghn/webhook', 'POST');
-
-        $this->assertTrue($this->service()->isValidSecret($request));
+        $this->assertTrue($this->service()->isValidSecret(GhnWebhookData::fromArray([])));
     }
 
     public function test_valid_secret_accepts_matching_header(): void
     {
         config(['services.ghn.webhook_secret' => 'webhook-secret']);
 
-        $request = Request::create('/api/ghn/webhook', 'POST');
-        $request->headers->set('X-GHN-Webhook-Secret', 'webhook-secret');
-
-        $this->assertTrue($this->service()->isValidSecret($request));
+        $this->assertTrue($this->service()->isValidSecret(GhnWebhookData::fromArray([], ['webhook-secret'])));
     }
 
     public function test_valid_secret_rejects_wrong_secret(): void
     {
         config(['services.ghn.webhook_secret' => 'webhook-secret']);
 
-        $request = Request::create('/api/ghn/webhook', 'POST', [
-            'secret' => 'wrong-secret',
-        ]);
-
-        $this->assertFalse($this->service()->isValidSecret($request));
+        $this->assertFalse($this->service()->isValidSecret(GhnWebhookData::fromArray([], ['wrong-secret'])));
     }
 
     public function test_accept_logs_payload_and_returns_not_found_when_order_is_missing(): void
     {
-        $log = new FakeGhnWebhookLog();
+        $log = new FakeGhnWebhookLog;
         $payload = [
             'Type' => 'switch_status',
             'OrderCode' => 'GHN123',
@@ -65,6 +56,11 @@ class GhnWebhookServiceTest extends TestCase
             }))
             ->willReturn($log);
 
+        $webhookLogs->expects($this->once())
+            ->method('update')
+            ->with($log, $this->callback(fn (array $data) => ! empty($data['error_message'])))
+            ->willReturn(true);
+
         $orders = $this->createMock(OrderRepositoryInterface::class);
         $orders->expects($this->once())
             ->method('findByGhnCodes')
@@ -77,17 +73,12 @@ class GhnWebhookServiceTest extends TestCase
             $orders
         );
 
-        $result = $service->accept($payload);
+        $result = $service->accept(GhnWebhookData::fromArray($payload));
 
         $this->assertSame([
             'found' => false,
             'message' => 'Webhook accepted but local order not found',
         ], $result);
-
-        $this->assertSame(
-            'Không tìm thấy order local tương ứng webhook GHN.',
-            $log->updates['error_message']
-        );
     }
 
     protected function service(): GhnWebhookService
@@ -100,14 +91,4 @@ class GhnWebhookServiceTest extends TestCase
     }
 }
 
-class FakeGhnWebhookLog extends GhnWebhookLog
-{
-    public array $updates = [];
-
-    public function update(array $attributes = [], array $options = []): bool
-    {
-        $this->updates = $attributes;
-
-        return true;
-    }
-}
+class FakeGhnWebhookLog extends GhnWebhookLog {}

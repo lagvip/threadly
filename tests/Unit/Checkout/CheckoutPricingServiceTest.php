@@ -4,7 +4,7 @@ namespace Tests\Unit\Checkout;
 
 use App\Models\Address;
 use App\Services\Checkout\CheckoutPricingService;
-use App\Services\GhnService;
+use App\Services\Integrations\Ghn\GhnService;
 use Tests\TestCase;
 
 class CheckoutPricingServiceTest extends TestCase

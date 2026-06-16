@@ -4,6 +4,7 @@ namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\BannerRepositoryInterface;
 use App\Models\Banner;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -14,9 +15,22 @@ class BannerRepository implements BannerRepositoryInterface
         return Banner::query();
     }
 
+    public function paginatedForAdmin(?string $search = null, int $perPage = 10): LengthAwarePaginator
+    {
+        return Banner::query()
+            ->when($search !== null && $search !== '', fn ($query) => $query->where('title', 'like', '%'.$search.'%'))
+            ->latest('id')
+            ->paginate($perPage);
+    }
+
     public function trashedQuery(): Builder
     {
         return Banner::onlyTrashed();
+    }
+
+    public function trashedPaginatedForAdmin(int $perPage = 10): LengthAwarePaginator
+    {
+        return Banner::onlyTrashed()->latest('id')->paginate($perPage);
     }
 
     public function find(int $id): Banner
@@ -32,6 +46,21 @@ class BannerRepository implements BannerRepositoryInterface
     public function create(array $data): Banner
     {
         return Banner::create($data);
+    }
+
+    public function update(Banner $banner, array $data): bool
+    {
+        return $banner->update($data);
+    }
+
+    public function delete(Banner $banner): bool
+    {
+        return (bool) $banner->delete();
+    }
+
+    public function restore(Banner $banner): bool
+    {
+        return (bool) $banner->restore();
     }
 
     public function softDeleteMany(array $ids): int

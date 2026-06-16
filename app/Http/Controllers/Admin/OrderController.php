@@ -14,20 +14,24 @@ use Illuminate\Support\Facades\Auth;
 
 class OrderController extends Controller
 {
-    public function index(IndexOrdersRequest $request, AdminOrderQueryService $orders)
+    public function __construct(
+        protected AdminOrderQueryService $queries,
+        protected AdminOrderLifecycleService $orders,
+        protected AdminOrderGhnService $ghnOrders,
+    ) {}
+
+    public function index(IndexOrdersRequest $request)
     {
         $this->authorize('viewAny', Order::class);
 
-        return view('admin.orders.index', $orders->indexData($request->validated()));
+        return view('admin.orders.index', $this->queries->indexData($request->validated()));
     }
 
-    public function show(Order $order, AdminOrderQueryService $orders)
+    public function show(Order $order)
     {
         $this->authorize('view', $order);
 
-        return view('admin.orders.details', [
-            'order' => $orders->loadForShow($order),
-        ]);
+        return view('admin.orders.details', $this->queries->showData($order));
     }
 
     public function edit(Order $order)
@@ -38,13 +42,13 @@ class OrderController extends Controller
             ->with('error', 'Không còn cập nhật trạng thái đơn hàng thủ công. Trạng thái giao hàng được đồng bộ từ GHN.');
     }
 
-    public function updateStatus(UpdateOrderStatusRequest $request, $id, AdminOrderLifecycleService $orders, AdminOrderQueryService $queries)
+    public function updateStatus(UpdateOrderStatusRequest $request, $id)
     {
         $this->authorize('updateAny', Order::class);
 
         try {
-            $orders->updateStatus(
-                $queries->findForStatusUpdate((int) $id),
+            $this->orders->updateStatus(
+                $this->queries->findForStatusUpdate((int) $id),
                 $request->string('order_status')->toString(),
                 $request->input('note'),
                 Auth::id()
@@ -56,77 +60,77 @@ class OrderController extends Controller
         return back()->with('success', 'Cập nhật trạng thái đơn hàng thành công.');
     }
 
-    public function print($id, AdminOrderQueryService $orders)
+    public function print($id)
     {
         $this->authorize('viewAny', Order::class);
 
         return view('admin.orders.invoice', [
-            'order' => $orders->loadForShow($orders->findForStatusUpdate((int) $id)),
+            'order' => $this->queries->loadForShow($this->queries->findForStatusUpdate((int) $id)),
         ]);
     }
 
-    public function createGhnOrder(Order $order, AdminOrderGhnService $ghnOrders)
+    public function createGhnOrder(Order $order)
     {
         $this->authorize('manageGhn', $order);
 
         try {
-            return back()->with('success', $ghnOrders->create($order));
+            return back()->with('success', $this->ghnOrders->create($order));
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
     }
 
-    public function syncGhnOrder(Order $order, AdminOrderGhnService $ghnOrders)
+    public function syncGhnOrder(Order $order)
     {
         $this->authorize('manageGhn', $order);
 
         try {
-            return back()->with('success', $ghnOrders->sync($order, Auth::id()));
+            return back()->with('success', $this->ghnOrders->sync($order, Auth::id()));
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
     }
 
-    public function cancelGhnOrder(Order $order, AdminOrderGhnService $ghnOrders)
+    public function cancelGhnOrder(Order $order)
     {
         $this->authorize('manageGhn', $order);
 
         try {
-            return back()->with('success', $ghnOrders->cancel($order, Auth::id()));
+            return back()->with('success', $this->ghnOrders->cancel($order, Auth::id()));
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
     }
 
-    public function printGhnOrder(Order $order, AdminOrderGhnService $ghnOrders)
+    public function printGhnOrder(Order $order)
     {
         $this->authorize('manageGhn', $order);
 
         try {
-            return redirect()->away($ghnOrders->printUrl($order));
+            return redirect()->away($this->ghnOrders->printUrl($order));
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
     }
 
-    public function simulateGhnStatus(Order $order, string $status, AdminOrderGhnService $ghnOrders)
+    public function simulateGhnStatus(Order $order, string $status)
     {
         abort_unless(app()->environment('local'), 403, 'Chỉ được giả lập GHN ở môi trường local.');
         $this->authorize('manageGhn', $order);
 
         try {
-            return back()->with('success', $ghnOrders->simulate($order, $status, Auth::id()));
+            return back()->with('success', $this->ghnOrders->simulate($order, $status, Auth::id()));
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
     }
 
-    public function destroy(Order $order, AdminOrderLifecycleService $orders)
+    public function destroy(Order $order)
     {
         $this->authorize('delete', $order);
 
         try {
-            $orders->softDelete($order);
+            $this->orders->softDelete($order);
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -134,28 +138,28 @@ class OrderController extends Controller
         return back()->with('success', 'Đơn hàng đã được xóa.');
     }
 
-    public function trash(AdminOrderQueryService $orders)
+    public function trash()
     {
         $this->authorize('viewAny', Order::class);
 
-        return view('admin.orders.trash', $orders->trashData());
+        return view('admin.orders.trash', $this->queries->trashData());
     }
 
-    public function restore(BulkOrderIdsRequest $request, AdminOrderLifecycleService $orders)
+    public function restore(BulkOrderIdsRequest $request)
     {
         $this->authorize('restore', Order::class);
 
-        $orders->restore($request->input('ids', []));
+        $this->orders->restore($request->input('ids', []));
 
         return back()->with('success', 'Khôi phục đơn hàng thành công.');
     }
 
-    public function forceDelete(BulkOrderIdsRequest $request, AdminOrderLifecycleService $orders)
+    public function forceDelete(BulkOrderIdsRequest $request)
     {
         $this->authorize('forceDelete', Order::class);
 
         try {
-            $orders->forceDelete($request->input('ids', []));
+            $this->orders->forceDelete($request->input('ids', []));
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }

@@ -26,7 +26,7 @@
                 <div class="col-md-3">
                     <select name="status" class="form-select">
                         <option value="">Tất cả trạng thái</option>
-                        @foreach(['draft' => 'Nháp', 'posted' => 'Đã xác nhận', 'cancelled' => 'Đã hủy'] as $value => $label)
+                        @foreach($receiptStatusLabels as $value => $label)
                             <option value="{{ $value }}" {{ ($filters['status'] ?? '') === $value ? 'selected' : '' }}>{{ $label }}</option>
                         @endforeach
                     </select>
@@ -60,8 +60,8 @@
                                 <td>{{ $receipt->receipt_code }}</td>
                                 <td>
                                     @php
-                                        $badge = ['draft' => 'warning', 'posted' => 'success', 'cancelled' => 'secondary'][$receipt->status] ?? 'secondary';
-                                        $label = ['draft' => 'Nháp', 'posted' => 'Đã xác nhận', 'cancelled' => 'Đã hủy'][$receipt->status] ?? $receipt->status;
+                                        $badge = $receiptStatusBadges[$receipt->status] ?? 'secondary';
+                                        $label = $receiptStatusLabels[$receipt->status] ?? $receipt->status;
                                     @endphp
                                     <span class="badge bg-{{ $badge }}">{{ $label }}</span>
                                 </td>

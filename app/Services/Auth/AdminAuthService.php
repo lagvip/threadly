@@ -2,13 +2,13 @@
 
 namespace App\Services\Auth;
 
+use App\Contracts\Repositories\PasswordResetTokenRepositoryInterface;
 use App\Contracts\Repositories\RoleRepositoryInterface;
 use App\Contracts\Repositories\UserRepositoryInterface;
-use App\Jobs\SendPasswordResetOtpJob;
+use App\Jobs\System\SendPasswordResetOtpJob;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use RuntimeException;
 
@@ -17,12 +17,12 @@ class AdminAuthService
     public function __construct(
         protected RoleRepositoryInterface $roles,
         protected UserRepositoryInterface $users,
-    ) {
-    }
+        protected PasswordResetTokenRepositoryInterface $passwordResetTokens,
+    ) {}
 
     public function attemptLogin(array $credentials, bool $remember): User
     {
-        if (!Auth::attempt([
+        if (! Auth::attempt([
             'email' => $credentials['email'],
             'password' => $credentials['password'],
         ], $remember)) {
@@ -52,7 +52,7 @@ class AdminAuthService
         $customerRole = $this->roles->findBySlug('customer');
 
         if ($customerRole) {
-            $user->roles()->attach($customerRole->id);
+            $this->users->attachRole($user, (int) $customerRole->id);
         }
 
         Auth::login($user);
@@ -64,42 +64,36 @@ class AdminAuthService
     {
         $otp = (string) random_int(100000, 999999);
 
-        DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $email],
-            [
-                'token' => Hash::make($otp),
-                'created_at' => now(),
-            ]
-        );
+        $this->passwordResetTokens->updateOrCreate($email, Hash::make($otp));
 
         SendPasswordResetOtpJob::dispatch($email, $otp);
     }
 
     public function resetPasswordWithOtp(string $email, string $otp, string $password): void
     {
-        $record = DB::table('password_reset_tokens')->where('email', $email)->first();
+        $record = $this->passwordResetTokens->findByEmail($email);
 
-        if (!$record) {
+        if (! $record) {
             throw new RuntimeException('OTP không tồn tại hoặc đã hết hạn.');
         }
 
         if (Carbon::parse($record->created_at)->addMinutes(10)->isPast()) {
-            DB::table('password_reset_tokens')->where('email', $email)->delete();
+            $this->passwordResetTokens->deleteByEmail($email);
             throw new RuntimeException('OTP đã hết hạn. Vui lòng yêu cầu mã mới.');
         }
 
-        if (!Hash::check($otp, $record->token)) {
+        if (! Hash::check($otp, $record->token)) {
             throw new RuntimeException('OTP không đúng.');
         }
 
         $this->users->updatePasswordByEmail($email, Hash::make($password));
 
-        DB::table('password_reset_tokens')->where('email', $email)->delete();
+        $this->passwordResetTokens->deleteByEmail($email);
     }
 
     public function changePassword(User $user, string $currentPassword, string $newPassword): void
     {
-        if (!Hash::check($currentPassword, $user->password)) {
+        if (! Hash::check($currentPassword, $user->password)) {
             throw new RuntimeException('Mật khẩu hiện tại không đúng.');
         }
 
@@ -107,7 +101,7 @@ class AdminAuthService
             throw new RuntimeException('Mật khẩu mới không được trùng mật khẩu hiện tại.');
         }
 
-        $user->update([
+        $this->users->update($user, [
             'password' => Hash::make($newPassword),
         ]);
     }
