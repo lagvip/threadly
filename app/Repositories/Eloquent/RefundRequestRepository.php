@@ -38,6 +38,11 @@ class RefundRequestRepository implements RefundRequestRepositoryInterface
         return RefundRequest::create($data);
     }
 
+    public function update(RefundRequest $refundRequest, array $data): bool
+    {
+        return $refundRequest->update($data);
+    }
+
     public function lockWithItems(int $id): RefundRequest
     {
         return RefundRequest::with('items')

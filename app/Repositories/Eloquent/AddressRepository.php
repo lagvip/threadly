@@ -44,7 +44,7 @@ class AddressRepository implements AddressRepositoryInterface
             }
         }
 
-        if (!empty($fullAddress)) {
+        if (! empty($fullAddress)) {
             $address = Address::where('user_id', $userId)
                 ->whereRaw(
                     "CONCAT(detailed_address, ', ', ward, ', ', district, ', ', province) = ?",
@@ -71,6 +71,16 @@ class AddressRepository implements AddressRepositoryInterface
         $data['user_id'] = $userId;
 
         return Address::create($data);
+    }
+
+    public function update(Address $address, array $data): bool
+    {
+        return $address->update($data);
+    }
+
+    public function delete(Address $address): bool
+    {
+        return (bool) $address->delete();
     }
 
     public function unsetDefaultForUser(int $userId, ?int $exceptAddressId = null): int

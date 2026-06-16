@@ -11,8 +11,7 @@ class ClientWishlistService
     public function __construct(
         protected WishlistRepositoryInterface $wishlists,
         protected ProductVariantRepositoryInterface $variants,
-    ) {
-    }
+    ) {}
 
     public function indexData(int $userId): array
     {
@@ -36,6 +35,6 @@ class ClientWishlistService
 
     public function remove(int $userId, int $id): void
     {
-        $this->wishlists->findForUser($userId, $id)->delete();
+        $this->wishlists->deleteForUser($userId, $id);
     }
 }

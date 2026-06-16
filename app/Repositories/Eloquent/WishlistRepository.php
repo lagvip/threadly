@@ -11,11 +11,11 @@ class WishlistRepository implements WishlistRepositoryInterface
     public function forUserWithProducts(int $userId): Collection
     {
         return Wishlist::with([
-                'variant.product.category',
-                'variant.product.brand',
-                'variant.color',
-                'variant.size',
-            ])
+            'variant.product.category',
+            'variant.product.brand',
+            'variant.color',
+            'variant.size',
+        ])
             ->where('user_id', $userId)
             ->latest()
             ->get();
@@ -32,5 +32,10 @@ class WishlistRepository implements WishlistRepositoryInterface
     public function findForUser(int $userId, int $id): Wishlist
     {
         return Wishlist::where('user_id', $userId)->findOrFail($id);
+    }
+
+    public function deleteForUser(int $userId, int $id): void
+    {
+        $this->findForUser($userId, $id)->delete();
     }
 }

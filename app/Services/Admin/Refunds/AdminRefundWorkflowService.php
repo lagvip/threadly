@@ -7,13 +7,13 @@ use App\Contracts\Repositories\ProductVariantRepositoryInterface;
 use App\Contracts\Repositories\RefundRequestRepositoryInterface;
 use App\Contracts\Repositories\WalletRepositoryInterface;
 use App\Contracts\Repositories\WalletTransactionRepositoryInterface;
-use App\Events\RefundApproved;
-use App\Events\RefundRejected;
+use App\Events\Inventory\StockMovementRecorded;
+use App\Events\Sales\RefundApproved;
+use App\Events\Sales\RefundRejected;
 use App\Models\Order;
 use App\Models\RefundRequest;
 use App\Models\StockMovement;
 use App\Models\WalletTransaction;
-use App\Services\Inventory\StockMovementService;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -25,9 +25,7 @@ class AdminRefundWorkflowService
         protected RefundRequestRepositoryInterface $refundRequests,
         protected WalletRepositoryInterface $wallets,
         protected WalletTransactionRepositoryInterface $walletTransactions,
-        protected StockMovementService $stockMovements,
-    ) {
-    }
+    ) {}
 
     public function approve(RefundRequest $refundRequest, int $adminId, ?string $adminNote = null): void
     {
@@ -65,7 +63,7 @@ class AdminRefundWorkflowService
             $balanceBefore = (float) $wallet->balance;
             $balanceAfter = $balanceBefore + $approvedAmount;
 
-            $wallet->update(['balance' => $balanceAfter]);
+            $this->wallets->update($wallet, ['balance' => $balanceAfter]);
 
             $this->walletTransactions->create([
                 'wallet_id' => $wallet->id,
@@ -76,19 +74,19 @@ class AdminRefundWorkflowService
                 'amount' => $approvedAmount,
                 'balance_before' => $balanceBefore,
                 'balance_after' => $balanceAfter,
-                'description' => 'Hoàn tiền demo vào ví cho đơn #' . $order->order_code,
+                'description' => 'Hoàn tiền demo vào ví cho đơn #'.$order->order_code,
             ]);
 
             $newRefundedAmount = (float) $order->refunded_amount + $approvedAmount;
             $isFullyRefunded = $newRefundedAmount >= ((float) $order->refundable_product_amount - 0.01);
 
-            $order->update([
+            $this->orders->update($order, [
                 'refunded_amount' => $newRefundedAmount,
                 'refund_status' => $isFullyRefunded ? Order::REFUND_REFUNDED : Order::REFUND_PARTIALLY_REFUNDED,
                 'last_refunded_at' => now(),
             ]);
 
-            $refundRequest->update([
+            $this->refundRequests->update($refundRequest, [
                 'approved_amount' => $approvedAmount,
                 'status' => RefundRequest::STATUS_APPROVED,
                 'admin_id' => $adminId,
@@ -137,23 +135,23 @@ class AdminRefundWorkflowService
 
                 $detail = $item->orderDetail;
 
-                if (!$detail || !$detail->variant_id) {
-                    throw new RuntimeException('Không tìm thấy biến thể sản phẩm để nhập lại kho cho dòng hoàn: ' . $item->product_name_snapshot);
+                if (! $detail || ! $detail->variant_id) {
+                    throw new RuntimeException('Không tìm thấy biến thể sản phẩm để nhập lại kho cho dòng hoàn: '.$item->product_name_snapshot);
                 }
 
                 $variant = $this->variants->lockById($detail->variant_id);
 
-                if (!$variant) {
-                    throw new RuntimeException('Biến thể sản phẩm không còn tồn tại: ' . $item->product_name_snapshot);
+                if (! $variant) {
+                    throw new RuntimeException('Biến thể sản phẩm không còn tồn tại: '.$item->product_name_snapshot);
                 }
 
                 $stockBefore = (int) $variant->quantity;
                 $stockAfter = $stockBefore + $quantityToRestock;
 
-                $variant->update(['quantity' => $stockAfter]);
+                $this->variants->update($variant, ['quantity' => $stockAfter]);
 
-                $this->stockMovements->record(
-                    $variant,
+                StockMovementRecorded::dispatch(
+                    (int) $variant->id,
                     StockMovement::TYPE_REFUND_RESTOCK,
                     $quantityToRestock,
                     $stockBefore,
@@ -161,16 +159,16 @@ class AdminRefundWorkflowService
                     RefundRequest::class,
                     $refundRequest->id,
                     $adminId,
-                    'Nhập lại kho từ yêu cầu hoàn #' . $refundRequest->id
+                    'Nhập lại kho từ yêu cầu hoàn #'.$refundRequest->id
                 );
 
-                $item->update([
+                $this->refundItems->update($item, [
                     'restocked_quantity' => $restockedQuantity + $quantityToRestock,
                     'restocked_at' => now(),
                 ]);
             }
 
-            $refundRequest->update([
+            $this->refundRequests->update($refundRequest, [
                 'restocked_at' => now(),
                 'restocked_by' => $adminId,
                 'restock_note' => trim((string) $restockNote) ?: null,
@@ -191,14 +189,14 @@ class AdminRefundWorkflowService
 
             $order = $this->orders->lockById($refundRequest->order_id);
 
-            $refundRequest->update([
+            $this->refundRequests->update($refundRequest, [
                 'status' => RefundRequest::STATUS_REJECTED,
                 'admin_id' => $adminId,
                 'admin_note' => trim($adminNote) ?: null,
                 'rejected_at' => now(),
             ]);
 
-            $order->update([
+            $this->orders->update($order, [
                 'refund_status' => ((float) $order->refunded_amount) > 0
                     ? Order::REFUND_PARTIALLY_REFUNDED
                     : Order::REFUND_REJECTED,
@@ -227,7 +225,7 @@ class AdminRefundWorkflowService
 
     protected function assertRefundCanBeApproved(RefundRequest $refundRequest, Order $order): void
     {
-        if (!in_array($order->payment_method, [Order::PAYMENT_METHOD_VNPAY, Order::PAYMENT_METHOD_COD], true)) {
+        if (! in_array($order->payment_method, [Order::PAYMENT_METHOD_VNPAY, Order::PAYMENT_METHOD_COD], true)) {
             throw new RuntimeException('Phương thức thanh toán của đơn hàng không hỗ trợ hoàn tiền demo.');
         }
 
@@ -240,7 +238,7 @@ class AdminRefundWorkflowService
             && ($order->refund_status ?? Order::REFUND_NONE) === Order::REFUND_REQUESTED
             && empty($order->ghn_order_code);
 
-        if (!$isDeliveredRefund && !$isPaidVnpayCancelledRefund) {
+        if (! $isDeliveredRefund && ! $isPaidVnpayCancelledRefund) {
             throw new RuntimeException('Chỉ duyệt hoàn tiền cho đơn đã giao thành công hoặc đơn VNPay đã thanh toán nhưng hủy trước khi xử lý.');
         }
 

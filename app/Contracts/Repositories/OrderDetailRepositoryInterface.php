@@ -13,6 +13,8 @@ interface OrderDetailRepositoryInterface
 
     public function find(int $id): OrderDetail;
 
+    public function delete(OrderDetail $orderDetail): bool;
+
     public function existsForProduct(int $productId): bool;
 
     public function existsForVariant(int $variantId): bool;

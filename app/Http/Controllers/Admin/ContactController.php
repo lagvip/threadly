@@ -8,22 +8,26 @@ use App\Services\Contact\ContactService;
 
 class ContactController extends Controller
 {
-    public function __construct(protected ContactService $contacts)
-    {
-    }
+    public function __construct(protected ContactService $contacts) {}
 
     public function index()
     {
+        $this->authorize('viewAny', Contact::class);
+
         return view('admin.contacts.index', $this->contacts->adminIndexData());
     }
 
     public function show(Contact $contact)
     {
+        $this->authorize('view', $contact);
+
         return view('admin.contacts.show', compact('contact'));
     }
 
     public function toggleReplied(Contact $contact)
     {
+        $this->authorize('update', $contact);
+
         $this->contacts->toggleReplied($contact);
 
         return redirect()

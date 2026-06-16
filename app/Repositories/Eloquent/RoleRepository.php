@@ -45,4 +45,24 @@ class RoleRepository implements RoleRepositoryInterface
     {
         return Role::create($data);
     }
+
+    public function update(Role $role, array $data): bool
+    {
+        return $role->update($data);
+    }
+
+    public function delete(Role $role): bool
+    {
+        return (bool) $role->delete();
+    }
+
+    public function restore(Role $role): bool
+    {
+        return (bool) $role->restore();
+    }
+
+    public function forceDelete(Role $role): bool
+    {
+        return (bool) $role->forceDelete();
+    }
 }

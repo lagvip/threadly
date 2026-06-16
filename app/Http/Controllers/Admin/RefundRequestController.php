@@ -14,31 +14,35 @@ use Illuminate\Support\Facades\Auth;
 
 class RefundRequestController extends Controller
 {
-    public function index(IndexRefundRequestsRequest $request, AdminRefundQueryService $refunds)
+    public function __construct(
+        protected AdminRefundQueryService $queries,
+        protected AdminRefundWorkflowService $refunds,
+    ) {}
+
+    public function index(IndexRefundRequestsRequest $request)
     {
         $this->authorize('viewAny', RefundRequest::class);
 
-        return view('admin.refunds.index', $refunds->paginated($request->validated()));
+        return view('admin.refunds.index', $this->queries->paginated($request->validated()));
     }
 
-    public function show(RefundRequest $refundRequest, AdminRefundQueryService $refunds)
+    public function show(RefundRequest $refundRequest)
     {
         $this->authorize('view', $refundRequest);
 
         return view('admin.refunds.show', [
-            'refundRequest' => $refunds->loadForShow($refundRequest),
+            'refundRequest' => $this->queries->loadForShow($refundRequest),
         ]);
     }
 
     public function approve(
         ApproveRefundRequest $request,
-        RefundRequest $refundRequest,
-        AdminRefundWorkflowService $refunds
+        RefundRequest $refundRequest
     ) {
         $this->authorize('approve', $refundRequest);
 
         try {
-            $refunds->approve($refundRequest, Auth::id(), $request->input('admin_note'));
+            $this->refunds->approve($refundRequest, Auth::id(), $request->input('admin_note'));
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -50,13 +54,12 @@ class RefundRequestController extends Controller
 
     public function restock(
         RestockRefundRequest $request,
-        RefundRequest $refundRequest,
-        AdminRefundWorkflowService $refunds
+        RefundRequest $refundRequest
     ) {
         $this->authorize('restock', $refundRequest);
 
         try {
-            $refunds->restock($refundRequest, Auth::id(), $request->input('restock_note'));
+            $this->refunds->restock($refundRequest, Auth::id(), $request->input('restock_note'));
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -66,13 +69,12 @@ class RefundRequestController extends Controller
 
     public function reject(
         RejectRefundRequest $request,
-        RefundRequest $refundRequest,
-        AdminRefundWorkflowService $refunds
+        RefundRequest $refundRequest
     ) {
         $this->authorize('reject', $refundRequest);
 
         try {
-            $refunds->reject($refundRequest, Auth::id(), (string) $request->input('admin_note'));
+            $this->refunds->reject($refundRequest, Auth::id(), (string) $request->input('admin_note'));
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }

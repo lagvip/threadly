@@ -47,6 +47,51 @@ class UserRepository implements UserRepositoryInterface
         return User::create($data);
     }
 
+    public function update(User $user, array $data): bool
+    {
+        return $user->update($data);
+    }
+
+    public function delete(User $user): bool
+    {
+        return (bool) $user->delete();
+    }
+
+    public function restore(User $user): bool
+    {
+        return (bool) $user->restore();
+    }
+
+    public function forceDelete(User $user): bool
+    {
+        return (bool) $user->forceDelete();
+    }
+
+    public function syncRoles(User $user, array $roleIds): array
+    {
+        return $user->roles()->sync($roleIds);
+    }
+
+    public function syncRolesWithoutDetaching(User $user, array $roleIds): array
+    {
+        return $user->roles()->syncWithoutDetaching($roleIds);
+    }
+
+    public function attachRole(User $user, int $roleId): void
+    {
+        $user->roles()->attach($roleId);
+    }
+
+    public function detachRoles(User $user): int
+    {
+        return $user->roles()->detach();
+    }
+
+    public function hasOrders(User $user): bool
+    {
+        return $user->allOrders()->exists();
+    }
+
     public function findByGoogleIdOrEmail(string $googleId, string $email): ?User
     {
         return User::where('google_id', $googleId)

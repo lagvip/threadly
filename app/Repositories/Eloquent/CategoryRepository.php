@@ -4,6 +4,7 @@ namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\CategoryRepositoryInterface;
 use App\Models\Category;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -14,14 +15,47 @@ class CategoryRepository implements CategoryRepositoryInterface
         return Category::query();
     }
 
+    public function paginatedForAdmin(?string $search = null, int $perPage = 10): LengthAwarePaginator
+    {
+        return Category::with('parent')
+            ->when($search, fn ($query) => $query->where('name', 'like', '%'.$search.'%'))
+            ->latest('id')
+            ->paginate($perPage);
+    }
+
     public function trashedQuery(): Builder
     {
         return Category::onlyTrashed();
     }
 
+    public function trashedPaginatedForAdmin(int $perPage = 10): LengthAwarePaginator
+    {
+        return Category::onlyTrashed()->latest()->paginate($perPage);
+    }
+
     public function create(array $data): Category
     {
         return Category::create($data);
+    }
+
+    public function update(Category $category, array $data): bool
+    {
+        return $category->update($data);
+    }
+
+    public function delete(Category $category): bool
+    {
+        return (bool) $category->delete();
+    }
+
+    public function restore(Category $category): bool
+    {
+        return (bool) $category->restore();
+    }
+
+    public function forceDelete(Category $category): bool
+    {
+        return (bool) $category->forceDelete();
     }
 
     public function find(int $id): Category
@@ -68,6 +102,24 @@ class CategoryRepository implements CategoryRepositoryInterface
         return Category::with('parent')
             ->whereNotNull('id_parent')
             ->get();
+    }
+
+    public function childCategoriesOrdered(): Collection
+    {
+        return Category::with('parent')
+            ->whereNotNull('id_parent')
+            ->orderBy('name')
+            ->get();
+    }
+
+    public function hasChildren(Category $category): bool
+    {
+        return $category->children()->exists();
+    }
+
+    public function hasProducts(Category $category): bool
+    {
+        return $category->products()->exists();
     }
 
     public function findWithChildren(int $id): Category

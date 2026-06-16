@@ -4,7 +4,9 @@ namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\ColorRepositoryInterface;
 use App\Models\Color;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ColorRepository implements ColorRepositoryInterface
@@ -17,6 +19,26 @@ class ColorRepository implements ColorRepositoryInterface
     public function trashedQuery(): Builder
     {
         return Color::onlyTrashed();
+    }
+
+    public function all(): Collection
+    {
+        return Color::all();
+    }
+
+    public function paginatedForAdmin(string $keyword = '', bool $trashed = false, int $perPage = 10): LengthAwarePaginator
+    {
+        $query = $trashed ? Color::onlyTrashed() : Color::query();
+
+        return $query
+            ->when($keyword !== '', function ($query) use ($keyword) {
+                $query->where(function ($subQuery) use ($keyword) {
+                    $subQuery->where('name', 'like', '%'.$keyword.'%')
+                        ->orWhere('code', 'like', '%'.$keyword.'%');
+                });
+            })
+            ->when($trashed, fn ($query) => $query->latest('deleted_at'), fn ($query) => $query->latest('id'))
+            ->paginate($perPage);
     }
 
     public function find(int $id): Color
@@ -32,6 +54,31 @@ class ColorRepository implements ColorRepositoryInterface
     public function create(array $data): Color
     {
         return Color::create($data);
+    }
+
+    public function update(Color $color, array $data): bool
+    {
+        return $color->update($data);
+    }
+
+    public function delete(Color $color): bool
+    {
+        return (bool) $color->delete();
+    }
+
+    public function restore(Color $color): bool
+    {
+        return (bool) $color->restore();
+    }
+
+    public function forceDelete(Color $color): bool
+    {
+        return (bool) $color->forceDelete();
+    }
+
+    public function forceDeleteTrashed(): int
+    {
+        return Color::onlyTrashed()->forceDelete();
     }
 
     public function trashedDuplicate(string $name, string $code, ?int $exceptId = null): ?Color

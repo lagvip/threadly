@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Client;
 
-use App\Actions\Checkout\BuyNowCheckoutAction;
 use App\Actions\Checkout\ApplyCheckoutVoucherAction;
+use App\Actions\Checkout\BuyNowCheckoutAction;
 use App\Actions\Checkout\RemoveCheckoutVoucherAction;
 use App\Actions\Checkout\SelectCheckoutItemsAction;
 use App\Actions\Checkout\StoreCheckoutAddressAction;
@@ -13,9 +13,11 @@ use App\Http\Requests\Checkout\BuyNowRequest;
 use App\Http\Requests\Checkout\GetShippingFeeRequest;
 use App\Http\Requests\Checkout\GhnDistrictsRequest;
 use App\Http\Requests\Checkout\GhnWardsRequest;
+use App\Http\Requests\Checkout\RepayVnpayRequest;
 use App\Http\Requests\Checkout\SelectCheckoutItemsRequest;
 use App\Http\Requests\Checkout\StoreCheckoutAddressRequest;
 use App\Http\Requests\Checkout\StoreCheckoutRequest;
+use App\Http\Requests\Checkout\VnpayCallbackRequest;
 use App\Services\Checkout\CheckoutAddressPresenter;
 use App\Services\Checkout\CheckoutPageService;
 use App\Services\Checkout\CheckoutShippingFeeService;
@@ -24,28 +26,43 @@ use App\Services\Checkout\PlaceCheckoutOrderService;
 use App\Services\Checkout\ReorderService;
 use App\Services\Checkout\RepayVnpayService;
 use App\Services\Checkout\VnpayCallbackService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class CheckoutController extends Controller
 {
-    public function index(CheckoutPageService $checkoutPage)
+    public function __construct(
+        protected CheckoutPageService $checkoutPage,
+        protected CheckoutShippingFeeService $shippingFee,
+        protected PlaceCheckoutOrderService $placeCheckoutOrder,
+        protected VnpayCallbackService $vnpayCallback,
+        protected ReorderService $reorder,
+        protected RepayVnpayService $repayVnpay,
+        protected SelectCheckoutItemsAction $selectCheckoutItems,
+        protected BuyNowCheckoutAction $buyNowCheckout,
+        protected GhnLocationService $ghnLocations,
+        protected StoreCheckoutAddressAction $storeCheckoutAddress,
+        protected CheckoutAddressPresenter $addressPresenter,
+        protected ApplyCheckoutVoucherAction $applyCheckoutVoucher,
+        protected RemoveCheckoutVoucherAction $removeCheckoutVoucher,
+    ) {}
+
+    public function index()
     {
         try {
-            return view('client.checkout.index', $checkoutPage->dataFor(Auth::user()));
+            return view('client.checkout.index', $this->checkoutPage->dataFor(Auth::user()));
         } catch (\RuntimeException $e) {
             return redirect()->route('client.cart.index')->with('error', $e->getMessage());
         }
     }
 
-    public function getShippingFee(GetShippingFeeRequest $request, CheckoutShippingFeeService $shippingFee)
+    public function getShippingFee(GetShippingFeeRequest $request)
     {
         try {
             return response()->json([
                 'success' => true,
-                'shipping_fee' => $shippingFee->calculate(Auth::user(), (int) $request->address_id),
+                'shipping_fee' => $this->shippingFee->calculate(Auth::user(), (int) $request->address_id),
             ]);
         } catch (\RuntimeException $e) {
             return response()->json([
@@ -55,10 +72,10 @@ class CheckoutController extends Controller
         }
     }
 
-    public function store(StoreCheckoutRequest $request, PlaceCheckoutOrderService $placeCheckoutOrder)
+    public function store(StoreCheckoutRequest $request)
     {
         try {
-            $result = $placeCheckoutOrder->execute(Auth::user(), $request->toDTO());
+            $result = $this->placeCheckoutOrder->execute(Auth::user(), $request->toDTO(), $request->ip());
 
             if ($result->isVnpay()) {
                 return redirect()->away($result->paymentUrl);
@@ -70,30 +87,30 @@ class CheckoutController extends Controller
         } catch (\RuntimeException $e) {
             return redirect()->back()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
-            Log::error('Checkout store error: ' . $e->getMessage());
+            Log::error('Checkout store error: '.$e->getMessage());
 
             return redirect()->back()->with('error', 'Có lỗi xảy ra khi tạo đơn hàng.');
         }
     }
 
-    public function paymentReturn(Request $request, VnpayCallbackService $vnpayCallback)
+    public function paymentReturn(VnpayCallbackRequest $request)
     {
-        $result = $vnpayCallback->handleReturn($request);
+        $result = $this->vnpayCallback->handleReturn($request->toDTO());
 
         return redirect()
             ->route('client.cart.index')
             ->with($result['ok'] ? 'success' : 'error', $result['message']);
     }
 
-    public function paymentIpn(Request $request, VnpayCallbackService $vnpayCallback)
+    public function paymentIpn(VnpayCallbackRequest $request)
     {
-        return response()->json($vnpayCallback->handleIpn($request));
+        return response()->json($this->vnpayCallback->handleIpn($request->toDTO()));
     }
 
-    public function reorder($id, ReorderService $reorder)
+    public function reorder($id)
     {
         try {
-            $result = $reorder->execute(Auth::user(), (int) $id);
+            $result = $this->reorder->execute(Auth::user(), (int) $id);
 
             return redirect()->route('client.cart.index')->with('success', $result['message']);
         } catch (\RuntimeException $e) {
@@ -101,19 +118,19 @@ class CheckoutController extends Controller
         }
     }
 
-    public function repayVnpay($id, RepayVnpayService $repayVnpay)
+    public function repayVnpay(RepayVnpayRequest $request, $id)
     {
         try {
-            return redirect()->away($repayVnpay->execute(Auth::user(), (int) $id));
+            return redirect()->away($this->repayVnpay->execute(Auth::user(), (int) $id, $request->clientIp()));
         } catch (\RuntimeException $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
 
-    public function selectItems(SelectCheckoutItemsRequest $request, SelectCheckoutItemsAction $selectCheckoutItems)
+    public function selectItems(SelectCheckoutItemsRequest $request)
     {
         try {
-            $selectCheckoutItems->execute(Auth::id(), $request->input('selected_items', []));
+            $this->selectCheckoutItems->execute(Auth::id(), $request->input('selected_items', []));
 
             return redirect()->route('client.checkout.index');
         } catch (\RuntimeException $e) {
@@ -121,10 +138,10 @@ class CheckoutController extends Controller
         }
     }
 
-    public function buyNow(BuyNowRequest $request, BuyNowCheckoutAction $buyNowCheckout)
+    public function buyNow(BuyNowRequest $request)
     {
         try {
-            $buyNowCheckout->execute($request->toDTO());
+            $this->buyNowCheckout->execute($request->toDTO());
         } catch (\RuntimeException $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
@@ -132,36 +149,33 @@ class CheckoutController extends Controller
         return redirect()->route('client.checkout.index');
     }
 
-    public function getProvinces(GhnLocationService $ghnLocations)
+    public function getProvinces()
     {
-        return $this->locationResponse(fn () => $ghnLocations->provinceData());
+        return $this->locationResponse(fn () => $this->ghnLocations->provinceData());
     }
 
-    public function getDistricts(GhnDistrictsRequest $request, GhnLocationService $ghnLocations)
+    public function getDistricts(GhnDistrictsRequest $request)
     {
-        return $this->locationResponse(fn () => $ghnLocations->districtData((int) $request->province_id));
+        return $this->locationResponse(fn () => $this->ghnLocations->districtData((int) $request->province_id));
     }
 
-    public function getWards(GhnWardsRequest $request, GhnLocationService $ghnLocations)
+    public function getWards(GhnWardsRequest $request)
     {
-        return $this->locationResponse(fn () => $ghnLocations->wardData((int) $request->district_id));
+        return $this->locationResponse(fn () => $this->ghnLocations->wardData((int) $request->district_id));
     }
 
-    public function storeAddress(
-        StoreCheckoutAddressRequest $request,
-        StoreCheckoutAddressAction $storeCheckoutAddress,
-        CheckoutAddressPresenter $presenter
-    ) {
+    public function storeAddress(StoreCheckoutAddressRequest $request)
+    {
         return response()->json([
             'success' => true,
-            'address' => $presenter->toArray($storeCheckoutAddress->execute(Auth::id(), $request->toDTO())),
+            'address' => $this->addressPresenter->toArray($this->storeCheckoutAddress->execute(Auth::id(), $request->toDTO())),
         ]);
     }
 
-    public function applyVoucher(ApplyVoucherRequest $request, ApplyCheckoutVoucherAction $applyCheckoutVoucher)
+    public function applyVoucher(ApplyVoucherRequest $request)
     {
         try {
-            $applyCheckoutVoucher->execute(Auth::id(), (string) $request->voucher_code);
+            $this->applyCheckoutVoucher->execute(Auth::id(), (string) $request->voucher_code);
 
             return redirect()->back()->with('success', 'Áp dụng voucher thành công.');
         } catch (RuntimeException $e) {
@@ -169,9 +183,9 @@ class CheckoutController extends Controller
         }
     }
 
-    public function removeVoucher(RemoveCheckoutVoucherAction $removeCheckoutVoucher)
+    public function removeVoucher()
     {
-        $removeCheckoutVoucher->execute();
+        $this->removeCheckoutVoucher->execute();
 
         return redirect()->back()->with('success', 'Đã bỏ voucher.');
     }

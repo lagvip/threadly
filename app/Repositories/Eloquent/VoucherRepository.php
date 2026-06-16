@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\Contracts\Repositories\VoucherRepositoryInterface;
 use App\Models\Order;
 use App\Models\Voucher;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -21,9 +22,44 @@ class VoucherRepository implements VoucherRepositoryInterface
         return Voucher::onlyTrashed();
     }
 
+    public function paginatedForAdmin(array $filters, int $perPage = 10): LengthAwarePaginator
+    {
+        return Voucher::query()
+            ->orderBy('id', 'desc')
+            ->when(! empty($filters['search']), fn ($query) => $query->where('code', 'like', '%'.$filters['search'].'%'))
+            ->when(! empty($filters['type']), fn ($query) => $query->where('type', $filters['type']))
+            ->when(! empty($filters['status']), fn ($query) => $query->where('status', $filters['status']))
+            ->paginate($perPage);
+    }
+
+    public function trashedPaginatedForAdmin(int $perPage = 10): LengthAwarePaginator
+    {
+        return Voucher::onlyTrashed()->paginate($perPage);
+    }
+
     public function create(array $data): Voucher
     {
         return Voucher::create($data);
+    }
+
+    public function update(Voucher $voucher, array $data): bool
+    {
+        return $voucher->update($data);
+    }
+
+    public function delete(Voucher $voucher): bool
+    {
+        return (bool) $voucher->delete();
+    }
+
+    public function restore(Voucher $voucher): bool
+    {
+        return (bool) $voucher->restore();
+    }
+
+    public function forceDelete(Voucher $voucher): bool
+    {
+        return (bool) $voucher->forceDelete();
     }
 
     public function findWithTrashed(int $id): Voucher

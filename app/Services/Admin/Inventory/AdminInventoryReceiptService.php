@@ -2,12 +2,12 @@
 
 namespace App\Services\Admin\Inventory;
 
-use App\Contracts\Repositories\InventoryReceiptRepositoryInterface;
 use App\Contracts\Repositories\InventoryReceiptItemRepositoryInterface;
+use App\Contracts\Repositories\InventoryReceiptRepositoryInterface;
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
+use App\Events\Inventory\StockMovementRecorded;
 use App\Models\InventoryReceipt;
 use App\Models\StockMovement;
-use App\Services\Inventory\StockMovementService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -18,9 +18,7 @@ class AdminInventoryReceiptService
         protected InventoryReceiptRepositoryInterface $receipts,
         protected InventoryReceiptItemRepositoryInterface $receiptItems,
         protected ProductVariantRepositoryInterface $variants,
-        protected StockMovementService $stockMovements
-    ) {
-    }
+    ) {}
 
     public function create(array $data, int $userId, bool $postNow = false): InventoryReceipt
     {
@@ -90,7 +88,7 @@ class AdminInventoryReceiptService
         foreach ($receipt->items as $item) {
             $variant = $this->variants->lockById($item->product_variant_id);
 
-            if (!$variant) {
+            if (! $variant) {
                 throw new RuntimeException('Không tìm thấy biến thể sản phẩm trong phiếu nhập.');
             }
 
@@ -105,8 +103,8 @@ class AdminInventoryReceiptService
                 'stock_after' => $stockAfter,
             ]);
 
-            $this->stockMovements->record(
-                $variant,
+            StockMovementRecorded::dispatch(
+                (int) $variant->id,
                 StockMovement::TYPE_IMPORT,
                 $quantity,
                 $stockBefore,
@@ -114,7 +112,7 @@ class AdminInventoryReceiptService
                 InventoryReceipt::class,
                 $receipt->id,
                 $userId,
-                'Nhập kho từ phiếu ' . $receipt->receipt_code,
+                'Nhập kho từ phiếu '.$receipt->receipt_code,
                 $item->unit_cost !== null ? (float) $item->unit_cost : null
             );
         }
@@ -129,7 +127,7 @@ class AdminInventoryReceiptService
     protected function generateReceiptCode(): string
     {
         do {
-            $code = 'IR' . now()->format('ymdHis') . Str::upper(Str::random(3));
+            $code = 'IR'.now()->format('ymdHis').Str::upper(Str::random(3));
         } while ($this->receipts->receiptCodeExists($code));
 
         return $code;

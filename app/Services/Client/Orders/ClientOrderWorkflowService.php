@@ -3,11 +3,11 @@
 namespace App\Services\Client\Orders;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
-use App\Contracts\Repositories\OrderStatusLogRepositoryInterface;
 use App\Contracts\Repositories\RefundRequestRepositoryInterface;
+use App\Events\Sales\OrderStatusChanged;
 use App\Models\Order;
 use App\Models\RefundRequest;
-use App\Services\OrderInventoryService;
+use App\Services\Inventory\OrderInventoryService;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -16,30 +16,28 @@ class ClientOrderWorkflowService
     public function __construct(
         protected OrderInventoryService $inventory,
         protected OrderRepositoryInterface $orders,
-        protected OrderStatusLogRepositoryInterface $statusLogs,
         protected RefundRequestRepositoryInterface $refundRequests,
-    ) {
-    }
+    ) {}
 
     public function confirmReceived(int $id, int $userId): void
     {
         $order = $this->orders->findForUser($id, $userId);
 
-        if (!$order->can_confirm_received) {
+        if (! $order->can_confirm_received) {
             throw new RuntimeException('Đơn hàng chưa đủ điều kiện để xác nhận đã nhận hàng.');
         }
 
         DB::transaction(function () use ($order, $userId) {
-            $order->update([
+            $this->orders->update($order, [
                 'customer_confirmed_at' => now(),
             ]);
 
-            $this->statusLogs->create([
-                'order_id' => $order->id,
-                'status' => $order->order_status,
-                'note' => 'Khách hàng xác nhận đã nhận hàng.',
-                'changed_by' => $userId,
-            ]);
+            OrderStatusChanged::dispatch(
+                (int) $order->id,
+                (string) $order->order_status,
+                'Khách hàng xác nhận đã nhận hàng.',
+                $userId
+            );
         });
     }
 
@@ -50,7 +48,7 @@ class ClientOrderWorkflowService
         DB::transaction(function () use ($id, $userId, $reason, &$actionType) {
             $order = $this->orders->lockForUserCancellation($id, $userId);
 
-            if (!$order->can_cancel) {
+            if (! $order->can_cancel) {
                 throw new RuntimeException('Đơn hàng này không thể hủy ở trạng thái hiện tại.');
             }
 
@@ -79,7 +77,7 @@ class ClientOrderWorkflowService
 
     protected function cancelDirectly(Order $order, string $oldStatus, string $reason, int $userId): void
     {
-        $order->update([
+        $this->orders->update($order, [
             'previous_status' => $oldStatus,
             'order_status' => Order::STATUS_CANCELLED,
             'payment_status' => Order::PAYMENT_CANCELLED,
@@ -88,7 +86,7 @@ class ClientOrderWorkflowService
 
         $this->inventory->releaseCancelledOrder($order);
 
-        $this->log($order, Order::STATUS_CANCELLED, 'Khách hàng hủy đơn: ' . $reason, $userId);
+        $this->log($order, Order::STATUS_CANCELLED, 'Khách hàng hủy đơn: '.$reason, $userId);
     }
 
     protected function cancelPaidVnpayOrder(Order $order, string $oldStatus, string $reason, int $userId): void
@@ -103,7 +101,7 @@ class ClientOrderWorkflowService
             throw new RuntimeException('Đơn hàng không còn số tiền có thể hoàn.');
         }
 
-        $order->update([
+        $this->orders->update($order, [
             'previous_status' => $oldStatus,
             'order_status' => Order::STATUS_CANCELLED,
             'refund_status' => Order::REFUND_REQUESTED,
@@ -118,31 +116,26 @@ class ClientOrderWorkflowService
             'user_id' => $userId,
             'type' => RefundRequest::TYPE_FULL,
             'requested_amount' => $refundAmount,
-            'reason' => 'Khách hủy đơn VNPay đã thanh toán: ' . $reason,
+            'reason' => 'Khách hủy đơn VNPay đã thanh toán: '.$reason,
             'status' => RefundRequest::STATUS_PENDING,
         ]);
 
-        $this->log($order, Order::STATUS_CANCELLED, 'Khách hàng hủy đơn VNPay đã thanh toán, tạo yêu cầu hoàn tiền demo: ' . $reason, $userId);
+        $this->log($order, Order::STATUS_CANCELLED, 'Khách hàng hủy đơn VNPay đã thanh toán, tạo yêu cầu hoàn tiền demo: '.$reason, $userId);
     }
 
     protected function requestCancellation(Order $order, string $oldStatus, string $reason, int $userId): void
     {
-        $order->update([
+        $this->orders->update($order, [
             'previous_status' => $oldStatus,
             'order_status' => Order::STATUS_WAITING_FOR_CANCELLATION,
             'cancel_reason' => $reason,
         ]);
 
-        $this->log($order, Order::STATUS_WAITING_FOR_CANCELLATION, 'Khách hàng gửi yêu cầu hủy: ' . $reason, $userId);
+        $this->log($order, Order::STATUS_WAITING_FOR_CANCELLATION, 'Khách hàng gửi yêu cầu hủy: '.$reason, $userId);
     }
 
     protected function log(Order $order, string $status, string $note, int $userId): void
     {
-        $this->statusLogs->create([
-            'order_id' => $order->id,
-            'status' => $status,
-            'note' => $note,
-            'changed_by' => $userId,
-        ]);
+        OrderStatusChanged::dispatch((int) $order->id, $status, $note, $userId);
     }
 }

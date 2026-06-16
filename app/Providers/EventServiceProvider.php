@@ -2,12 +2,16 @@
 
 namespace App\Providers;
 
-use App\Events\OrderPlaced;
-use App\Events\RefundApproved;
-use App\Events\RefundRejected;
-use App\Listeners\LogRefundApproval;
-use App\Listeners\LogRefundRejection;
-use App\Listeners\QueueOrderPlacedMail;
+use App\Events\Inventory\StockMovementRecorded;
+use App\Events\Sales\OrderPlaced;
+use App\Events\Sales\OrderStatusChanged;
+use App\Events\Sales\RefundApproved;
+use App\Events\Sales\RefundRejected;
+use App\Listeners\Inventory\CreateStockMovementRecord;
+use App\Listeners\Sales\CreateOrderStatusLog;
+use App\Listeners\Sales\LogRefundApproval;
+use App\Listeners\Sales\LogRefundRejection;
+use App\Listeners\Sales\QueueOrderPlacedMail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -26,6 +30,12 @@ class EventServiceProvider extends ServiceProvider
         ],
         OrderPlaced::class => [
             QueueOrderPlacedMail::class,
+        ],
+        OrderStatusChanged::class => [
+            CreateOrderStatusLog::class,
+        ],
+        StockMovementRecorded::class => [
+            CreateStockMovementRecord::class,
         ],
         RefundApproved::class => [
             LogRefundApproval::class,

@@ -2,16 +2,14 @@
 
 namespace App\Http\Controllers\Client;
 
-use App\Events\ChatMessageSent;
+use App\Events\Content\ChatMessageSent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Chat\SendChatMessageRequest;
 use App\Services\Chat\ChatService;
 
 class ChatController extends Controller
 {
-    public function __construct(protected ChatService $chat)
-    {
-    }
+    public function __construct(protected ChatService $chat) {}
 
     public function send(SendChatMessageRequest $request)
     {

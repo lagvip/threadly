@@ -2,9 +2,9 @@
 
 namespace App\Services\Client\Products;
 
+use App\Contracts\Repositories\BrandRepositoryInterface;
 use App\Contracts\Repositories\CategoryRepositoryInterface;
 use App\Contracts\Repositories\ProductRepositoryInterface;
-use App\Contracts\Repositories\BrandRepositoryInterface;
 use App\Contracts\Repositories\ReviewRepositoryInterface;
 use App\Models\Category;
 use App\Models\Product;
@@ -16,8 +16,7 @@ class ClientProductCatalogService
         protected ProductRepositoryInterface $products,
         protected BrandRepositoryInterface $brands,
         protected ReviewRepositoryInterface $reviews,
-    ) {
-    }
+    ) {}
 
     public function detailData(int $id): array
     {
@@ -49,7 +48,7 @@ class ClientProductCatalogService
         $this->applySort($productsQuery, $filters['sort'] ?? 'newest');
 
         return [
-            'products' => $productsQuery->paginate(16)->appends(request()->query()),
+            'products' => $productsQuery->paginate(16)->appends($filters),
             'categories' => $this->rootCategories(),
             'brands' => $this->brands(),
             'priceRangeMin' => (clone $this->products->activeVariantsQuery())->min('price'),
@@ -74,7 +73,7 @@ class ClientProductCatalogService
 
         return [
             'category' => $category,
-            'products' => $productsQuery->paginate(16)->appends(request()->query()),
+            'products' => $productsQuery->paginate(16)->appends($filters),
             'categories' => $this->rootCategories(),
             'activeCategoryIds' => $this->collectActiveCategoryPathIds($category),
             'brands' => $this->brands(),
@@ -94,12 +93,13 @@ class ClientProductCatalogService
             return;
         }
 
-        if (!$includeBrandCategory) {
-            $query->where(fn ($q) => $q->where('name', 'like', '%' . $keyword . '%')->orWhere('description', 'like', '%' . $keyword . '%'));
+        if (! $includeBrandCategory) {
+            $query->where(fn ($q) => $q->where('name', 'like', '%'.$keyword.'%')->orWhere('description', 'like', '%'.$keyword.'%'));
+
             return;
         }
 
-        $keywordLike = '%' . addcslashes(mb_strtolower($keyword, 'UTF-8'), '\\%_') . '%';
+        $keywordLike = '%'.addcslashes(mb_strtolower($keyword, 'UTF-8'), '\\%_').'%';
 
         $query->where(function ($q) use ($keywordLike) {
             $q->whereRaw('LOWER(products.name) COLLATE utf8mb4_bin LIKE ?', [$keywordLike])
@@ -110,7 +110,7 @@ class ClientProductCatalogService
 
     protected function applyCategory($query, $categoryId): void
     {
-        if (!$categoryId) {
+        if (! $categoryId) {
             return;
         }
 
@@ -123,14 +123,14 @@ class ClientProductCatalogService
 
     protected function applyBrands($query, array $brandIds): void
     {
-        if (!empty($brandIds)) {
+        if (! empty($brandIds)) {
             $query->whereIn('id_brand', $brandIds);
         }
     }
 
     protected function applyPrice($query, $priceMin, $priceMax): void
     {
-        if (!is_numeric($priceMin) && !is_numeric($priceMax)) {
+        if (! is_numeric($priceMin) && ! is_numeric($priceMax)) {
             return;
         }
 
@@ -151,8 +151,9 @@ class ClientProductCatalogService
         if ($sort === 'price_asc' || $sort === 'price_desc') {
             $query->orderByRaw(
                 "(select min(pv.price) from product_variants pv where pv.id_product = products.id and pv.status = 'active' and pv.deleted_at is null) "
-                . ($sort === 'price_asc' ? 'asc' : 'desc')
+                .($sort === 'price_asc' ? 'asc' : 'desc')
             );
+
             return;
         }
 
@@ -211,7 +212,7 @@ class ClientProductCatalogService
                 break;
             }
 
-            $current = $this->categories->query()->find($current->id_parent);
+            $current = $this->categories->find((int) $current->id_parent);
         }
 
         return $ids;

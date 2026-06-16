@@ -8,9 +8,7 @@ use RuntimeException;
 
 class AdminColorService
 {
-    public function __construct(protected ColorRepositoryInterface $colors)
-    {
-    }
+    public function __construct(protected ColorRepositoryInterface $colors) {}
 
     public function create(array $data): ?string
     {
@@ -34,7 +32,7 @@ class AdminColorService
             return 'Đã có một màu hoặc mã màu trùng trong thùng rác. Hãy xử lý bản cũ trước.';
         }
 
-        $color->update([
+        $this->colors->update($color, [
             'name' => $data['name'],
             'code' => $data['code'],
         ]);
@@ -49,7 +47,7 @@ class AdminColorService
 
     public function softDelete(int $id): void
     {
-        $this->colors->find($id)->delete();
+        $this->colors->delete($this->colors->find($id));
     }
 
     public function restore(int $id): void
@@ -60,7 +58,7 @@ class AdminColorService
             throw new RuntimeException('Không thể khôi phục vì đã có màu hoặc mã màu trùng đang hoạt động.');
         }
 
-        $color->restore();
+        $this->colors->restore($color);
     }
 
     public function forceDelete(int $id): void
@@ -71,7 +69,7 @@ class AdminColorService
             throw new RuntimeException('Không thể xóa vĩnh viễn vì màu này vẫn đang được dùng trong biến thể sản phẩm.');
         }
 
-        $color->forceDelete();
+        $this->colors->forceDelete($color);
     }
 
     public function forceDeleteAll(): void
@@ -80,6 +78,6 @@ class AdminColorService
             throw new RuntimeException('Có màu trong thùng rác vẫn đang được dùng trong biến thể sản phẩm, không thể xóa tất cả.');
         }
 
-        $this->colors->trashedQuery()->forceDelete();
+        $this->colors->forceDeleteTrashed();
     }
 }

@@ -12,4 +12,6 @@ interface WishlistRepositoryInterface
     public function firstOrCreate(int $userId, int $variantId): Wishlist;
 
     public function findForUser(int $userId, int $id): Wishlist;
+
+    public function deleteForUser(int $userId, int $id): void;
 }

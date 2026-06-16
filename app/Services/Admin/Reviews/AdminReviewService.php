@@ -17,15 +17,13 @@ class AdminReviewService
         'admin',
     ];
 
-    public function __construct(protected ReviewRepositoryInterface $reviews)
-    {
-    }
+    public function __construct(protected ReviewRepositoryInterface $reviews) {}
 
     public function indexData(array $filters): array
     {
         $query = $this->reviews->queryWithRelations($this->relations);
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
 
             $query->where(function ($q) use ($search) {
@@ -46,7 +44,7 @@ class AdminReviewService
             $query->whereNull('admin_reply');
         }
 
-        if (!empty($filters['rating'])) {
+        if (! empty($filters['rating'])) {
             $query->where('rating', (int) $filters['rating']);
         }
 
@@ -71,19 +69,20 @@ class AdminReviewService
 
     public function reply(Review $review, string $reply, int $adminId): void
     {
-        $review->admin_reply = trim($reply);
-        $review->admin_id = $adminId;
-        $review->save();
+        $this->reviews->update($review, [
+            'admin_reply' => trim($reply),
+            'admin_id' => $adminId,
+        ]);
     }
 
     public function softDelete(Review $review): void
     {
-        $review->delete();
+        $this->reviews->delete($review);
     }
 
     public function restore(int $id): void
     {
-        $this->reviews->findTrashed($id)->restore();
+        $this->reviews->restore($this->reviews->findTrashed($id));
     }
 
     public function bulkRestore(array $ids): void
@@ -93,6 +92,6 @@ class AdminReviewService
 
     public function forceDelete(int $id): void
     {
-        $this->reviews->findTrashed($id)->forceDelete();
+        $this->reviews->forceDelete($this->reviews->findTrashed($id));
     }
 }

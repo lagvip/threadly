@@ -37,4 +37,24 @@ class BrandRepository implements BrandRepositoryInterface
     {
         return Brand::create($data);
     }
+
+    public function update(Brand $brand, array $data): bool
+    {
+        return $brand->update($data);
+    }
+
+    public function delete(Brand $brand): bool
+    {
+        return (bool) $brand->delete();
+    }
+
+    public function restore(Brand $brand): bool
+    {
+        return (bool) $brand->restore();
+    }
+
+    public function forceDelete(Brand $brand): bool
+    {
+        return (bool) $brand->forceDelete();
+    }
 }

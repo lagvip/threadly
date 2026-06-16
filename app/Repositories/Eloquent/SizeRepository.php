@@ -4,7 +4,9 @@ namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\SizeRepositoryInterface;
 use App\Models\Size;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class SizeRepository implements SizeRepositoryInterface
@@ -17,6 +19,21 @@ class SizeRepository implements SizeRepositoryInterface
     public function trashedQuery(): Builder
     {
         return Size::onlyTrashed();
+    }
+
+    public function all(): Collection
+    {
+        return Size::all();
+    }
+
+    public function paginatedForAdmin(string $keyword = '', bool $trashed = false, int $perPage = 10): LengthAwarePaginator
+    {
+        $query = $trashed ? Size::onlyTrashed() : Size::query();
+
+        return $query
+            ->when($keyword !== '', fn ($query) => $query->where('name', 'like', '%'.$keyword.'%'))
+            ->when($trashed, fn ($query) => $query->latest('deleted_at'), fn ($query) => $query->latest())
+            ->paginate($perPage);
     }
 
     public function find(int $id): Size
@@ -32,6 +49,26 @@ class SizeRepository implements SizeRepositoryInterface
     public function create(array $data): Size
     {
         return Size::create($data);
+    }
+
+    public function update(Size $size, array $data): bool
+    {
+        return $size->update($data);
+    }
+
+    public function delete(Size $size): bool
+    {
+        return (bool) $size->delete();
+    }
+
+    public function restore(Size $size): bool
+    {
+        return (bool) $size->restore();
+    }
+
+    public function forceDelete(Size $size): bool
+    {
+        return (bool) $size->forceDelete();
     }
 
     public function activeNameExists(string $name): bool

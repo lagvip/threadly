@@ -3,8 +3,9 @@
 namespace App\Services\Checkout;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
+use App\DTOs\Checkout\VnpayCallbackData;
+use App\Events\Sales\OrderPlaced;
 use App\Models\Order;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -15,29 +16,27 @@ class VnpayCallbackService
         protected VnpayPaymentService $vnpay,
         protected CheckoutInventoryService $inventory,
         protected CheckoutCartService $cart,
-        protected OrderNotificationService $notifications,
-    ) {
-    }
+    ) {}
 
-    public function handleReturn(Request $request): array
+    public function handleReturn(VnpayCallbackData $data): array
     {
-        if (!$this->vnpay->hasValidSignature($request->all())) {
+        if (! $this->vnpay->hasValidSignature($data->payload)) {
             return ['ok' => false, 'message' => 'Chữ ký VNPay không hợp lệ.'];
         }
 
-        $order = $this->orders->findByCode((string) $request->vnp_TxnRef);
+        $order = $this->orders->findByCode($data->txnRef());
 
-        if (!$order) {
+        if (! $order) {
             return ['ok' => false, 'message' => 'Không tìm thấy đơn hàng.'];
         }
 
-        if (!$this->vnpay->isValidAmount($order, $request->vnp_Amount)) {
-            Log::warning('VNPay return amount mismatch', $this->amountMismatchContext($order, $request));
+        if (! $this->vnpay->isValidAmount($order, $data->amount())) {
+            Log::warning('VNPay return amount mismatch', $this->amountMismatchContext($order, $data));
 
             try {
-                DB::transaction(fn () => $this->vnpay->updateFailureState($order, '97', $request->vnp_TransactionStatus));
+                DB::transaction(fn () => $this->vnpay->updateFailureState($order, '97', $data->transactionStatus()));
             } catch (\Throwable $e) {
-                Log::error('VNPay return amount mismatch process error: ' . $e->getMessage());
+                Log::error('VNPay return amount mismatch process error: '.$e->getMessage());
 
                 return ['ok' => false, 'message' => 'Phát hiện sai lệch số tiền nhưng xử lý đơn hàng gặp lỗi.'];
             }
@@ -46,19 +45,19 @@ class VnpayCallbackService
         }
 
         try {
-            $success = $request->vnp_ResponseCode === '00' && $request->vnp_TransactionStatus === '00';
+            $success = $data->isSuccessful();
             $shouldSendMail = false;
 
-            DB::transaction(function () use ($order, $request, $success, &$shouldSendMail) {
+            DB::transaction(function () use ($order, $data, $success, &$shouldSendMail) {
                 if ($success) {
                     if ($order->payment_status !== 'paid') {
                         $this->inventory->decreaseStockFromOrder($order);
                         $this->cart->clearUserCartByOrder($order);
 
-                        $order->update(array_merge([
+                        $this->orders->update($order, array_merge([
                             'payment_status' => 'paid',
                             'order_status' => 'pending',
-                        ], $this->vnpay->paymentMeta($request)));
+                        ], $this->vnpay->paymentMeta($data)));
 
                         $shouldSendMail = true;
                     }
@@ -66,7 +65,7 @@ class VnpayCallbackService
                     return;
                 }
 
-                $this->vnpay->updateFailureState($order, (string) $request->vnp_ResponseCode, $request->vnp_TransactionStatus);
+                $this->vnpay->updateFailureState($order, $data->responseCode(), $data->transactionStatus());
             });
 
             if ($success) {
@@ -74,7 +73,7 @@ class VnpayCallbackService
                 session()->forget(config('threadly.checkout.cart_session_key'));
 
                 if ($shouldSendMail) {
-                    $this->notifications->sendOrderPlacedMail($order);
+                    OrderPlaced::dispatch((int) $order->id);
                 }
 
                 return ['ok' => true, 'message' => 'Thanh toán VNPay thành công.'];
@@ -82,31 +81,31 @@ class VnpayCallbackService
 
             return ['ok' => false, 'message' => 'Thanh toán VNPay thất bại hoặc bị hủy.'];
         } catch (\Throwable $e) {
-            Log::error('VNPay return process error: ' . $e->getMessage());
+            Log::error('VNPay return process error: '.$e->getMessage());
 
             return ['ok' => false, 'message' => 'Thanh toán thành công nhưng xử lý đơn hàng gặp lỗi.'];
         }
     }
 
-    public function handleIpn(Request $request): array
+    public function handleIpn(VnpayCallbackData $data): array
     {
-        if (!$this->vnpay->hasValidSignature($request->all())) {
+        if (! $this->vnpay->hasValidSignature($data->payload)) {
             return ['RspCode' => '97', 'Message' => 'Invalid signature'];
         }
 
-        $order = $this->orders->findByCode((string) $request->vnp_TxnRef);
+        $order = $this->orders->findByCode($data->txnRef());
 
-        if (!$order) {
+        if (! $order) {
             return ['RspCode' => '01', 'Message' => 'Order not found'];
         }
 
-        if (!$this->vnpay->isValidAmount($order, $request->vnp_Amount)) {
-            Log::warning('VNPay IPN amount mismatch', $this->amountMismatchContext($order, $request));
+        if (! $this->vnpay->isValidAmount($order, $data->amount())) {
+            Log::warning('VNPay IPN amount mismatch', $this->amountMismatchContext($order, $data));
 
             try {
-                DB::transaction(fn () => $this->vnpay->updateFailureState($order, '97', $request->vnp_TransactionStatus));
+                DB::transaction(fn () => $this->vnpay->updateFailureState($order, '97', $data->transactionStatus()));
             } catch (\Throwable $e) {
-                Log::error('VNPay IPN amount mismatch process error: ' . $e->getMessage());
+                Log::error('VNPay IPN amount mismatch process error: '.$e->getMessage());
             }
 
             return ['RspCode' => '04', 'Message' => 'Invalid amount'];
@@ -115,45 +114,45 @@ class VnpayCallbackService
         try {
             $shouldSendMail = false;
 
-            DB::transaction(function () use ($order, $request, &$shouldSendMail) {
-                if ($request->vnp_ResponseCode === '00' && $request->vnp_TransactionStatus === '00') {
+            DB::transaction(function () use ($order, $data, &$shouldSendMail) {
+                if ($data->isSuccessful()) {
                     if ($order->payment_status !== 'paid') {
                         $this->inventory->decreaseStockFromOrder($order);
                         $this->cart->clearUserCartByOrder($order);
 
-                        $order->update(array_merge([
+                        $this->orders->update($order, array_merge([
                             'payment_status' => 'paid',
                             'order_status' => 'pending',
-                        ], $this->vnpay->paymentMeta($request)));
+                        ], $this->vnpay->paymentMeta($data)));
 
                         $shouldSendMail = true;
                     }
                 } else {
-                    $this->vnpay->updateFailureState($order, (string) $request->vnp_ResponseCode, $request->vnp_TransactionStatus);
+                    $this->vnpay->updateFailureState($order, $data->responseCode(), $data->transactionStatus());
                 }
             });
 
             if ($shouldSendMail) {
-                $this->notifications->sendOrderPlacedMail($order);
+                OrderPlaced::dispatch((int) $order->id);
             }
 
             return ['RspCode' => '00', 'Message' => 'Confirm Success'];
         } catch (\Throwable $e) {
-            Log::error('VNPay IPN error: ' . $e->getMessage());
+            Log::error('VNPay IPN error: '.$e->getMessage());
 
             return ['RspCode' => '99', 'Message' => 'Unknown error'];
         }
     }
 
-    protected function amountMismatchContext(Order $order, Request $request): array
+    protected function amountMismatchContext(Order $order, VnpayCallbackData $data): array
     {
         return [
             'order_id' => $order->id,
             'order_code' => $order->order_code,
             'expected_amount' => ((int) $order->total_price) * 100,
-            'received_amount' => (int) ($request->vnp_Amount ?? 0),
-            'response_code' => $request->vnp_ResponseCode,
-            'transaction_status' => $request->vnp_TransactionStatus,
+            'received_amount' => (int) ($data->amount() ?? 0),
+            'response_code' => $data->responseCode(),
+            'transaction_status' => $data->transactionStatus(),
         ];
     }
 }

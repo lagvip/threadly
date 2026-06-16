@@ -9,9 +9,7 @@ use RuntimeException;
 
 class AdminVoucherService
 {
-    public function __construct(protected VoucherRepositoryInterface $vouchers)
-    {
-    }
+    public function __construct(protected VoucherRepositoryInterface $vouchers) {}
 
     public function create(array $data): void
     {
@@ -26,7 +24,7 @@ class AdminVoucherService
     {
         $this->assertBusinessRules($data);
 
-        $voucher->update($this->payload($data));
+        $this->vouchers->update($voucher, $this->payload($data));
     }
 
     public function softDelete(Voucher $voucher): void
@@ -35,22 +33,22 @@ class AdminVoucherService
             throw new RuntimeException('Không thể xóa voucher đang áp dụng cho đơn hàng');
         }
 
-        $voucher->delete();
+        $this->vouchers->delete($voucher);
     }
 
     public function restore(int $id): void
     {
-        $this->vouchers->findWithTrashed($id)->restore();
+        $this->vouchers->restore($this->vouchers->findWithTrashed($id));
     }
 
     public function forceDelete(int $id): void
     {
-        $this->vouchers->findWithTrashed($id)->forceDelete();
+        $this->vouchers->forceDelete($this->vouchers->findWithTrashed($id));
     }
 
     protected function assertBusinessRules(array $data): void
     {
-        if (!empty($data['start_date']) && !empty($data['end_date']) && Carbon::parse($data['end_date'])->lte(Carbon::parse($data['start_date']))) {
+        if (! empty($data['start_date']) && ! empty($data['end_date']) && Carbon::parse($data['end_date'])->lte(Carbon::parse($data['start_date']))) {
             throw new RuntimeException('Ngày kết thúc phải sau ngày bắt đầu');
         }
 
@@ -67,10 +65,10 @@ class AdminVoucherService
             'value' => $data['value'],
             'max_discount' => $data['max_discount'] ?? null,
             'min_order_value' => $data['min_order_value'] ?? null,
-            'start_date' => !empty($data['start_date'])
+            'start_date' => ! empty($data['start_date'])
                 ? Carbon::parse($data['start_date'])->format('Y-m-d H:i:s')
                 : Carbon::now()->format('Y-m-d H:i:s'),
-            'end_date' => !empty($data['end_date'])
+            'end_date' => ! empty($data['end_date'])
                 ? Carbon::parse($data['end_date'])->format('Y-m-d H:i:s')
                 : Carbon::now()->addYears(10)->format('Y-m-d H:i:s'),
             'quantity' => isset($data['quantity']) && $data['quantity'] !== '' ? (int) $data['quantity'] : 0,

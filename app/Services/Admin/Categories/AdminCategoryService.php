@@ -10,9 +10,7 @@ use RuntimeException;
 
 class AdminCategoryService
 {
-    public function __construct(protected CategoryRepositoryInterface $categories)
-    {
-    }
+    public function __construct(protected CategoryRepositoryInterface $categories) {}
 
     public function create(array $data, UploadedFile $image): void
     {
@@ -20,7 +18,7 @@ class AdminCategoryService
 
         $this->categories->create([
             'name' => $data['name'],
-            'id_parent' => !empty($data['id_parent']) ? $data['id_parent'] : null,
+            'id_parent' => ! empty($data['id_parent']) ? $data['id_parent'] : null,
             'image' => Storage::disk('public')->putFile('category', $image),
         ]);
     }
@@ -34,7 +32,7 @@ class AdminCategoryService
 
         $payload = [
             'name' => $data['name'],
-            'id_parent' => !empty($parentId) ? $parentId : null,
+            'id_parent' => ! empty($parentId) ? $parentId : null,
         ];
 
         $currentImage = $category->image;
@@ -45,7 +43,7 @@ class AdminCategoryService
             $payload['image'] = $newImagePath;
         }
 
-        if (!$category->update($payload)) {
+        if (! $this->categories->update($category, $payload)) {
             throw new RuntimeException('Sửa không thành công!');
         }
 
@@ -58,20 +56,20 @@ class AdminCategoryService
     {
         $category = $this->categories->find($id);
 
-        if ($category->children()->exists()) {
+        if ($this->categories->hasChildren($category)) {
             throw new RuntimeException('Không thể xoá danh mục đang có danh mục con.');
         }
 
-        if ($category->products()->exists()) {
+        if ($this->categories->hasProducts($category)) {
             throw new RuntimeException('Không thể xoá danh mục đang có sản phẩm.');
         }
 
-        $category->delete();
+        $this->categories->delete($category);
     }
 
     public function restore(int $id): void
     {
-        $this->categories->findWithTrashed($id)->restore();
+        $this->categories->restore($this->categories->findWithTrashed($id));
     }
 
     public function forceDelete(int $id): void
@@ -82,7 +80,7 @@ class AdminCategoryService
             Storage::disk('public')->delete($category->image);
         }
 
-        $category->forceDelete();
+        $this->categories->forceDelete($category);
     }
 
     protected function assertValidParent($parentId, ?Category $category = null): void
@@ -95,13 +93,13 @@ class AdminCategoryService
             throw new RuntimeException('Danh mục không thể là cha của chính nó.');
         }
 
-        if ($category && $category->children()->exists()) {
+        if ($category && $this->categories->hasChildren($category)) {
             throw new RuntimeException('Danh mục đang là danh mục cha, không thể chuyển thành danh mục con.');
         }
 
         $parent = $this->categories->find($parentId);
 
-        if (!is_null($parent->id_parent)) {
+        if (! is_null($parent->id_parent)) {
             throw new RuntimeException('Chỉ được chọn danh mục gốc làm danh mục cha.');
         }
     }

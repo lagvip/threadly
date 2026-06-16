@@ -15,14 +15,13 @@ class GoogleAuthService
     public function __construct(
         protected RoleRepositoryInterface $roles,
         protected UserRepositoryInterface $users,
-    ) {
-    }
+    ) {}
 
     public function login($googleUser): User
     {
         $user = $this->users->findByGoogleIdOrEmail((string) $googleUser->id, (string) $googleUser->email);
 
-        if (!$user) {
+        if (! $user) {
             $user = $this->users->create([
                 'name' => $googleUser->name,
                 'email' => $googleUser->email,
@@ -33,7 +32,7 @@ class GoogleAuthService
                 'password' => Hash::make(Str::random(24)),
             ]);
         } else {
-            $user->update([
+            $this->users->update($user, [
                 'google_id' => $googleUser->id,
                 'avatar' => $googleUser->avatar,
                 'email_verified_at' => $user->email_verified_at ?? now(),
@@ -65,8 +64,8 @@ class GoogleAuthService
     {
         $customerRole = $this->roles->findBySlug('customer');
 
-        if ($customerRole && !$user->hasRole('customer')) {
-            $user->roles()->syncWithoutDetaching([$customerRole->id]);
+        if ($customerRole && ! $user->hasRole('customer')) {
+            $this->users->syncRolesWithoutDetaching($user, [$customerRole->id]);
         }
     }
 }

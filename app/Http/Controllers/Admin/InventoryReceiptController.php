@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Inventory\IndexInventoryReceiptsRequest;
+use App\Http\Requests\Admin\Inventory\ProductVariantsRequest;
+use App\Http\Requests\Admin\Inventory\SearchInventoryProductsRequest;
 use App\Http\Requests\Admin\Inventory\StoreInventoryReceiptRequest;
 use App\Models\InventoryReceipt;
 use App\Services\Admin\Inventory\AdminInventoryReceiptQueryService;
 use App\Services\Admin\Inventory\AdminInventoryReceiptService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -17,21 +18,26 @@ class InventoryReceiptController extends Controller
     public function __construct(
         protected AdminInventoryReceiptQueryService $queries,
         protected AdminInventoryReceiptService $receipts
-    ) {
-    }
+    ) {}
 
     public function index(IndexInventoryReceiptsRequest $request)
     {
+        $this->authorize('viewAny', InventoryReceipt::class);
+
         return view('admin.inventory.receipts.index', $this->queries->indexData($request->filters()));
     }
 
     public function create()
     {
+        $this->authorize('create', InventoryReceipt::class);
+
         return view('admin.inventory.receipts.create', $this->queries->createData());
     }
 
     public function store(StoreInventoryReceiptRequest $request)
     {
+        $this->authorize('create', InventoryReceipt::class);
+
         try {
             $receipt = $this->receipts->create(
                 $request->validated(),
@@ -49,11 +55,15 @@ class InventoryReceiptController extends Controller
 
     public function show(InventoryReceipt $receipt)
     {
+        $this->authorize('view', $receipt);
+
         return view('admin.inventory.receipts.show', $this->queries->showData($receipt));
     }
 
     public function post(InventoryReceipt $receipt)
     {
+        $this->authorize('update', $receipt);
+
         try {
             $this->receipts->post($receipt, (int) Auth::id());
 
@@ -65,6 +75,8 @@ class InventoryReceiptController extends Controller
 
     public function cancel(InventoryReceipt $receipt)
     {
+        $this->authorize('update', $receipt);
+
         try {
             $this->receipts->cancel($receipt, (int) Auth::id());
 
@@ -76,20 +88,26 @@ class InventoryReceiptController extends Controller
 
     public function movements(IndexInventoryReceiptsRequest $request)
     {
+        $this->authorize('viewAny', InventoryReceipt::class);
+
         return view('admin.inventory.movements.index', $this->queries->movementsData($request->filters()));
     }
 
-    public function searchProducts(Request $request)
+    public function searchProducts(SearchInventoryProductsRequest $request)
     {
+        $this->authorize('viewAny', InventoryReceipt::class);
+
         return response()->json(
-            $this->queries->productSearchData((string) $request->query('keyword', ''))
+            $this->queries->productSearchData($request->keyword())
         );
     }
 
-    public function productVariants(Request $request)
+    public function productVariants(ProductVariantsRequest $request)
     {
+        $this->authorize('viewAny', InventoryReceipt::class);
+
         return response()->json(
-            $this->queries->productVariantData((int) $request->query('product_id'))
+            $this->queries->productVariantData($request->productId())
         );
     }
 }

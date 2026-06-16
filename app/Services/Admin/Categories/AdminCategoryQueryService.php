@@ -11,16 +11,11 @@ class AdminCategoryQueryService
     public function __construct(
         protected CategoryRepositoryInterface $categories,
         protected ProductRepositoryInterface $products,
-    ) {
-    }
+    ) {}
 
     public function indexData(?string $search = null): array
     {
-        $category = $this->categories->query()
-            ->with('parent')
-            ->when($search, fn ($query) => $query->where('name', 'like', '%' . $search . '%'))
-            ->latest('id')
-            ->paginate(10);
+        $category = $this->categories->paginatedForAdmin($search);
 
         $category = Pagination::withQueryString($category);
 
@@ -56,7 +51,7 @@ class AdminCategoryQueryService
     public function trashData(): array
     {
         return [
-            'category' => $this->categories->trashedQuery()->latest()->paginate(10),
+            'category' => $this->categories->trashedPaginatedForAdmin(),
         ];
     }
 }

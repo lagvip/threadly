@@ -16,8 +16,7 @@ class ReorderService
         protected OrderRepositoryInterface $orders,
         protected CartRepositoryInterface $carts,
         protected ProductVariantRepositoryInterface $variants,
-    ) {
-    }
+    ) {}
 
     public function execute(User $user, int $orderId): array
     {
@@ -30,15 +29,17 @@ class ReorderService
         try {
             DB::transaction(function () use ($order, $cart, &$addedQty, &$skipped) {
                 foreach ($order->details as $detail) {
-                    if (!$detail->variant_id) {
+                    if (! $detail->variant_id) {
                         $skipped++;
+
                         continue;
                     }
 
-                    $variant = $this->variants->query()->with('product')->find($detail->variant_id);
+                    $variant = $this->variants->findWithRelationsOrNull((int) $detail->variant_id);
 
-                    if (!$variant || !$variant->product || $variant->status !== 'active') {
+                    if (! $variant || ! $variant->product || $variant->status !== 'active') {
                         $skipped++;
+
                         continue;
                     }
 
@@ -47,6 +48,7 @@ class ReorderService
 
                     if ($stock <= 0 || $wantedQty <= 0) {
                         $skipped++;
+
                         continue;
                     }
 
@@ -57,11 +59,12 @@ class ReorderService
 
                     if ($canAdd <= 0) {
                         $skipped++;
+
                         continue;
                     }
 
                     if ($cartItem) {
-                        $cartItem->update(['quantity' => $currentCartQty + $canAdd]);
+                        $this->carts->updateDetail($cartItem, ['quantity' => $currentCartQty + $canAdd]);
                     } else {
                         $this->carts->createDetail([
                             'id_cart' => $cart->id,
@@ -74,7 +77,7 @@ class ReorderService
                 }
             });
         } catch (\Throwable $e) {
-            Log::error('Reorder error: ' . $e->getMessage());
+            Log::error('Reorder error: '.$e->getMessage());
             throw new RuntimeException('Có lỗi xảy ra khi mua lại đơn hàng.');
         }
 

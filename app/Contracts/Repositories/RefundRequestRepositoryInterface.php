@@ -15,6 +15,8 @@ interface RefundRequestRepositoryInterface
 
     public function create(array $data): RefundRequest;
 
+    public function update(RefundRequest $refundRequest, array $data): bool;
+
     public function lockWithItems(int $id): RefundRequest;
 
     public function lockWithItemsAndOrderDetail(int $id): RefundRequest;

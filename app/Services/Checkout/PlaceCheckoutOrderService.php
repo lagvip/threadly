@@ -9,6 +9,7 @@ use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Contracts\Repositories\VoucherRepositoryInterface;
 use App\DTOs\Checkout\CheckoutOrderData;
 use App\DTOs\Checkout\CheckoutOrderResult;
+use App\Events\Sales\OrderPlaced;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -26,12 +27,10 @@ class PlaceCheckoutOrderService
         protected CheckoutPricingService $checkoutPricing,
         protected CheckoutInventoryService $checkoutInventory,
         protected CheckoutVoucherService $checkoutVoucher,
-        protected OrderNotificationService $notifications,
         protected VnpayPaymentService $vnpay,
-    ) {
-    }
+    ) {}
 
-    public function execute(User $user, CheckoutOrderData $data): CheckoutOrderResult
+    public function execute(User $user, CheckoutOrderData $data, ?string $clientIp = null): CheckoutOrderResult
     {
         $address = $this->addresses->findForUser($data->addressId, $user->id);
         $cart = $this->carts->findForUser($user->id);
@@ -39,7 +38,7 @@ class PlaceCheckoutOrderService
         $checkoutSource = $checkoutData['source'];
         $cartItems = $checkoutData['items'];
 
-        if ($checkoutSource === 'cart' && !$cart) {
+        if ($checkoutSource === 'cart' && ! $cart) {
             throw new RuntimeException('Không tìm thấy giỏ hàng.');
         }
 
@@ -65,7 +64,8 @@ class PlaceCheckoutOrderService
             $selectedCartItemIds,
             $subtotal,
             $shippingFee,
-            $fullAddress
+            $fullAddress,
+            $clientIp
         ) {
             $voucherData = $this->reserveSessionVoucher($subtotal, $user->id);
             $totalPrice = max(0, $subtotal + $shippingFee - $voucherData['discount']);
@@ -120,7 +120,7 @@ class PlaceCheckoutOrderService
                     session()->forget(config('threadly.checkout.cart_session_key'));
                 }
 
-                DB::afterCommit(fn () => $this->notifications->sendOrderPlacedMail($order));
+                OrderPlaced::dispatch((int) $order->id);
 
                 return new CheckoutOrderResult($order, $data->paymentMethod);
             }
@@ -128,7 +128,7 @@ class PlaceCheckoutOrderService
             return new CheckoutOrderResult(
                 $order,
                 $data->paymentMethod,
-                $this->vnpay->createPaymentUrl($order)
+                $this->vnpay->createPaymentUrl($order, $clientIp)
             );
         });
     }
@@ -140,12 +140,12 @@ class PlaceCheckoutOrderService
         foreach ($cartItems as $item) {
             $variant = $item->variant;
 
-            if (!$variant) {
+            if (! $variant) {
                 throw new RuntimeException('Có sản phẩm không hợp lệ.');
             }
 
             if ($variant->quantity < $item->quantity) {
-                throw new RuntimeException('Sản phẩm "' . ($variant->product->name ?? 'N/A') . '" không đủ tồn kho.');
+                throw new RuntimeException('Sản phẩm "'.($variant->product->name ?? 'N/A').'" không đủ tồn kho.');
             }
 
             $subtotal += ((float) $variant->price * (int) $item->quantity);
@@ -159,9 +159,9 @@ class PlaceCheckoutOrderService
         $discount = 0;
         $voucherId = null;
         $voucherCode = null;
-        $sessionVoucherId = session(config('threadly.checkout.voucher_session_key') . '.voucher_id');
+        $sessionVoucherId = session(config('threadly.checkout.voucher_session_key').'.voucher_id');
 
-        if (!$sessionVoucherId) {
+        if (! $sessionVoucherId) {
             return [
                 'discount' => $discount,
                 'voucher_id' => null,
@@ -171,13 +171,13 @@ class PlaceCheckoutOrderService
 
         $voucher = $this->vouchers->lockById((int) $sessionVoucherId);
 
-        if (!$voucher) {
+        if (! $voucher) {
             throw new RuntimeException('Voucher không còn tồn tại.');
         }
 
         $currentUses = $this->checkoutVoucher->getUserVoucherUsage($voucher, $userId);
 
-        if (!$voucher->isValid($subtotal, $currentUses, 1)) {
+        if (! $voucher->isValid($subtotal, $currentUses, 1)) {
             throw new RuntimeException('Voucher không hợp lệ hoặc đã vượt giới hạn sử dụng.');
         }
 
@@ -197,7 +197,7 @@ class PlaceCheckoutOrderService
     protected function generateOrderCode(): string
     {
         do {
-            $orderCode = 'OD' . now()->format('ymdhis') . Str::upper(Str::random(2));
+            $orderCode = 'OD'.now()->format('ymdhis').Str::upper(Str::random(2));
         } while ($this->orders->orderCodeExists($orderCode));
 
         return $orderCode;

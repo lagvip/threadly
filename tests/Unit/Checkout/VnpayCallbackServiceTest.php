@@ -3,12 +3,11 @@
 namespace Tests\Unit\Checkout;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
+use App\DTOs\Checkout\VnpayCallbackData;
 use App\Services\Checkout\CheckoutCartService;
 use App\Services\Checkout\CheckoutInventoryService;
-use App\Services\Checkout\OrderNotificationService;
 use App\Services\Checkout\VnpayCallbackService;
 use App\Services\Checkout\VnpayPaymentService;
-use Illuminate\Http\Request;
 use Tests\TestCase;
 
 class VnpayCallbackServiceTest extends TestCase
@@ -23,7 +22,7 @@ class VnpayCallbackServiceTest extends TestCase
         $orders = $this->createMock(OrderRepositoryInterface::class);
         $orders->expects($this->never())->method('findByCode');
 
-        $result = $this->service($orders, $vnpay)->handleReturn($this->request());
+        $result = $this->service($orders, $vnpay)->handleReturn($this->callbackData());
 
         $this->assertFalse($result['ok']);
         $this->assertSame('Chữ ký VNPay không hợp lệ.', $result['message']);
@@ -42,7 +41,7 @@ class VnpayCallbackServiceTest extends TestCase
             ->with('OD001')
             ->willReturn(null);
 
-        $result = $this->service($orders, $vnpay)->handleReturn($this->request());
+        $result = $this->service($orders, $vnpay)->handleReturn($this->callbackData());
 
         $this->assertFalse($result['ok']);
         $this->assertSame('Không tìm thấy đơn hàng.', $result['message']);
@@ -58,7 +57,7 @@ class VnpayCallbackServiceTest extends TestCase
         $orders = $this->createMock(OrderRepositoryInterface::class);
         $orders->expects($this->never())->method('findByCode');
 
-        $result = $this->service($orders, $vnpay)->handleIpn($this->request());
+        $result = $this->service($orders, $vnpay)->handleIpn($this->callbackData());
 
         $this->assertSame([
             'RspCode' => '97',
@@ -75,17 +74,21 @@ class VnpayCallbackServiceTest extends TestCase
             $vnpay,
             $this->createMock(CheckoutInventoryService::class),
             $this->createMock(CheckoutCartService::class),
-            $this->createMock(OrderNotificationService::class),
         );
     }
 
-    protected function request(): Request
+    protected function payload(): array
     {
-        return Request::create('/checkout/vnpay/return', 'GET', [
+        return [
             'vnp_TxnRef' => 'OD001',
             'vnp_Amount' => '1000000',
             'vnp_ResponseCode' => '00',
             'vnp_TransactionStatus' => '00',
-        ]);
+        ];
+    }
+
+    protected function callbackData(): VnpayCallbackData
+    {
+        return VnpayCallbackData::fromArray($this->payload());
     }
 }

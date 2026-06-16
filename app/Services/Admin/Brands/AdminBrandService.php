@@ -10,9 +10,7 @@ use RuntimeException;
 
 class AdminBrandService
 {
-    public function __construct(protected BrandRepositoryInterface $brands)
-    {
-    }
+    public function __construct(protected BrandRepositoryInterface $brands) {}
 
     public function indexData(): array
     {
@@ -47,7 +45,7 @@ class AdminBrandService
             $data['image'] = $image->store('brands', 'public');
         }
 
-        $brand->update($data);
+        $this->brands->update($brand, $data);
     }
 
     public function softDelete(int $id): void
@@ -58,12 +56,12 @@ class AdminBrandService
             throw new RuntimeException('Không thể xóa thương hiệu vì đang có sản phẩm sử dụng.');
         }
 
-        $brand->delete();
+        $this->brands->delete($brand);
     }
 
     public function restore(int $id): void
     {
-        $this->brands->findWithTrashed($id)->restore();
+        $this->brands->restore($this->brands->findWithTrashed($id));
     }
 
     public function forceDelete(int $id): void
@@ -75,7 +73,7 @@ class AdminBrandService
         }
 
         $this->deleteImage($brand);
-        $brand->forceDelete();
+        $this->brands->forceDelete($brand);
     }
 
     protected function deleteImage(Brand $brand): void

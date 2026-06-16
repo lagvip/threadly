@@ -2,15 +2,16 @@
 
 namespace App\Services\Checkout;
 
+use App\Contracts\Repositories\OrderRepositoryInterface;
+use App\DTOs\Checkout\VnpayCallbackData;
 use App\Models\Order;
-use Illuminate\Http\Request;
 
 class VnpayPaymentService
 {
     public function __construct(
+        protected OrderRepositoryInterface $orders,
         protected CheckoutVoucherService $vouchers,
-    ) {
-    }
+    ) {}
 
     public function hasValidSignature(array $inputData): bool
     {
@@ -22,7 +23,7 @@ class VnpayPaymentService
 
         $hashData = [];
         foreach ($inputData as $key => $value) {
-            $hashData[] = urlencode($key) . '=' . urlencode($value);
+            $hashData[] = urlencode($key).'='.urlencode($value);
         }
 
         $secureHash = hash_hmac('sha512', implode('&', $hashData), $vnpHashSecret);
@@ -35,7 +36,7 @@ class VnpayPaymentService
         return (int) ($vnpAmount ?? 0) === ((int) $order->total_price) * 100;
     }
 
-    public function createPaymentUrl(Order $order): string
+    public function createPaymentUrl(Order $order, ?string $clientIp = null): string
     {
         $vnpUrl = trim((string) config('services.vnpay.url'));
         $vnpReturnUrl = trim((string) config('services.vnpay.return_url'));
@@ -54,9 +55,9 @@ class VnpayPaymentService
             'vnp_Command' => 'pay',
             'vnp_CreateDate' => $vnpCreateDate,
             'vnp_CurrCode' => 'VND',
-            'vnp_IpAddr' => request()->ip() ?: '127.0.0.1',
+            'vnp_IpAddr' => $clientIp ?: '127.0.0.1',
             'vnp_Locale' => 'vn',
-            'vnp_OrderInfo' => 'Thanh toán đơn hàng ' . $order->order_code,
+            'vnp_OrderInfo' => 'Thanh toán đơn hàng '.$order->order_code,
             'vnp_OrderType' => 'billpayment',
             'vnp_ReturnUrl' => $vnpReturnUrl,
             'vnp_TxnRef' => $order->order_code,
@@ -69,14 +70,14 @@ class VnpayPaymentService
         $hashData = '';
 
         foreach ($inputData as $key => $value) {
-            $encoded = urlencode($key) . '=' . urlencode($value);
-            $hashData .= $hashData === '' ? $encoded : '&' . $encoded;
-            $query .= $encoded . '&';
+            $encoded = urlencode($key).'='.urlencode($value);
+            $hashData .= $hashData === '' ? $encoded : '&'.$encoded;
+            $query .= $encoded.'&';
         }
 
         $vnpSecureHash = hash_hmac('sha512', $hashData, $vnpHashSecret);
 
-        return $vnpUrl . '?' . $query . 'vnp_SecureHash=' . $vnpSecureHash;
+        return $vnpUrl.'?'.$query.'vnp_SecureHash='.$vnpSecureHash;
     }
 
     public function updateFailureState(Order $order, string $responseCode, ?string $transactionStatus = null): void
@@ -88,7 +89,7 @@ class VnpayPaymentService
         $this->vouchers->restoreVoucherForOrder($order);
 
         if ($responseCode === '97') {
-            $order->update([
+            $this->orders->update($order, [
                 'order_status' => 'pending',
                 'payment_status' => 'failed',
                 'cancel_reason' => 'Sai lệch số tiền VNPay trả về',
@@ -100,7 +101,7 @@ class VnpayPaymentService
         }
 
         if ($responseCode === '24') {
-            $order->update([
+            $this->orders->update($order, [
                 'order_status' => 'pending',
                 'payment_status' => 'cancelled',
                 'cancel_reason' => 'Khách hủy phiên thanh toán VNPay',
@@ -112,7 +113,7 @@ class VnpayPaymentService
         }
 
         if ($responseCode === '11') {
-            $order->update([
+            $this->orders->update($order, [
                 'previous_status' => $order->order_status,
                 'order_status' => 'cancelled',
                 'payment_status' => 'expired',
@@ -124,7 +125,7 @@ class VnpayPaymentService
             return;
         }
 
-        $order->update([
+        $this->orders->update($order, [
             'order_status' => 'pending',
             'payment_status' => 'failed',
             'cancel_reason' => 'Thanh toán VNPay thất bại',
@@ -135,20 +136,20 @@ class VnpayPaymentService
 
     public function saveRequestMeta(Order $order, string $createDate, string $expireDate): void
     {
-        $order->update([
+        $this->orders->update($order, [
             'payment_request_date' => $createDate,
             'payment_expire_date' => $expireDate,
         ]);
     }
 
-    public function paymentMeta(Request $request): array
+    public function paymentMeta(VnpayCallbackData $data): array
     {
         return [
-            'payment_transaction_no' => $request->vnp_TransactionNo,
-            'payment_bank_code' => $request->vnp_BankCode,
-            'payment_response_code' => $request->vnp_ResponseCode,
-            'payment_transaction_status' => $request->vnp_TransactionStatus,
-            'payment_pay_date' => $request->vnp_PayDate,
+            'payment_transaction_no' => $data->transactionNo(),
+            'payment_bank_code' => $data->bankCode(),
+            'payment_response_code' => $data->responseCode(),
+            'payment_transaction_status' => $data->transactionStatus(),
+            'payment_pay_date' => $data->payDate(),
             'paid_at' => now(),
         ];
     }

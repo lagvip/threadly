@@ -6,20 +6,17 @@ use App\Contracts\Repositories\BrandRepositoryInterface;
 use App\Contracts\Repositories\CategoryRepositoryInterface;
 use App\Contracts\Repositories\ColorRepositoryInterface;
 use App\Contracts\Repositories\SizeRepositoryInterface;
-use App\Services\ProductService;
-use App\Services\ProductVariantService;
 
 class AdminProductPageService
 {
     public function __construct(
-        protected ProductService $products,
-        protected ProductVariantService $variants,
+        protected AdminProductService $products,
+        protected AdminProductVariantService $variants,
         protected BrandRepositoryInterface $brands,
         protected CategoryRepositoryInterface $categories,
         protected ColorRepositoryInterface $colors,
         protected SizeRepositoryInterface $sizes,
-    ) {
-    }
+    ) {}
 
     public function indexData(array $filters): array
     {
@@ -77,8 +74,8 @@ class AdminProductPageService
         return [
             'brands' => $this->brands->all(),
             'categories' => $this->categories->childCategories(),
-            'colors' => $this->colors->query()->get(),
-            'sizes' => $this->sizes->query()->get(),
+            'colors' => $this->colors->all(),
+            'sizes' => $this->sizes->all(),
         ];
     }
 
@@ -86,11 +83,7 @@ class AdminProductPageService
     {
         return [
             'brands' => $this->brands->ordered(),
-            'categories' => $this->categories->query()
-                ->with('parent')
-                ->whereNotNull('id_parent')
-                ->orderBy('name')
-                ->get(),
+            'categories' => $this->categories->childCategoriesOrdered(),
         ];
     }
 }

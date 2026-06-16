@@ -8,10 +8,10 @@ use App\Http\Requests\Admin\Products\IndexProductsRequest;
 use App\Http\Requests\Admin\Products\StoreProductRequest;
 use App\Http\Requests\Admin\Products\ToggleProductStatusRequest;
 use App\Http\Requests\Admin\Products\UpdateProductRequest;
+use App\Models\Product;
 use App\Services\Admin\Products\AdminProductPageService;
 use App\Services\Admin\Products\AdminProductVariantWriteService;
 use App\Services\Admin\Products\AdminProductWriteService;
-use App\Models\Product;
 use RuntimeException;
 
 class ProductController extends Controller
@@ -20,8 +20,7 @@ class ProductController extends Controller
         protected AdminProductPageService $pages,
         protected AdminProductWriteService $products,
         protected AdminProductVariantWriteService $variants,
-    ) {
-    }
+    ) {}
 
     public function list(IndexProductsRequest $request)
     {
@@ -47,7 +46,7 @@ class ProductController extends Controller
         $this->authorize('create', Product::class);
 
         try {
-            $this->products->create($request);
+            $this->products->create($request->validated(), $request->file('variants', []));
 
             return redirect()->route('product.listProduct')->with('success', 'Thêm sản phẩm và biến thể thành công');
         } catch (\Throwable $e) {
@@ -70,7 +69,12 @@ class ProductController extends Controller
         $this->authorize('updateAny', Product::class);
 
         try {
-            $this->products->update($request, (int) $id);
+            $this->products->update(
+                $request->validated(),
+                (int) $id,
+                $request->file('variants', []),
+                $request->file('variants_new', [])
+            );
 
             return redirect()->route('product.listProduct')->with('success', 'Cập nhật sản phẩm thành công');
         } catch (\Throwable $e) {

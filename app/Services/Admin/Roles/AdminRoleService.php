@@ -9,9 +9,7 @@ use RuntimeException;
 
 class AdminRoleService
 {
-    public function __construct(protected RoleRepositoryInterface $roles)
-    {
-    }
+    public function __construct(protected RoleRepositoryInterface $roles) {}
 
     public function indexData(): array
     {
@@ -47,7 +45,7 @@ class AdminRoleService
     {
         $role = $this->roles->find($id);
 
-        $role->update([
+        $this->roles->update($role, [
             'name' => $data['name'],
             'slug' => $data['slug'] ?: Str::slug($data['name']),
             'permissions' => $data['permissions'] ?? $role->permissions,
@@ -62,12 +60,12 @@ class AdminRoleService
             throw new RuntimeException('Role này vẫn còn user, không thể xóa.');
         }
 
-        $role->delete();
+        $this->roles->delete($role);
     }
 
     public function restore(int $id): void
     {
-        $this->roles->findTrashedWithUserCount($id)->restore();
+        $this->roles->restore($this->roles->findTrashedWithUserCount($id));
     }
 
     public function forceDelete(int $id): void
@@ -78,6 +76,6 @@ class AdminRoleService
             throw new RuntimeException('Role này vẫn còn user, không thể xóa vĩnh viễn.');
         }
 
-        $role->forceDelete();
+        $this->roles->forceDelete($role);
     }
 }

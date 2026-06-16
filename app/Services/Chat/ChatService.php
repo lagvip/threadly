@@ -10,9 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class ChatService
 {
-    public function __construct(protected ChatRepositoryInterface $chats)
-    {
-    }
+    public function __construct(protected ChatRepositoryInterface $chats) {}
 
     public function adminIndexData(): array
     {
@@ -34,6 +32,22 @@ class ChatService
         ];
     }
 
+    public function canAccessConversation(User $user, int $conversationId): bool
+    {
+        $conversation = $this->chats->findConversation($conversationId);
+
+        if (! $conversation) {
+            return false;
+        }
+
+        $isOwner = (int) $conversation->user_id === (int) $user->id;
+        $isStaff =
+            (method_exists($user, 'isAdmin') && $user->isAdmin())
+            || (method_exists($user, 'isManager') && $user->isManager());
+
+        return $isOwner || $isStaff;
+    }
+
     public function sendFromUser(int $userId, string $body): ChatMessage
     {
         return DB::transaction(function () use ($userId, $body) {
@@ -46,8 +60,8 @@ class ChatService
     public function sendFromAdmin(ChatConversation $conversation, int $adminId, string $body): ChatMessage
     {
         return DB::transaction(function () use ($conversation, $adminId, $body) {
-            if (!$conversation->admin_id) {
-                $conversation->update(['admin_id' => $adminId]);
+            if (! $conversation->admin_id) {
+                $this->chats->updateConversation($conversation, ['admin_id' => $adminId]);
             }
 
             return $this->createMessage($conversation, $adminId, 'admin', $body);
@@ -95,9 +109,8 @@ class ChatService
     {
         $message = $this->chats->createMessage($conversation, $senderId, $senderRole, $body);
 
-        $conversation->update(['last_message_at' => now()]);
+        $this->chats->updateConversation($conversation, ['last_message_at' => now()]);
 
         return $message;
     }
-
 }

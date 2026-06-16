@@ -7,7 +7,7 @@
             <h4 class="card-title mb-0">Chi tiết phiếu nhập {{ $receipt->receipt_code }}</h4>
             <div class="d-flex gap-2">
                 <a href="{{ route('admin.inventory.receipts.index') }}" class="btn btn-light btn-sm">Danh sách</a>
-                @if($receipt->status === \App\Models\InventoryReceipt::STATUS_DRAFT)
+                @if($canPostReceipt)
                     <form method="POST" action="{{ route('admin.inventory.receipts.post', $receipt->id) }}">
                         @csrf
                         <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Xác nhận nhập kho và cộng tồn?')">Xác nhận</button>
@@ -31,7 +31,7 @@
             <div class="row g-3 mb-4">
                 <div class="col-md-3">
                     <div class="text-muted">Trạng thái</div>
-                    <strong>{{ ['draft' => 'Nháp', 'posted' => 'Đã xác nhận', 'cancelled' => 'Đã hủy'][$receipt->status] ?? $receipt->status }}</strong>
+                    <strong>{{ $receiptStatusLabels[$receipt->status] ?? $receipt->status }}</strong>
                 </div>
                 <div class="col-md-3">
                     <div class="text-muted">Người tạo</div>

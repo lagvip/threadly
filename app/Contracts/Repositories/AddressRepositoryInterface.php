@@ -17,6 +17,10 @@ interface AddressRepositoryInterface
 
     public function createForUser(int $userId, array $data): Address;
 
+    public function update(Address $address, array $data): bool;
+
+    public function delete(Address $address): bool;
+
     public function unsetDefaultForUser(int $userId, ?int $exceptAddressId = null): int;
 
     public function latestForUser(int $userId): ?Address;
