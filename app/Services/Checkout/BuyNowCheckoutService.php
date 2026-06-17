@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Actions\Checkout;
+namespace App\Services\Checkout;
 
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
 use App\DTOs\Checkout\BuyNowData;
 use App\Enums\ProductStatus;
 use RuntimeException;
 
-class BuyNowCheckoutAction
+class BuyNowCheckoutService
 {
     public function __construct(
         protected ProductVariantRepositoryInterface $variants,

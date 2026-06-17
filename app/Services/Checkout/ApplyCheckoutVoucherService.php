@@ -1,15 +1,12 @@
 <?php
 
-namespace App\Actions\Checkout;
+namespace App\Services\Checkout;
 
 use App\Contracts\Repositories\CartRepositoryInterface;
 use App\Contracts\Repositories\VoucherRepositoryInterface;
-use App\Services\Checkout\CheckoutCartService;
-use App\Services\Checkout\CheckoutPricingService;
-use App\Services\Checkout\CheckoutVoucherService;
 use RuntimeException;
 
-class ApplyCheckoutVoucherAction
+class ApplyCheckoutVoucherService
 {
     public function __construct(
         protected CartRepositoryInterface $carts,

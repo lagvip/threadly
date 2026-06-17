@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Actions\Checkout;
+namespace App\Services\Checkout;
 
 use App\Contracts\Repositories\AddressRepositoryInterface;
 use App\DTOs\Checkout\CheckoutAddressData;
 use App\Models\Address;
 
-class StoreCheckoutAddressAction
+class StoreCheckoutAddressService
 {
     public function __construct(
         protected AddressRepositoryInterface $addresses,

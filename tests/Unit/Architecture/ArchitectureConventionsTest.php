@@ -9,11 +9,18 @@ use Tests\TestCase;
 
 class ArchitectureConventionsTest extends TestCase
 {
-    public function test_services_and_actions_do_not_depend_on_http_requests(): void
+    public function test_actions_layer_is_not_used(): void
+    {
+        $actionsPath = base_path('app/Actions');
+
+        $this->assertFalse(is_dir($actionsPath), 'Use services instead of app/Actions.');
+    }
+
+    public function test_services_do_not_depend_on_http_requests(): void
     {
         $violations = [];
 
-        foreach ($this->phpFiles(['app/Services', 'app/Actions']) as $file) {
+        foreach ($this->phpFiles(['app/Services']) as $file) {
             $contents = file_get_contents($file->getPathname());
 
             if (
@@ -89,13 +96,13 @@ class ArchitectureConventionsTest extends TestCase
         $this->assertSame($expected, $bindings);
     }
 
-    public function test_controllers_inject_services_and_actions_through_constructors(): void
+    public function test_controllers_inject_services_through_constructors(): void
     {
         $violations = [];
 
         foreach ($this->phpFiles(['app/Http/Controllers']) as $file) {
             $contents = file_get_contents($file->getPathname());
-            preg_match_all('/public function (?!__construct)\w+\s*\([^)]*(?:Service|Action)\s+\$/m', $contents, $matches);
+            preg_match_all('/public function (?!__construct)\w+\s*\([^)]*Service\s+\$/m', $contents, $matches);
 
             if (! empty($matches[0])) {
                 $violations[] = $this->relativePath($file);
@@ -173,12 +180,12 @@ class ArchitectureConventionsTest extends TestCase
         $this->assertSame([], $violations);
     }
 
-    public function test_services_and_actions_do_not_call_eloquent_static_queries(): void
+    public function test_services_do_not_call_eloquent_static_queries(): void
     {
         $violations = [];
         $pattern = '/[A-Z][A-Za-z0-9_]*::(query|where|create|find|findOrFail|firstOrCreate|with|onlyTrashed|lockForUpdate|sum|count)\s*\(/';
 
-        foreach ($this->phpFiles(['app/Services', 'app/Actions']) as $file) {
+        foreach ($this->phpFiles(['app/Services']) as $file) {
             $contents = file_get_contents($file->getPathname());
 
             if (preg_match($pattern, $contents)) {
@@ -189,7 +196,7 @@ class ArchitectureConventionsTest extends TestCase
         $this->assertSame([], $violations);
     }
 
-    public function test_services_and_actions_do_not_persist_models_directly(): void
+    public function test_services_do_not_persist_models_directly(): void
     {
         $violations = [];
         $patterns = [
@@ -197,7 +204,7 @@ class ArchitectureConventionsTest extends TestCase
             '/->find[A-Za-z0-9_]*\([^;]*\)->(save|delete|update|restore|forceDelete)\s*\(/s',
         ];
 
-        foreach ($this->phpFiles(['app/Services', 'app/Actions']) as $file) {
+        foreach ($this->phpFiles(['app/Services']) as $file) {
             $contents = file_get_contents($file->getPathname());
 
             if (collect($patterns)->contains(fn (string $pattern) => preg_match($pattern, $contents))) {
@@ -208,12 +215,12 @@ class ArchitectureConventionsTest extends TestCase
         $this->assertSame([], $violations);
     }
 
-    public function test_services_and_actions_do_not_use_repository_query_builders_directly(): void
+    public function test_services_do_not_use_repository_query_builders_directly(): void
     {
         $violations = [];
         $pattern = '/->(query|trashedQuery|newestQuery)\s*\(/';
 
-        foreach ($this->phpFiles(['app/Services', 'app/Actions']) as $file) {
+        foreach ($this->phpFiles(['app/Services']) as $file) {
             $contents = file_get_contents($file->getPathname());
 
             if (preg_match($pattern, $contents)) {
@@ -224,11 +231,11 @@ class ArchitectureConventionsTest extends TestCase
         $this->assertSame([], $violations);
     }
 
-    public function test_services_and_actions_do_not_use_db_table_directly(): void
+    public function test_services_do_not_use_db_table_directly(): void
     {
         $violations = [];
 
-        foreach ($this->phpFiles(['app/Services', 'app/Actions']) as $file) {
+        foreach ($this->phpFiles(['app/Services']) as $file) {
             $contents = file_get_contents($file->getPathname());
 
             if (str_contains($contents, 'DB::table(')) {
@@ -239,11 +246,11 @@ class ArchitectureConventionsTest extends TestCase
         $this->assertSame([], $violations);
     }
 
-    public function test_services_and_actions_use_transaction_closures(): void
+    public function test_services_use_transaction_closures(): void
     {
         $violations = [];
 
-        foreach ($this->phpFiles(['app/Services', 'app/Actions']) as $file) {
+        foreach ($this->phpFiles(['app/Services']) as $file) {
             $contents = file_get_contents($file->getPathname());
 
             if (
@@ -270,7 +277,7 @@ class ArchitectureConventionsTest extends TestCase
             'stockMovements->record',
         ];
 
-        foreach ($this->phpFiles(['app/Services', 'app/Actions']) as $file) {
+        foreach ($this->phpFiles(['app/Services']) as $file) {
             $contents = file_get_contents($file->getPathname());
 
             foreach ($forbidden as $needle) {
@@ -423,7 +430,6 @@ class ArchitectureConventionsTest extends TestCase
         $pattern = "/'active'|'inactive'|in:active,inactive|status = 'active'/";
 
         foreach ($this->phpFiles([
-            'app/Actions',
             'app/Http/Requests/Admin/Products',
             'app/Models',
             'app/Repositories',
