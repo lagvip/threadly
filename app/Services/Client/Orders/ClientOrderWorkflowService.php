@@ -4,9 +4,13 @@ namespace App\Services\Client\Orders;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Contracts\Repositories\RefundRequestRepositoryInterface;
+use App\Enums\OrderPaymentStatus;
+use App\Enums\OrderRefundStatus;
+use App\Enums\OrderStatus;
+use App\Enums\RefundRequestStatus;
+use App\Enums\RefundRequestType;
 use App\Events\Sales\OrderStatusChanged;
 use App\Models\Order;
-use App\Models\RefundRequest;
 use App\Services\Inventory\OrderInventoryService;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -79,14 +83,14 @@ class ClientOrderWorkflowService
     {
         $this->orders->update($order, [
             'previous_status' => $oldStatus,
-            'order_status' => Order::STATUS_CANCELLED,
-            'payment_status' => Order::PAYMENT_CANCELLED,
+            'order_status' => OrderStatus::Cancelled->value,
+            'payment_status' => OrderPaymentStatus::Cancelled->value,
             'cancel_reason' => $reason,
         ]);
 
         $this->inventory->releaseCancelledOrder($order);
 
-        $this->log($order, Order::STATUS_CANCELLED, 'Khách hàng hủy đơn: '.$reason, $userId);
+        $this->log($order, OrderStatus::Cancelled->value, 'Khách hàng hủy đơn: '.$reason, $userId);
     }
 
     protected function cancelPaidVnpayOrder(Order $order, string $oldStatus, string $reason, int $userId): void
@@ -103,8 +107,8 @@ class ClientOrderWorkflowService
 
         $this->orders->update($order, [
             'previous_status' => $oldStatus,
-            'order_status' => Order::STATUS_CANCELLED,
-            'refund_status' => Order::REFUND_REQUESTED,
+            'order_status' => OrderStatus::Cancelled->value,
+            'refund_status' => OrderRefundStatus::Requested->value,
             'last_refund_requested_at' => now(),
             'cancel_reason' => $reason,
         ]);
@@ -114,24 +118,24 @@ class ClientOrderWorkflowService
         $this->refundRequests->create([
             'order_id' => $order->id,
             'user_id' => $userId,
-            'type' => RefundRequest::TYPE_FULL,
+            'type' => RefundRequestType::Full->value,
             'requested_amount' => $refundAmount,
             'reason' => 'Khách hủy đơn VNPay đã thanh toán: '.$reason,
-            'status' => RefundRequest::STATUS_PENDING,
+            'status' => RefundRequestStatus::Pending->value,
         ]);
 
-        $this->log($order, Order::STATUS_CANCELLED, 'Khách hàng hủy đơn VNPay đã thanh toán, tạo yêu cầu hoàn tiền demo: '.$reason, $userId);
+        $this->log($order, OrderStatus::Cancelled->value, 'Khách hàng hủy đơn VNPay đã thanh toán, tạo yêu cầu hoàn tiền demo: '.$reason, $userId);
     }
 
     protected function requestCancellation(Order $order, string $oldStatus, string $reason, int $userId): void
     {
         $this->orders->update($order, [
             'previous_status' => $oldStatus,
-            'order_status' => Order::STATUS_WAITING_FOR_CANCELLATION,
+            'order_status' => OrderStatus::WaitingForCancellation->value,
             'cancel_reason' => $reason,
         ]);
 
-        $this->log($order, Order::STATUS_WAITING_FOR_CANCELLATION, 'Khách hàng gửi yêu cầu hủy: '.$reason, $userId);
+        $this->log($order, OrderStatus::WaitingForCancellation->value, 'Khách hàng gửi yêu cầu hủy: '.$reason, $userId);
     }
 
     protected function log(Order $order, string $status, string $note, int $userId): void

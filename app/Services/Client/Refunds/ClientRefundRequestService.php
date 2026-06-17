@@ -6,6 +6,9 @@ use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Contracts\Repositories\RefundRequestEvidenceRepositoryInterface;
 use App\Contracts\Repositories\RefundRequestItemRepositoryInterface;
 use App\Contracts\Repositories\RefundRequestRepositoryInterface;
+use App\Enums\OrderRefundStatus;
+use App\Enums\RefundRequestStatus;
+use App\Enums\RefundRequestType;
 use App\Models\Order;
 use App\Models\RefundRequest;
 use Illuminate\Support\Facades\DB;
@@ -48,14 +51,14 @@ class ClientRefundRequestService
                 'type' => $data['type'],
                 'requested_amount' => $requestedAmount,
                 'reason' => trim((string) $data['reason']),
-                'status' => RefundRequest::STATUS_PENDING,
+                'status' => RefundRequestStatus::Pending->value,
             ]);
 
             $this->storeItems($refundRequest, $selectedItems);
             $this->storeEvidences($refundRequest, $evidenceFiles);
 
             $this->orders->update($order, [
-                'refund_status' => Order::REFUND_REQUESTED,
+                'refund_status' => OrderRefundStatus::Requested->value,
                 'last_refund_requested_at' => now(),
             ]);
         });
@@ -104,7 +107,7 @@ class ClientRefundRequestService
         $refundableItems = $this->buildRefundableItems($order);
         $selectedItems = [];
 
-        if ($type === RefundRequest::TYPE_FULL) {
+        if ($type === RefundRequestType::Full->value) {
             foreach ($refundableItems as $item) {
                 if ($item['available_quantity'] <= 0) {
                     continue;

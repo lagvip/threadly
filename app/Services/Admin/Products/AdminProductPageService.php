@@ -6,6 +6,7 @@ use App\Contracts\Repositories\BrandRepositoryInterface;
 use App\Contracts\Repositories\CategoryRepositoryInterface;
 use App\Contracts\Repositories\ColorRepositoryInterface;
 use App\Contracts\Repositories\SizeRepositoryInterface;
+use App\Enums\ProductStatus;
 
 class AdminProductPageService
 {
@@ -29,7 +30,8 @@ class AdminProductPageService
                 'searchTerm' => $filters['search'] ?? null,
                 'brandId' => $filters['brand_id'] ?? null,
                 'categoryId' => $filters['category_id'] ?? null,
-            ]
+            ],
+            $this->productStatusData()
         );
     }
 
@@ -52,7 +54,7 @@ class AdminProductPageService
             'product' => $this->products->getProductById($id),
             'brands' => $this->brands->all(),
             'categories' => $this->categories->childCategories(),
-        ];
+        ] + $this->productStatusData();
     }
 
     public function trashData(): array
@@ -76,7 +78,7 @@ class AdminProductPageService
             'categories' => $this->categories->childCategories(),
             'colors' => $this->colors->all(),
             'sizes' => $this->sizes->all(),
-        ];
+        ] + $this->productStatusData();
     }
 
     protected function filterData(): array
@@ -84,6 +86,17 @@ class AdminProductPageService
         return [
             'brands' => $this->brands->ordered(),
             'categories' => $this->categories->childCategoriesOrdered(),
+        ];
+    }
+
+    protected function productStatusData(): array
+    {
+        return [
+            'activeProductStatus' => ProductStatus::Active->value,
+            'inactiveProductStatus' => ProductStatus::Inactive->value,
+            'productStatusOptions' => collect(ProductStatus::cases())
+                ->mapWithKeys(fn (ProductStatus $status) => [$status->value => $status->label()])
+                ->all(),
         ];
     }
 }

@@ -45,15 +45,14 @@
                                 <td class="fw-medium">{{ $v->code }}</td>
 
                                 <td>
-                                    @if($v->type == 'percent')
-                                        <span class="badge bg-info">%</span>
-                                    @else
-                                        <span class="badge bg-warning text-dark">₫</span>
-                                    @endif
+                                    @php($typeInfo = $voucherTypeOptions[$v->type] ?? null)
+                                    <span class="badge bg-{{ $typeInfo['badge'] ?? 'secondary' }}">
+                                        {{ $typeInfo['unit'] ?? $v->type }}
+                                    </span>
                                 </td>
 
                                 <td>
-                                    {{ $v->type == 'percent'
+                                    {{ ($typeInfo['unit'] ?? null) === '%'
                                         ? $v->value.'%'
                                         : number_format($v->value,0,',','.') . 'đ' }}
                                 </td>

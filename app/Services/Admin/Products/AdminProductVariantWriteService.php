@@ -2,6 +2,7 @@
 
 namespace App\Services\Admin\Products;
 
+use App\Enums\ProductStatus;
 use RuntimeException;
 
 class AdminProductVariantWriteService
@@ -11,14 +12,14 @@ class AdminProductVariantWriteService
     public function updateStatus(int $id, string $status): string
     {
         if (! $this->variants->updateStatus($id, $status)) {
-            $message = $status === 'active'
+            $message = $status === ProductStatus::Active->value
                 ? 'Không thể bật biến thể khi sản phẩm cha đang không hoạt động'
                 : 'Cập nhật trạng thái biến thể thất bại';
 
             throw new RuntimeException($message);
         }
 
-        return $status === 'active' ? 'Đã bật biến thể' : 'Đã tắt biến thể';
+        return $status === ProductStatus::Active->value ? 'Đã bật biến thể' : 'Đã tắt biến thể';
     }
 
     public function bulkRestore(array $ids): void

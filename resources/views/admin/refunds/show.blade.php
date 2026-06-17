@@ -190,7 +190,7 @@
             </div>
 
 
-            @if($refundRequest->status === 'approved' && !$refundRequest->restocked_at && $refundRequest->items->isNotEmpty())
+            @if($refundRequest->status === $approvedStatus && !$refundRequest->restocked_at && $refundRequest->items->isNotEmpty())
                 <div class="card border-0 shadow-sm rounded-4 mb-4">
                     <div class="card-header fw-bold text-primary">Nhập lại kho hàng hoàn</div>
                     <div class="card-body">
@@ -225,7 +225,7 @@
                 </div>
             @endif
 
-            @if($refundRequest->status === 'pending')
+            @if($refundRequest->status === $pendingStatus)
                 <div class="card border-0 shadow-sm rounded-4 mb-4">
                     <div class="card-header fw-bold text-success">Duyệt hoàn vào ví demo</div>
                     <div class="card-body">

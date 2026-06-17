@@ -10,8 +10,11 @@
 <div class="mb-3">
     <label>Loại</label>
     <select id="type" name="type" class="form-control" onchange="toggleMaxDiscount()">
-        <option value="percent" @selected(($voucher->type ?? '')=='percent')>Giảm theo %</option>
-        <option value="fixed" @selected(($voucher->type ?? '')=='fixed')>Trừ tiền cố định</option>
+        @foreach($voucherTypeOptions as $value => $option)
+            <option value="{{ $value }}" @selected(old('type', $voucher->type ?? '') === $value)>
+                {{ $option['label'] }}
+            </option>
+        @endforeach
     </select>
     @error('type')
         <div class="text-danger">{{ $message }}</div>
@@ -111,7 +114,7 @@
         const valueHelp = document.getElementById('valueHelp');
         const value = document.getElementById('value');
         
-        if (type === 'percent') {
+        if (type === @json($percentVoucherType)) {
             maxDiscountDiv.style.display = 'block';
             valueUnit.textContent = '(%)';
             valueHelp.textContent = 'Nhập số từ 0-100 nếu là %';

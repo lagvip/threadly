@@ -6,17 +6,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body class="p-4">
-    @php
-        $paymentLabels = [
-            'paid' => 'Đã thanh toán',
-            'unpaid' => 'Chưa thanh toán',
-            'pending' => 'Đang chờ thanh toán',
-            'failed' => 'Thanh toán thất bại',
-            'cancelled' => 'Thanh toán đã hủy',
-            'expired' => 'Thanh toán hết hạn',
-        ];
-    @endphp
-
     <h3>HÓA ĐƠN ĐƠN HÀNG - {{ $order->order_code }}</h3>
     <p><strong>Khách hàng:</strong> {{ $order->name }}</p>
     <p><strong>Email:</strong> {{ $order->email }}</p>
@@ -55,7 +44,7 @@
     <p><strong>Phí vận chuyển:</strong> {{ number_format($order->shipping_fee, 0, ',', '.') }}₫</p>
     <p><strong>Giảm giá:</strong> {{ number_format($order->discount, 0, ',', '.') }}₫</p>
     <p><strong>Tổng cộng:</strong> {{ number_format($order->total_price, 0, ',', '.') }}₫</p>
-    <p><strong>Thanh toán:</strong> {{ $paymentLabels[$order->payment_status] ?? ucfirst($order->payment_status) }}</p>
+    <p><strong>Thanh toán:</strong> {{ $order->payment_status_label }}</p>
 
     <hr>
     <p class="text-muted">In lúc: {{ now()->format('d/m/Y H:i') }}</p>

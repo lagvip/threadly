@@ -3,9 +3,9 @@
 namespace App\Services\Checkout;
 
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
+use App\Enums\StockMovementType;
 use App\Events\Inventory\StockMovementRecorded;
 use App\Models\Order;
-use App\Models\StockMovement;
 
 class CheckoutInventoryService
 {
@@ -36,7 +36,7 @@ class CheckoutInventoryService
 
             StockMovementRecorded::dispatch(
                 (int) $variant->id,
-                StockMovement::TYPE_SALE,
+                StockMovementType::Sale->value,
                 -$quantity,
                 $stockBefore,
                 $stockAfter,

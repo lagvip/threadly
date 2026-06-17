@@ -345,7 +345,7 @@
                                                         <div class="fw-bold text-dark">{{ $voucher['code'] }}</div>
 
                                                         <div class="small text-muted mt-1">
-                                                            @if($voucher['type'] === 'percent')
+                                                            @if($voucher['is_percent_type'])
                                                                 Giảm {{ rtrim(rtrim(number_format($voucher['value'], 2, '.', ''), '0'), '.') }}%
                                                                 @if(!empty($voucher['max_discount']))
                                                                     , tối đa {{ number_format($voucher['max_discount'], 0, ',', '.') }} ₫

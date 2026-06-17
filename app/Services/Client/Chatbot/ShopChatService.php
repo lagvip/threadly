@@ -4,6 +4,8 @@ namespace App\Services\Client\Chatbot;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Contracts\Repositories\ProductRepositoryInterface;
+use App\Enums\OrderPaymentStatus;
+use App\Enums\OrderStatus;
 use App\Models\User;
 use App\Services\Integrations\Gemini\GeminiService;
 use Illuminate\Support\Str;
@@ -78,11 +80,11 @@ PROMPT;
             'vnpay',
             'hủy đơn',
             'trạng thái đơn',
-            'paid',
-            'pending',
-            'processing',
-            'shipped',
-            'delivered',
+            OrderPaymentStatus::Paid->value,
+            OrderStatus::Pending->value,
+            OrderStatus::Processing->value,
+            OrderStatus::Shipped->value,
+            OrderStatus::Delivered->value,
         ];
 
         // Nếu câu hỏi chứa một trong các keyword trên thì coi là câu hỏi về đơn hàng.

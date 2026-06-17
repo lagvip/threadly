@@ -5,9 +5,11 @@ namespace App\Services\Inventory;
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
 use App\Contracts\Repositories\VoucherRepositoryInterface;
+use App\Enums\OrderPaymentStatus;
+use App\Enums\PaymentMethod;
+use App\Enums\StockMovementType;
 use App\Events\Inventory\StockMovementRecorded;
 use App\Models\Order;
-use App\Models\StockMovement;
 
 class OrderInventoryService
 {
@@ -65,7 +67,7 @@ class OrderInventoryService
 
             StockMovementRecorded::dispatch(
                 (int) $variant->id,
-                StockMovement::TYPE_CANCEL_RELEASE,
+                StockMovementType::CancelRelease->value,
                 $quantity,
                 $stockBefore,
                 $stockAfter,
@@ -106,12 +108,12 @@ class OrderInventoryService
     protected function wasStockDeducted(Order $order): bool
     {
         // COD đã trừ kho ngay khi tạo đơn nên nếu hủy thì cần hoàn kho.
-        if ($order->payment_method === Order::PAYMENT_METHOD_COD) {
+        if ($order->payment_method === PaymentMethod::Cod->value) {
             return true;
         }
 
         // VNPay chỉ trừ kho sau khi thanh toán thành công.
-        return $order->payment_method === Order::PAYMENT_METHOD_VNPAY
-            && $order->payment_status === Order::PAYMENT_PAID;
+        return $order->payment_method === PaymentMethod::Vnpay->value
+            && $order->payment_status === OrderPaymentStatus::Paid->value;
     }
 }

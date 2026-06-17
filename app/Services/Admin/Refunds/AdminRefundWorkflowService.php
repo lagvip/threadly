@@ -7,13 +7,20 @@ use App\Contracts\Repositories\ProductVariantRepositoryInterface;
 use App\Contracts\Repositories\RefundRequestRepositoryInterface;
 use App\Contracts\Repositories\WalletRepositoryInterface;
 use App\Contracts\Repositories\WalletTransactionRepositoryInterface;
+use App\Enums\GhnOrderStatus;
+use App\Enums\OrderPaymentStatus;
+use App\Enums\OrderRefundStatus;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
+use App\Enums\RefundRequestStatus;
+use App\Enums\RefundRequestType;
+use App\Enums\StockMovementType;
+use App\Enums\WalletTransactionType;
 use App\Events\Inventory\StockMovementRecorded;
 use App\Events\Sales\RefundApproved;
 use App\Events\Sales\RefundRejected;
 use App\Models\Order;
 use App\Models\RefundRequest;
-use App\Models\StockMovement;
-use App\Models\WalletTransaction;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -53,7 +60,7 @@ class AdminRefundWorkflowService
                 throw new RuntimeException('Số tiền duyệt hoàn không được vượt quá số tiền còn lại có thể hoàn.');
             }
 
-            if ($refundRequest->type === RefundRequest::TYPE_PARTIAL && $refundRequest->items->isEmpty()) {
+            if ($refundRequest->type === RefundRequestType::Partial->value && $refundRequest->items->isEmpty()) {
                 throw new RuntimeException('Yêu cầu hoàn theo sản phẩm không có sản phẩm nào được chọn.');
             }
 
@@ -70,7 +77,7 @@ class AdminRefundWorkflowService
                 'user_id' => $refundRequest->user_id,
                 'order_id' => $order->id,
                 'refund_request_id' => $refundRequest->id,
-                'type' => WalletTransaction::TYPE_REFUND_CREDIT,
+                'type' => WalletTransactionType::RefundCredit->value,
                 'amount' => $approvedAmount,
                 'balance_before' => $balanceBefore,
                 'balance_after' => $balanceAfter,
@@ -82,13 +89,15 @@ class AdminRefundWorkflowService
 
             $this->orders->update($order, [
                 'refunded_amount' => $newRefundedAmount,
-                'refund_status' => $isFullyRefunded ? Order::REFUND_REFUNDED : Order::REFUND_PARTIALLY_REFUNDED,
+                'refund_status' => $isFullyRefunded
+                    ? OrderRefundStatus::Refunded->value
+                    : OrderRefundStatus::PartiallyRefunded->value,
                 'last_refunded_at' => now(),
             ]);
 
             $this->refundRequests->update($refundRequest, [
                 'approved_amount' => $approvedAmount,
-                'status' => RefundRequest::STATUS_APPROVED,
+                'status' => RefundRequestStatus::Approved->value,
                 'admin_id' => $adminId,
                 'admin_note' => trim((string) $adminNote) ?: null,
                 'approved_at' => now(),
@@ -113,7 +122,7 @@ class AdminRefundWorkflowService
         DB::transaction(function () use ($refundRequest, $adminId, $restockNote) {
             $refundRequest = $this->refundRequests->lockWithItemsAndOrderDetail($refundRequest->id);
 
-            if ($refundRequest->status !== RefundRequest::STATUS_APPROVED) {
+            if ($refundRequest->status !== RefundRequestStatus::Approved->value) {
                 throw new RuntimeException('Chỉ được nhập kho sau khi yêu cầu hoàn tiền đã được duyệt.');
             }
 
@@ -152,7 +161,7 @@ class AdminRefundWorkflowService
 
                 StockMovementRecorded::dispatch(
                     (int) $variant->id,
-                    StockMovement::TYPE_REFUND_RESTOCK,
+                    StockMovementType::RefundRestock->value,
                     $quantityToRestock,
                     $stockBefore,
                     $stockAfter,
@@ -190,7 +199,7 @@ class AdminRefundWorkflowService
             $order = $this->orders->lockById($refundRequest->order_id);
 
             $this->refundRequests->update($refundRequest, [
-                'status' => RefundRequest::STATUS_REJECTED,
+                'status' => RefundRequestStatus::Rejected->value,
                 'admin_id' => $adminId,
                 'admin_note' => trim($adminNote) ?: null,
                 'rejected_at' => now(),
@@ -198,8 +207,8 @@ class AdminRefundWorkflowService
 
             $this->orders->update($order, [
                 'refund_status' => ((float) $order->refunded_amount) > 0
-                    ? Order::REFUND_PARTIALLY_REFUNDED
-                    : Order::REFUND_REJECTED,
+                    ? OrderRefundStatus::PartiallyRefunded->value
+                    : OrderRefundStatus::Rejected->value,
             ]);
 
             $rejectedEvent = new RefundRejected(
@@ -218,31 +227,31 @@ class AdminRefundWorkflowService
 
     protected function ensurePending(RefundRequest $refundRequest): void
     {
-        if ($refundRequest->status !== RefundRequest::STATUS_PENDING) {
+        if ($refundRequest->status !== RefundRequestStatus::Pending->value) {
             throw new RuntimeException('Yêu cầu hoàn tiền này đã được xử lý trước đó.');
         }
     }
 
     protected function assertRefundCanBeApproved(RefundRequest $refundRequest, Order $order): void
     {
-        if (! in_array($order->payment_method, [Order::PAYMENT_METHOD_VNPAY, Order::PAYMENT_METHOD_COD], true)) {
+        if (! in_array($order->payment_method, [PaymentMethod::Vnpay->value, PaymentMethod::Cod->value], true)) {
             throw new RuntimeException('Phương thức thanh toán của đơn hàng không hỗ trợ hoàn tiền demo.');
         }
 
-        $isDeliveredRefund = $order->payment_status === Order::PAYMENT_PAID
-            && $order->order_status === Order::STATUS_DELIVERED;
+        $isDeliveredRefund = $order->payment_status === OrderPaymentStatus::Paid->value
+            && $order->order_status === OrderStatus::Delivered->value;
 
-        $isPaidVnpayCancelledRefund = $order->payment_method === Order::PAYMENT_METHOD_VNPAY
-            && $order->payment_status === Order::PAYMENT_PAID
-            && $order->order_status === Order::STATUS_CANCELLED
-            && ($order->refund_status ?? Order::REFUND_NONE) === Order::REFUND_REQUESTED
+        $isPaidVnpayCancelledRefund = $order->payment_method === PaymentMethod::Vnpay->value
+            && $order->payment_status === OrderPaymentStatus::Paid->value
+            && $order->order_status === OrderStatus::Cancelled->value
+            && ($order->refund_status ?? OrderRefundStatus::None->value) === OrderRefundStatus::Requested->value
             && empty($order->ghn_order_code);
 
         if (! $isDeliveredRefund && ! $isPaidVnpayCancelledRefund) {
             throw new RuntimeException('Chỉ duyệt hoàn tiền cho đơn đã giao thành công hoặc đơn VNPay đã thanh toán nhưng hủy trước khi xử lý.');
         }
 
-        if ($isDeliveredRefund && $order->ghn_order_code && $order->ghn_status !== 'delivered') {
+        if ($isDeliveredRefund && $order->ghn_order_code && $order->ghn_status !== GhnOrderStatus::Delivered->value) {
             throw new RuntimeException('Đơn có vận đơn GHN nhưng GHN chưa xác nhận giao thành công.');
         }
     }

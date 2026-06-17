@@ -3,6 +3,7 @@
 namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\ProductRepositoryInterface;
+use App\Enums\ProductStatus;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,7 +15,7 @@ class ProductRepository implements ProductRepositoryInterface
     public function findAvailableWithDetail(int $id): Product
     {
         return Product::with([
-            'variants' => fn ($query) => $query->where('status', 'active')->with(['color', 'size']),
+            'variants' => fn ($query) => $query->where('status', ProductStatus::Active->value)->with(['color', 'size']),
             'category',
             'brand',
         ])
@@ -95,7 +96,7 @@ class ProductRepository implements ProductRepositoryInterface
     public function relatedAvailable(Product $product, int $limit = 8)
     {
         return Product::with([
-            'variants' => fn ($q) => $q->where('status', 'active')->with(['color', 'size']),
+            'variants' => fn ($q) => $q->where('status', ProductStatus::Active->value)->with(['color', 'size']),
             'category',
         ])
             ->available()
@@ -113,7 +114,7 @@ class ProductRepository implements ProductRepositoryInterface
                 'brand',
                 'category',
                 'reviews',
-                'variants' => fn ($query) => $query->where('status', 'active')
+                'variants' => fn ($query) => $query->where('status', ProductStatus::Active->value)
                     ->with(['color', 'size'])
                     ->orderBy('price', 'asc'),
             ]);
@@ -122,16 +123,16 @@ class ProductRepository implements ProductRepositoryInterface
     public function activeProductsQuery(): Builder
     {
         return Product::with([
-            'variants' => fn ($query) => $query->where('status', 'active')->orderBy('price', 'asc'),
+            'variants' => fn ($query) => $query->where('status', ProductStatus::Active->value)->orderBy('price', 'asc'),
         ])
             ->available()
-            ->whereHas('variants', fn ($query) => $query->where('status', 'active'));
+            ->whereHas('variants', fn ($query) => $query->where('status', ProductStatus::Active->value));
     }
 
     public function activeVariantsQuery(array $categoryIds = []): Builder
     {
         return ProductVariant::query()
-            ->where('status', 'active')
+            ->where('status', ProductStatus::Active->value)
             ->whereHas('product', function ($query) use ($categoryIds) {
                 $query->available();
 
@@ -145,7 +146,7 @@ class ProductRepository implements ProductRepositoryInterface
     {
         return DB::table('order_details')
             ->join('products', 'products.id', '=', 'order_details.product_id')
-            ->where('products.status', 'active')
+            ->where('products.status', ProductStatus::Active->value)
             ->whereNull('products.deleted_at')
             ->select('order_details.product_id', DB::raw('SUM(order_details.quantity) as total_sold'))
             ->groupBy('order_details.product_id')
@@ -161,10 +162,10 @@ class ProductRepository implements ProductRepositoryInterface
             'brand:id,name',
             'category:id,name',
             'variants' => function ($q) {
-                $q->where('status', 'active')->orderBy('price', 'asc');
+                $q->where('status', ProductStatus::Active->value)->orderBy('price', 'asc');
             },
         ])
-            ->where('status', 'active');
+            ->where('status', ProductStatus::Active->value);
 
         if (! empty($keywords)) {
             $query->where(function ($q) use ($keywords) {

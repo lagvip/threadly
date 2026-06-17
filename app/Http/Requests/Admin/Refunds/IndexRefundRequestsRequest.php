@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Admin\Refunds;
 
+use App\Enums\RefundRequestStatus;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class IndexRefundRequestsRequest extends FormRequest
 {
@@ -14,7 +16,7 @@ class IndexRefundRequestsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['nullable', 'string', 'in:pending,approved,rejected,cancelled'],
+            'status' => ['nullable', Rule::in(RefundRequestStatus::values())],
             'keyword' => ['nullable', 'string', 'max:255'],
         ];
     }

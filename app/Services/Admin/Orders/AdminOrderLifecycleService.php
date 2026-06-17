@@ -3,7 +3,9 @@
 namespace App\Services\Admin\Orders;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Events\Sales\OrderStatusChanged;
 use App\Models\Order;
 use App\Services\Inventory\OrderInventoryService;
@@ -35,7 +37,7 @@ class AdminOrderLifecycleService
             throw new RuntimeException('Trạng thái chờ duyệt hủy không còn được sử dụng.');
         }
 
-        if ($order->payment_status === 'failed' && $newStatus !== OrderStatus::Cancelled->value) {
+        if ($order->payment_status === OrderPaymentStatus::Failed->value && $newStatus !== OrderStatus::Cancelled->value) {
             throw new RuntimeException('Đơn hàng thanh toán thất bại chỉ có thể hủy.');
         }
 
@@ -55,10 +57,13 @@ class AdminOrderLifecycleService
 
         if (
             $newStatus === OrderStatus::Delivered->value &&
-            $order->payment_method === 'cod' &&
-            in_array($order->payment_status, ['unpaid', 'pending'], true)
+            $order->payment_method === PaymentMethod::Cod->value &&
+            in_array($order->payment_status, [
+                OrderPaymentStatus::Unpaid->value,
+                OrderPaymentStatus::Pending->value,
+            ], true)
         ) {
-            $payload['payment_status'] = 'paid';
+            $payload['payment_status'] = OrderPaymentStatus::Paid->value;
         }
 
         $this->orders->update($order, $payload);
@@ -92,7 +97,7 @@ class AdminOrderLifecycleService
 
     protected function cancel(Order $order, string $note, int $adminId): void
     {
-        if ($order->payment_status === 'paid') {
+        if ($order->payment_status === OrderPaymentStatus::Paid->value) {
             throw new RuntimeException('Đơn hàng đã thanh toán không thể hủy.');
         }
 

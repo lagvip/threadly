@@ -5,6 +5,7 @@ namespace App\Services\Auth;
 use App\Contracts\Repositories\PasswordResetTokenRepositoryInterface;
 use App\Contracts\Repositories\RoleRepositoryInterface;
 use App\Contracts\Repositories\UserRepositoryInterface;
+use App\Enums\UserStatus;
 use App\Jobs\System\SendPasswordResetOtpJob;
 use App\Models\User;
 use Carbon\Carbon;
@@ -32,7 +33,7 @@ class AdminAuthService
         /** @var User $user */
         $user = Auth::user();
 
-        if ((int) $user->status !== User::STATUS_ACTIVE) {
+        if ((int) $user->status !== UserStatus::Active->value) {
             Auth::logout();
             throw new RuntimeException('Tài khoản của bạn đang bị khóa.');
         }
@@ -46,7 +47,7 @@ class AdminAuthService
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
-            'status' => User::STATUS_ACTIVE,
+            'status' => UserStatus::Active->value,
         ]);
 
         $customerRole = $this->roles->findBySlug('customer');

@@ -6,6 +6,7 @@ use App\Contracts\Repositories\BrandRepositoryInterface;
 use App\Contracts\Repositories\CategoryRepositoryInterface;
 use App\Contracts\Repositories\ProductRepositoryInterface;
 use App\Contracts\Repositories\ReviewRepositoryInterface;
+use App\Enums\ProductStatus;
 use App\Models\Category;
 use App\Models\Product;
 
@@ -138,7 +139,7 @@ class ClientProductCatalogService
         $max = is_numeric($priceMax) ? (float) $priceMax : null;
 
         $query->whereHas('variants', function ($q) use ($min, $max) {
-            $q->where('status', 'active')->where('price', '>=', $min);
+            $q->where('status', ProductStatus::Active->value)->where('price', '>=', $min);
 
             if ($max !== null) {
                 $q->where('price', '<=', $max);
@@ -150,8 +151,9 @@ class ClientProductCatalogService
     {
         if ($sort === 'price_asc' || $sort === 'price_desc') {
             $query->orderByRaw(
-                "(select min(pv.price) from product_variants pv where pv.id_product = products.id and pv.status = 'active' and pv.deleted_at is null) "
-                .($sort === 'price_asc' ? 'asc' : 'desc')
+                '(select min(pv.price) from product_variants pv where pv.id_product = products.id and pv.status = ? and pv.deleted_at is null) '
+                .($sort === 'price_asc' ? 'asc' : 'desc'),
+                [ProductStatus::Active->value]
             );
 
             return;

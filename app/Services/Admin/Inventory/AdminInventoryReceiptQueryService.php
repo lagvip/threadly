@@ -6,8 +6,9 @@ use App\Contracts\Repositories\InventoryReceiptRepositoryInterface;
 use App\Contracts\Repositories\ProductRepositoryInterface;
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
 use App\Contracts\Repositories\StockMovementRepositoryInterface;
+use App\Enums\InventoryReceiptStatus;
+use App\Enums\StockMovementType;
 use App\Models\InventoryReceipt;
-use App\Models\StockMovement;
 use App\Support\Pagination;
 
 class AdminInventoryReceiptQueryService
@@ -55,7 +56,7 @@ class AdminInventoryReceiptQueryService
 
         return [
             'receipt' => $receipt,
-            'canPostReceipt' => $receipt->status === InventoryReceipt::STATUS_DRAFT,
+            'canPostReceipt' => $receipt->status === InventoryReceiptStatus::Draft->value,
             'receiptStatusLabels' => $this->receiptStatusLabels(),
         ];
     }
@@ -86,7 +87,7 @@ class AdminInventoryReceiptQueryService
             'movements' => Pagination::withQueryString($query->paginate(20)),
             'filters' => $filters,
             'movementTypeLabels' => $this->movementTypeLabels(),
-            'importMovementType' => StockMovement::TYPE_IMPORT,
+            'importMovementType' => StockMovementType::Import->value,
         ];
     }
 
@@ -119,29 +120,29 @@ class AdminInventoryReceiptQueryService
     protected function receiptStatusLabels(): array
     {
         return [
-            InventoryReceipt::STATUS_DRAFT => 'Nháp',
-            InventoryReceipt::STATUS_POSTED => 'Đã xác nhận',
-            InventoryReceipt::STATUS_CANCELLED => 'Đã hủy',
+            InventoryReceiptStatus::Draft->value => InventoryReceiptStatus::Draft->label(),
+            InventoryReceiptStatus::Posted->value => InventoryReceiptStatus::Posted->label(),
+            InventoryReceiptStatus::Cancelled->value => InventoryReceiptStatus::Cancelled->label(),
         ];
     }
 
     protected function receiptStatusBadges(): array
     {
         return [
-            InventoryReceipt::STATUS_DRAFT => 'warning',
-            InventoryReceipt::STATUS_POSTED => 'success',
-            InventoryReceipt::STATUS_CANCELLED => 'secondary',
+            InventoryReceiptStatus::Draft->value => InventoryReceiptStatus::Draft->badge(),
+            InventoryReceiptStatus::Posted->value => InventoryReceiptStatus::Posted->badge(),
+            InventoryReceiptStatus::Cancelled->value => InventoryReceiptStatus::Cancelled->badge(),
         ];
     }
 
     protected function movementTypeLabels(): array
     {
         return [
-            StockMovement::TYPE_IMPORT => 'Nhập kho',
-            StockMovement::TYPE_SALE => 'Bán hàng',
-            StockMovement::TYPE_CANCEL_RELEASE => 'Hoàn tồn do hủy',
-            StockMovement::TYPE_REFUND_RESTOCK => 'Hoàn hàng nhập lại',
-            StockMovement::TYPE_ADJUSTMENT => 'Điều chỉnh',
+            StockMovementType::Import->value => StockMovementType::Import->label(),
+            StockMovementType::Sale->value => StockMovementType::Sale->label(),
+            StockMovementType::CancelRelease->value => StockMovementType::CancelRelease->label(),
+            StockMovementType::RefundRestock->value => StockMovementType::RefundRestock->label(),
+            StockMovementType::Adjustment->value => StockMovementType::Adjustment->label(),
         ];
     }
 }

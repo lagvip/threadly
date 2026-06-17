@@ -8,10 +8,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class InventoryReceipt extends Model
 {
-    public const STATUS_DRAFT = 'draft';
-    public const STATUS_POSTED = 'posted';
-    public const STATUS_CANCELLED = 'cancelled';
-
     protected $fillable = [
         'receipt_code',
         'created_by',

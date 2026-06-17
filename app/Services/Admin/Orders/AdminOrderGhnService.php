@@ -3,7 +3,10 @@
 namespace App\Services\Admin\Orders;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
+use App\Enums\GhnOrderStatus;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Events\Sales\OrderStatusChanged;
 use App\Models\Order;
 use App\Services\Integrations\Ghn\GhnService;
@@ -59,7 +62,7 @@ class AdminOrderGhnService
             throw new RuntimeException('Đơn đã giao thành công, không thể hủy vận đơn GHN.');
         }
 
-        if ($order->payment_status === Order::PAYMENT_PAID) {
+        if ($order->payment_status === OrderPaymentStatus::Paid->value) {
             throw new RuntimeException('Đơn đã thanh toán không nên hủy vận đơn trực tiếp. Hãy xử lý hoàn tiền/hoàn hàng riêng để tránh lệch tiền và tồn kho.');
         }
 
@@ -75,13 +78,13 @@ class AdminOrderGhnService
 
             DB::transaction(function () use ($order, $response) {
                 $this->orders->update($order, [
-                    'ghn_status' => 'cancel',
+                    'ghn_status' => GhnOrderStatus::Cancel->value,
                     'ghn_status_name' => 'Đã hủy trên GHN',
                     'ghn_raw_response' => $response,
                     'ghn_synced_at' => now(),
                     'order_status' => OrderStatus::Cancelled->value,
-                    'payment_status' => $order->payment_method === Order::PAYMENT_METHOD_COD && $order->payment_status !== Order::PAYMENT_PAID
-                        ? Order::PAYMENT_CANCELLED
+                    'payment_status' => $order->payment_method === PaymentMethod::Cod->value && $order->payment_status !== OrderPaymentStatus::Paid->value
+                        ? OrderPaymentStatus::Cancelled->value
                         : $order->payment_status,
                 ]);
 
@@ -126,7 +129,7 @@ class AdminOrderGhnService
             throw new RuntimeException('Đơn này chưa có mã vận đơn GHN, không thể giả lập trạng thái.');
         }
 
-        $currentStatus = $order->ghn_status ?: 'ready_to_pick';
+        $currentStatus = $order->ghn_status ?: GhnOrderStatus::ReadyToPick->value;
         $this->assertSafeSimulation($currentStatus, $status);
 
         try {
@@ -156,32 +159,19 @@ class AdminOrderGhnService
 
     protected function assertSafeSimulation(string $currentStatus, string $status): void
     {
-        $safeDemoStatuses = [
-            'ready_to_pick',
-            'picking',
-            'picked',
-            'storing',
-            'transporting',
-            'sorting',
-            'delivering',
-            'money_collect_delivering',
-            'delivery_fail',
-            'delivered',
-        ];
-
-        if (! in_array($status, $safeDemoStatuses, true)) {
+        if (! in_array($status, GhnOrderStatus::safeSimulationValues(), true)) {
             throw new RuntimeException('Đã tắt giả lập trạng thái GHN gây lệch nghiệp vụ như hủy, hoàn hàng, thất lạc hoặc hư hỏng.');
         }
 
-        $allowedTransitions = $this->allowedTransitions();
+        $allowedTransitions = GhnOrderStatus::allowedTransitions();
         $allowedNextStatuses = $allowedTransitions[$currentStatus] ?? [
-            'picked',
-            'delivering',
-            'delivery_fail',
-            'delivered',
-            'cancel',
-            'lost',
-            'damage',
+            GhnOrderStatus::Picked->value,
+            GhnOrderStatus::Delivering->value,
+            GhnOrderStatus::DeliveryFail->value,
+            GhnOrderStatus::Delivered->value,
+            GhnOrderStatus::Cancel->value,
+            GhnOrderStatus::Lost->value,
+            GhnOrderStatus::Damage->value,
         ];
 
         if (! in_array($status, $allowedNextStatuses, true)) {
@@ -193,34 +183,6 @@ class AdminOrderGhnService
                 '".'
             );
         }
-    }
-
-    protected function allowedTransitions(): array
-    {
-        return [
-            'ready_to_pick' => ['picking', 'picked', 'cancel'],
-            'picking' => ['picked', 'cancel'],
-            'money_collect_picking' => ['picked', 'cancel'],
-            'picked' => ['storing', 'delivering', 'cancel', 'lost', 'damage'],
-            'storing' => ['transporting', 'sorting', 'delivering', 'lost', 'damage'],
-            'transporting' => ['sorting', 'delivering', 'lost', 'damage'],
-            'sorting' => ['delivering', 'lost', 'damage'],
-            'delivering' => ['delivered', 'delivery_fail', 'waiting_to_return', 'lost', 'damage'],
-            'money_collect_delivering' => ['delivered', 'delivery_fail', 'waiting_to_return'],
-            'delivery_fail' => ['delivering', 'waiting_to_return', 'cancel'],
-            'waiting_to_return' => ['return', 'return_transporting', 'returning'],
-            'return' => ['return_transporting', 'return_sorting', 'returning'],
-            'return_transporting' => ['return_sorting', 'returning'],
-            'return_sorting' => ['returning'],
-            'returning' => ['returned', 'return_fail'],
-            'return_fail' => ['returning', 'returned'],
-            'delivered' => [],
-            'cancel' => [],
-            'returned' => [],
-            'lost' => [],
-            'damage' => [],
-            'exception' => [],
-        ];
     }
 
     protected function logContext(Order $order): array

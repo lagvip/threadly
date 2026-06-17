@@ -4,6 +4,7 @@ namespace App\Services\Auth;
 
 use App\Contracts\Repositories\RoleRepositoryInterface;
 use App\Contracts\Repositories\UserRepositoryInterface;
+use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -27,7 +28,7 @@ class GoogleAuthService
                 'email' => $googleUser->email,
                 'google_id' => $googleUser->id,
                 'avatar' => $googleUser->avatar,
-                'status' => User::STATUS_ACTIVE,
+                'status' => UserStatus::Active->value,
                 'email_verified_at' => now(),
                 'password' => Hash::make(Str::random(24)),
             ]);

@@ -30,9 +30,7 @@ class RefundRequestController extends Controller
     {
         $this->authorize('view', $refundRequest);
 
-        return view('admin.refunds.show', [
-            'refundRequest' => $this->queries->loadForShow($refundRequest),
-        ]);
+        return view('admin.refunds.show', $this->queries->showData($refundRequest));
     }
 
     public function approve(

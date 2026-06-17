@@ -2,6 +2,8 @@
 
 namespace App\Mail;
 
+use App\Enums\OrderPaymentStatus;
+use App\Enums\PaymentMethod;
 use App\Models\Order;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -31,10 +33,10 @@ class OrderPlacedMail extends Mailable
 
     public function build()
     {
-        $subject = 'Xác nhận đơn hàng #' . $this->order->order_code;
+        $subject = 'Xác nhận đơn hàng #'.$this->order->order_code;
 
-        if ($this->order->payment_method === 'vnpay' && $this->order->payment_status === 'paid') {
-            $subject = 'Thanh toán thành công - Đơn hàng #' . $this->order->order_code;
+        if ($this->order->payment_method === PaymentMethod::Vnpay->value && $this->order->payment_status === OrderPaymentStatus::Paid->value) {
+            $subject = 'Thanh toán thành công - Đơn hàng #'.$this->order->order_code;
         }
 
         return $this->subject($subject)

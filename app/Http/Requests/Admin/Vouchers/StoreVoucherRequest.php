@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Admin\Vouchers;
 
+use App\Enums\VoucherType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreVoucherRequest extends FormRequest
 {
@@ -15,7 +17,7 @@ class StoreVoucherRequest extends FormRequest
     {
         return [
             'code' => ['required', 'unique:vouchers,code'],
-            'type' => ['required', 'in:percent,fixed'],
+            'type' => ['required', Rule::in(VoucherType::values())],
             'value' => ['required', 'numeric', 'min:1'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],

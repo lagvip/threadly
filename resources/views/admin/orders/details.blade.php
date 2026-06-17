@@ -256,24 +256,6 @@
         @endif
 
         @php
-            $statusLabels = [
-                'pending' => 'Chờ xử lý',
-                'processing' => 'Đang xử lý',
-                'shipped' => 'Đang giao hàng',
-                'delivered' => 'Đã giao',
-                'cancelled' => 'Đã hủy',
-                'waiting_for_cancellation' => 'Chờ duyệt hủy',
-            ];
-
-            $paymentLabels = [
-                'paid' => 'Đã thanh toán',
-                'unpaid' => 'Chưa thanh toán',
-                'pending' => 'Đang chờ thanh toán',
-                'failed' => 'Thanh toán thất bại',
-                'cancelled' => 'Thanh toán đã hủy',
-                'expired' => 'Thanh toán hết hạn',
-            ];
-
             $approvedRefundByDetail = $approvedRefundByDetail ?? collect();
 
             $subtotal = $order->details->sum(fn($d) => (float) $d->total);
@@ -296,18 +278,18 @@
 
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <span class="badge bg-primary">
-                        {{ $order->payment_method === 'cod' ? 'Thanh toán khi nhận hàng' : strtoupper($order->payment_method) }}
+                        {{ $paymentMethodOptions[$order->payment_method] ?? strtoupper($order->payment_method) }}
                     </span>
 
-                    <span class="badge bg-success">
-                        {{ $paymentLabels[$order->payment_status] ?? ucfirst($order->payment_status) }}
+                    <span class="badge bg-{{ $order->payment_status_badge }}">
+                        {{ $order->payment_status_label }}
                     </span>
 
-                    <span class="badge bg-warning text-dark">
-                        {{ $statusLabels[$order->order_status] ?? ucfirst($order->order_status) }}
+                    <span class="badge bg-{{ $order->order_status_badge }}">
+                        {{ $order->order_status_label }}
                     </span>
 
-                    @if(($order->refund_status ?? 'none') !== 'none')
+                    @if(($order->refund_status ?? $noRefundStatus) !== $noRefundStatus)
                         <span class="badge bg-danger">
                             {{ $order->refund_status_label }}
                         </span>
@@ -567,7 +549,7 @@
                                         In vận đơn
                                     </a>
 
-                                    @if (!in_array($order->ghn_status, ['delivered', 'cancel', 'returned', 'lost', 'damage'], true))
+                                    @if (!in_array($order->ghn_status, $ghnTerminalStatuses, true))
                                         <form method="POST"
                                               action="{{ route('orders.ghn.cancel', $order->id) }}"
                                               onsubmit="return confirm('Anh chắc chắn muốn hủy vận đơn GHN này?')">
@@ -588,13 +570,7 @@
                                         </div>
 
                                         <div class="d-flex flex-wrap gap-2">
-                                            @foreach([
-                                                'ready_to_pick' => 'Chờ bàn giao',
-                                                'picked' => 'Đã lấy hàng',
-                                                'delivering' => 'Đang giao',
-                                                'delivery_fail' => 'Giao thất bại',
-                                                'delivered' => 'Hoàn tất',
-                                            ] as $simulateStatus => $simulateLabel)
+                                            @foreach($ghnSimulationOptions as $simulateStatus => $simulateLabel)
                                                 <form method="POST"
                                                       action="{{ route('orders.ghn.simulate', [$order->id, $simulateStatus]) }}">
                                                     @csrf
@@ -679,13 +655,7 @@
                         <div class="card-header fw-bold">Voucher áp dụng</div>
 
                         <div class="card-body">
-                            @php
-                                $appliedDiscount = (float) ($order->discount ?? 0);
-                                $voucherTypeLabel = [
-                                    'percent' => 'Giảm theo phần trăm',
-                                    'fixed' => 'Giảm số tiền cố định',
-                                ];
-                            @endphp
+                            @php($appliedDiscount = (float) ($order->discount ?? 0))
 
                             @if ($order->voucher_code)
                                 <p class="mb-2">
@@ -701,12 +671,12 @@
                                 @if ($order->voucher)
                                     <p class="mb-2">
                                         <strong>Loại voucher:</strong>
-                                        {{ $voucherTypeLabel[$order->voucher->type] ?? $order->voucher->type }}
+                                        {{ $voucherTypeOptions[$order->voucher->type] ?? $order->voucher->type }}
                                     </p>
 
                                     <p class="mb-0">
                                         <strong>Giá trị voucher:</strong>
-                                        @if ($order->voucher->type === 'percent')
+                                        @if ($order->voucher->type === $percentVoucherType)
                                             {{ rtrim(rtrim(number_format((float) $order->voucher->value, 2, '.', ''), '0'), '.') }}%
                                         @else
                                             <span class="money">{{ number_format((float) $order->voucher->value, 0, ',', '.') }} VNĐ</span>

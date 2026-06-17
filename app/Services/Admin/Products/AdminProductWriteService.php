@@ -2,6 +2,7 @@
 
 namespace App\Services\Admin\Products;
 
+use App\Enums\ProductStatus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -31,7 +32,7 @@ class AdminProductWriteService
                     $variant['id_product'] = $product->id;
                     $variant['price'] = $variant['price'] ?? 0;
                     $variant['quantity'] = $variant['quantity'] ?? 0;
-                    $variant['status'] = $variant['status'] ?? 'active';
+                    $variant['status'] = $variant['status'] ?? ProductStatus::Active->value;
 
                     if (isset($variantImageFiles[$index]['image'])) {
                         $variant['image'] = $variantImageFiles[$index]['image'];
@@ -63,7 +64,7 @@ class AdminProductWriteService
             throw new RuntimeException('Cập nhật trạng thái sản phẩm thất bại.');
         }
 
-        return $status === 'active' ? 'Đã bật sản phẩm' : 'Đã tắt sản phẩm';
+        return $status === ProductStatus::Active->value ? 'Đã bật sản phẩm' : 'Đã tắt sản phẩm';
     }
 
     public function softDelete(int $id): void

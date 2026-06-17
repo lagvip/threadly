@@ -152,18 +152,18 @@
                                 <div class="col-lg-6">
                                     <label class="form-label d-block">Trạng thái sản phẩm</label>
                                     <div class="status-switch-wrap">
-                                        <input type="hidden" name="status" value="inactive">
+                                        <input type="hidden" name="status" value="{{ $inactiveProductStatus }}">
                                         <div class="form-check form-switch">
                                             <input class="form-check-input status-toggle-input"
                                                    type="checkbox"
                                                    role="switch"
                                                    id="product-status-toggle"
                                                    name="status"
-                                                   value="active"
-                                                   {{ old('status', $product->status) == 'active' ? 'checked' : '' }}>
+                                                   value="{{ $activeProductStatus }}"
+                                                   {{ old('status', $product->status) == $activeProductStatus ? 'checked' : '' }}>
                                         </div>
-                                        <span class="status-toggle-text {{ old('status', $product->status) == 'active' ? '' : 'inactive' }}">
-                                            {{ old('status', $product->status) == 'active' ? 'Hoạt động' : 'Không hoạt động' }}
+                                        <span class="status-toggle-text {{ old('status', $product->status) == $activeProductStatus ? '' : 'inactive' }}">
+                                            {{ $productStatusOptions[old('status', $product->status)] ?? old('status', $product->status) }}
                                         </span>
                                     </div>
                                     <small class="text-muted">Khi sản phẩm đang tắt, sản phẩm và các biến thể sẽ không được dùng ở client.</small>
@@ -242,7 +242,7 @@
                             <div id="variant-list">
                                 @forelse ($product->variants as $index => $variant)
                                     @php
-                                        $oldStatus = old('variants.' . $index . '.status', $variant->status ?? 'active');
+                                        $oldStatus = old('variants.' . $index . '.status', $variant->status ?? $activeProductStatus);
                                     @endphp
                                     <div class="row variant-row mb-3"
                                          data-type="old"
@@ -307,17 +307,17 @@
                                         <div class="col-md-2">
                                             <label class="form-label d-block">Trạng thái</label>
                                             <div class="status-switch-wrap">
-                                                <input type="hidden" name="variants[{{ $index }}][status]" value="inactive">
+                                                <input type="hidden" name="variants[{{ $index }}][status]" value="{{ $inactiveProductStatus }}">
                                                 <div class="form-check form-switch">
                                                     <input class="form-check-input status-toggle-input"
                                                            type="checkbox"
                                                            role="switch"
                                                            name="variants[{{ $index }}][status]"
-                                                           value="active"
-                                                           {{ $oldStatus == 'active' ? 'checked' : '' }}>
+                                                           value="{{ $activeProductStatus }}"
+                                                           {{ $oldStatus == $activeProductStatus ? 'checked' : '' }}>
                                                 </div>
-                                                <span class="status-toggle-text {{ $oldStatus == 'active' ? '' : 'inactive' }}">
-                                                    {{ $oldStatus == 'active' ? 'Hoạt động' : 'Không hoạt động' }}
+                                                <span class="status-toggle-text {{ $oldStatus == $activeProductStatus ? '' : 'inactive' }}">
+                                                    {{ $productStatusOptions[$oldStatus] ?? $oldStatus }}
                                                 </span>
                                             </div>
                                             @error("variants.$index.status")
@@ -373,6 +373,9 @@
 <script>
     let variantNewIndex = 0;
     const PLACEHOLDER_SRC = `{{ asset('images/placeholder-80x80.png') }}`;
+    const productStatusLabels = @json($productStatusOptions);
+    const activeProductStatus = @json($activeProductStatus);
+    const inactiveProductStatus = @json($inactiveProductStatus);
     // Lấy các tùy chọn đã chọn
     function getSelectedOptions(selector) {
         return Array.from(document.querySelectorAll(selector + ':checked')).map(item => ({
@@ -385,10 +388,10 @@
         const text = toggle.closest('.status-switch-wrap')?.querySelector('.status-toggle-text');
         if (!text) return;
         if (toggle.checked) {
-            text.textContent = 'Hoạt động';
+            text.textContent = productStatusLabels[activeProductStatus] || activeProductStatus;
             text.classList.remove('inactive');
         } else {
-            text.textContent = 'Không hoạt động';
+            text.textContent = productStatusLabels[inactiveProductStatus] || inactiveProductStatus;
             text.classList.add('inactive');
         }
     }
@@ -495,16 +498,16 @@
                 <div class="col-md-2">
                     <label class="d-block">Trạng thái</label>
                     <div class="status-switch-wrap">
-                        <input type="hidden" name="variants_new[${variantNewIndex}][status]" value="inactive">
+                        <input type="hidden" name="variants_new[${variantNewIndex}][status]" value="${inactiveProductStatus}">
                         <div class="form-check form-switch">
                             <input class="form-check-input status-toggle-input"
                                    type="checkbox"
                                    role="switch"
                                    name="variants_new[${variantNewIndex}][status]"
-                                   value="active"
+                                   value="${activeProductStatus}"
                                    checked>
                         </div>
-                        <span class="status-toggle-text">Hoạt động</span>
+                        <span class="status-toggle-text">${productStatusLabels[activeProductStatus] || activeProductStatus}</span>
                     </div>
                 </div>
 

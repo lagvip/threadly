@@ -3,6 +3,8 @@
 namespace App\Services\Admin\Vouchers;
 
 use App\Contracts\Repositories\VoucherRepositoryInterface;
+use App\Enums\VoucherStatus;
+use App\Enums\VoucherType;
 use App\Models\Voucher;
 use Carbon\Carbon;
 use RuntimeException;
@@ -16,7 +18,7 @@ class AdminVoucherService
         $this->assertBusinessRules($data);
 
         $this->vouchers->create(array_merge($this->payload($data), [
-            'status' => 'active',
+            'status' => VoucherStatus::Active->value,
         ]));
     }
 
@@ -52,7 +54,7 @@ class AdminVoucherService
             throw new RuntimeException('Ngày kết thúc phải sau ngày bắt đầu');
         }
 
-        if (($data['type'] ?? null) === 'percent' && (float) $data['value'] > 100) {
+        if (($data['type'] ?? null) === VoucherType::Percent->value && (float) $data['value'] > 100) {
             throw new RuntimeException('Phần trăm giảm không được vượt quá 100%');
         }
     }

@@ -2,6 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\GhnOrderStatus;
+use App\Enums\OrderPaymentStatus;
+use App\Enums\OrderRefundStatus;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
+use App\Enums\RefundRequestStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -11,6 +17,7 @@ class Order extends Model
     use HasFactory, SoftDeletes;
 
     protected $table = 'orders';
+
     protected $primaryKey = 'id';
 
     protected $dates = ['deleted_at'];
@@ -84,6 +91,7 @@ class Order extends Model
     ];
 
     protected $appends = [
+        'payment_method_label',
         'payment_status_label',
         'payment_status_badge',
         'order_status_label',
@@ -104,29 +112,6 @@ class Order extends Model
         'net_paid_amount',
         'can_request_refund',
     ];
-
-    public const PAYMENT_METHOD_VNPAY = 'vnpay';
-    public const PAYMENT_METHOD_COD   = 'cod';
-
-    public const PAYMENT_UNPAID    = 'unpaid';
-    public const PAYMENT_PENDING   = 'pending';
-    public const PAYMENT_PAID      = 'paid';
-    public const PAYMENT_FAILED    = 'failed';
-    public const PAYMENT_CANCELLED = 'cancelled';
-    public const PAYMENT_EXPIRED   = 'expired';
-
-    public const STATUS_PENDING                  = 'pending';
-    public const STATUS_PROCESSING               = 'processing';
-    public const STATUS_SHIPPED                  = 'shipped';
-    public const STATUS_DELIVERED                = 'delivered';
-    public const STATUS_CANCELLED                = 'cancelled';
-    public const STATUS_WAITING_FOR_CANCELLATION = 'waiting_for_cancellation';
-
-    public const REFUND_NONE = 'none';
-    public const REFUND_REQUESTED = 'requested';
-    public const REFUND_PARTIALLY_REFUNDED = 'partially_refunded';
-    public const REFUND_REFUNDED = 'refunded';
-    public const REFUND_REJECTED = 'rejected';
 
     public function user()
     {
@@ -170,143 +155,59 @@ class Order extends Model
 
     public function getPaymentStatusLabelAttribute(): string
     {
-        return match ($this->payment_status) {
-            self::PAYMENT_UNPAID    => 'Chưa thanh toán',
-            self::PAYMENT_PENDING   => 'Chờ thanh toán',
-            self::PAYMENT_PAID      => 'Đã thanh toán',
-            self::PAYMENT_FAILED    => 'Thất bại',
-            self::PAYMENT_CANCELLED => 'Đã hủy',
-            self::PAYMENT_EXPIRED   => 'Hết hạn',
-            default => ucfirst((string) $this->payment_status),
-        };
+        return OrderPaymentStatus::tryFrom((string) $this->payment_status)?->label()
+            ?? ucfirst((string) $this->payment_status);
+    }
+
+    public function getPaymentMethodLabelAttribute(): string
+    {
+        return PaymentMethod::tryFrom((string) $this->payment_method)?->label()
+            ?? strtoupper((string) $this->payment_method);
     }
 
     public function getPaymentStatusBadgeAttribute(): string
     {
-        return match ($this->payment_status) {
-            self::PAYMENT_PAID      => 'success',
-            self::PAYMENT_PENDING   => 'warning',
-            self::PAYMENT_UNPAID    => 'secondary',
-            self::PAYMENT_FAILED    => 'danger',
-            self::PAYMENT_CANCELLED => 'dark',
-            self::PAYMENT_EXPIRED   => 'secondary',
-            default => 'secondary',
-        };
+        return OrderPaymentStatus::tryFrom((string) $this->payment_status)?->badge()
+            ?? 'secondary';
     }
 
     public function getOrderStatusLabelAttribute(): string
     {
-        return match ($this->order_status) {
-            self::STATUS_PENDING                  => 'Chờ xử lý',
-            self::STATUS_PROCESSING               => 'Đang xử lý',
-            self::STATUS_SHIPPED                  => 'Đang giao',
-            self::STATUS_DELIVERED                => 'Đã giao',
-            self::STATUS_CANCELLED                => 'Đã hủy',
-            self::STATUS_WAITING_FOR_CANCELLATION => 'Chờ xác nhận hủy',
-            default => ucfirst((string) $this->order_status),
-        };
+        return OrderStatus::tryFrom((string) $this->order_status)?->label()
+            ?? ucfirst((string) $this->order_status);
     }
 
     public function getOrderStatusBadgeAttribute(): string
     {
-        return match ($this->order_status) {
-            self::STATUS_PENDING                  => 'warning',
-            self::STATUS_PROCESSING               => 'info',
-            self::STATUS_SHIPPED                  => 'primary',
-            self::STATUS_DELIVERED                => 'success',
-            self::STATUS_CANCELLED                => 'dark',
-            self::STATUS_WAITING_FOR_CANCELLATION => 'secondary',
-            default => 'secondary',
-        };
+        return OrderStatus::tryFrom((string) $this->order_status)?->badge()
+            ?? 'secondary';
     }
 
     public function getGhnStatusGroupAttribute(): string
     {
-        return match ((string) $this->ghn_status) {
-            'ready_to_pick',
-            'picking',
-            'money_collect_picking' => 'Chờ bàn giao',
-
-            'picked',
-            'storing',
-            'transporting',
-            'sorting',
-            'delivering',
-            'money_collect_delivering' => 'Đã bàn giao - Đang giao',
-
-            'delivery_fail' => 'Chờ xác nhận giao lại',
-
-            'waiting_to_return',
-            'return',
-            'return_transporting',
-            'return_sorting',
-            'returning',
-            'return_fail',
-            'returned' => 'Đã bàn giao - đang hoàn hàng',
-
-            'delivered' => 'Hoàn tất',
-
-            'cancel' => 'Đơn hủy',
-
-            'exception',
-            'damage',
-            'lost' => 'Hàng thất lạc - hư hỏng',
-
-            default => $this->ghn_order_code ? 'Không xác định' : 'Chưa gửi GHN',
-        };
+        return GhnOrderStatus::groupFor((string) $this->ghn_status, (bool) $this->ghn_order_code);
     }
 
     public function getGhnStatusGroupBadgeAttribute(): string
     {
-        return match ((string) $this->ghn_status) {
-            'ready_to_pick',
-            'picking',
-            'money_collect_picking' => 'bg-primary',
-
-            'picked',
-            'storing',
-            'transporting',
-            'sorting',
-            'delivering',
-            'money_collect_delivering' => 'bg-info',
-
-            'delivery_fail' => 'bg-warning text-dark',
-
-            'waiting_to_return',
-            'return',
-            'return_transporting',
-            'return_sorting',
-            'returning',
-            'return_fail',
-            'returned' => 'bg-secondary',
-
-            'delivered' => 'bg-success',
-
-            'cancel' => 'bg-danger',
-
-            'exception',
-            'damage',
-            'lost' => 'bg-dark',
-
-            default => 'bg-light text-dark',
-        };
+        return GhnOrderStatus::badgeFor((string) $this->ghn_status);
     }
 
     public function canCustomerCancelDirectly(): bool
     {
-        if ($this->order_status !== self::STATUS_PENDING) {
+        if ($this->order_status !== OrderStatus::Pending->value) {
             return false;
         }
 
-        if ($this->payment_method === self::PAYMENT_METHOD_COD) {
-            return $this->payment_status === self::PAYMENT_UNPAID;
+        if ($this->payment_method === PaymentMethod::Cod->value) {
+            return $this->payment_status === OrderPaymentStatus::Unpaid->value;
         }
 
-        if ($this->payment_method === self::PAYMENT_METHOD_VNPAY) {
+        if ($this->payment_method === PaymentMethod::Vnpay->value) {
             return in_array($this->payment_status, [
-                self::PAYMENT_UNPAID,
-                self::PAYMENT_PENDING,
-                self::PAYMENT_FAILED,
+                OrderPaymentStatus::Unpaid->value,
+                OrderPaymentStatus::Pending->value,
+                OrderPaymentStatus::Failed->value,
             ], true);
         }
 
@@ -315,19 +216,19 @@ class Order extends Model
 
     public function canCancelPaidVnpayBeforeProcessing(): bool
     {
-        if ($this->payment_method !== self::PAYMENT_METHOD_VNPAY) {
+        if ($this->payment_method !== PaymentMethod::Vnpay->value) {
             return false;
         }
 
-        if ($this->payment_status !== self::PAYMENT_PAID) {
+        if ($this->payment_status !== OrderPaymentStatus::Paid->value) {
             return false;
         }
 
-        if ($this->order_status !== self::STATUS_PENDING) {
+        if ($this->order_status !== OrderStatus::Pending->value) {
             return false;
         }
 
-        if (!empty($this->ghn_order_code)) {
+        if (! empty($this->ghn_order_code)) {
             return false;
         }
 
@@ -335,7 +236,7 @@ class Order extends Model
             return false;
         }
 
-        if (($this->refund_status ?? self::REFUND_NONE) === self::REFUND_REFUNDED) {
+        if (($this->refund_status ?? OrderRefundStatus::None->value) === OrderRefundStatus::Refunded->value) {
             return false;
         }
 
@@ -353,24 +254,24 @@ class Order extends Model
 
     public function isAutoExpiredVnpay(): bool
     {
-        return $this->payment_method === self::PAYMENT_METHOD_VNPAY
-            && $this->payment_status === self::PAYMENT_EXPIRED
+        return $this->payment_method === PaymentMethod::Vnpay->value
+            && $this->payment_status === OrderPaymentStatus::Expired->value
             && in_array($this->order_status, [
-                self::STATUS_PENDING,
-                self::STATUS_CANCELLED,
+                OrderStatus::Pending->value,
+                OrderStatus::Cancelled->value,
             ], true);
     }
 
     public function canRepayVnpay(): bool
     {
-        if ($this->payment_method !== self::PAYMENT_METHOD_VNPAY) {
+        if ($this->payment_method !== PaymentMethod::Vnpay->value) {
             return false;
         }
 
         if (in_array($this->order_status, [
-            self::STATUS_SHIPPED,
-            self::STATUS_DELIVERED,
-            self::STATUS_WAITING_FOR_CANCELLATION,
+            OrderStatus::Shipped->value,
+            OrderStatus::Delivered->value,
+            OrderStatus::WaitingForCancellation->value,
         ], true)) {
             return false;
         }
@@ -379,29 +280,29 @@ class Order extends Model
             return true;
         }
 
-        return $this->order_status === self::STATUS_PENDING
+        return $this->order_status === OrderStatus::Pending->value
             && in_array($this->payment_status, [
-                self::PAYMENT_UNPAID,
-                self::PAYMENT_PENDING,
-                self::PAYMENT_FAILED,
+                OrderPaymentStatus::Unpaid->value,
+                OrderPaymentStatus::Pending->value,
+                OrderPaymentStatus::Failed->value,
             ], true);
     }
 
     public function canCustomerConfirmReceived(): bool
     {
-        if (!empty($this->customer_confirmed_at)) {
+        if (! empty($this->customer_confirmed_at)) {
             return false;
         }
 
-        if ($this->order_status !== self::STATUS_DELIVERED) {
+        if ($this->order_status !== OrderStatus::Delivered->value) {
             return false;
         }
 
-        if ($this->payment_status !== self::PAYMENT_PAID) {
+        if ($this->payment_status !== OrderPaymentStatus::Paid->value) {
             return false;
         }
 
-        if ($this->ghn_order_code && $this->ghn_status !== 'delivered') {
+        if ($this->ghn_order_code && $this->ghn_status !== GhnOrderStatus::Delivered->value) {
             return false;
         }
 
@@ -410,9 +311,9 @@ class Order extends Model
 
     public function canReviewProducts(): bool
     {
-        return $this->order_status === self::STATUS_DELIVERED
-            && $this->payment_status === self::PAYMENT_PAID
-            && !empty($this->customer_confirmed_at);
+        return $this->order_status === OrderStatus::Delivered->value
+            && $this->payment_status === OrderPaymentStatus::Paid->value
+            && ! empty($this->customer_confirmed_at);
     }
 
     public function getCanCancelAttribute(): bool
@@ -475,20 +376,14 @@ class Order extends Model
     public function pendingRefundRequest()
     {
         return $this->hasOne(RefundRequest::class, 'order_id')
-            ->where('status', RefundRequest::STATUS_PENDING)
+            ->where('status', RefundRequestStatus::Pending->value)
             ->latestOfMany();
     }
 
     public function getRefundStatusLabelAttribute(): string
     {
-        return match ($this->refund_status ?: self::REFUND_NONE) {
-            self::REFUND_NONE => 'Chưa hoàn tiền',
-            self::REFUND_REQUESTED => 'Đang chờ duyệt hoàn tiền',
-            self::REFUND_PARTIALLY_REFUNDED => 'Đã hoàn một phần',
-            self::REFUND_REFUNDED => 'Đã hoàn hết giá trị sản phẩm',
-            self::REFUND_REJECTED => 'Yêu cầu hoàn bị từ chối',
-            default => ucfirst((string) $this->refund_status),
-        };
+        return OrderRefundStatus::tryFrom((string) ($this->refund_status ?: OrderRefundStatus::None->value))?->label()
+            ?? ucfirst((string) $this->refund_status);
     }
 
     /**
@@ -538,11 +433,11 @@ class Order extends Model
     public function hasPendingRefundRequest(): bool
     {
         if ($this->relationLoaded('refundRequests')) {
-            return $this->refundRequests->contains('status', RefundRequest::STATUS_PENDING);
+            return $this->refundRequests->contains('status', RefundRequestStatus::Pending->value);
         }
 
         return $this->refundRequests()
-            ->where('status', RefundRequest::STATUS_PENDING)
+            ->where('status', RefundRequestStatus::Pending->value)
             ->exists();
     }
 
@@ -550,25 +445,25 @@ class Order extends Model
     {
         // Demo refund: cho phép cả VNPay và COD, nhưng đều hoàn vào ví nội bộ.
         // Không gọi API hoàn tiền thật của VNPay/GHN và không hoàn phí vận chuyển.
-        if (!in_array($this->payment_method, [
-            self::PAYMENT_METHOD_VNPAY,
-            self::PAYMENT_METHOD_COD,
+        if (! in_array($this->payment_method, [
+            PaymentMethod::Vnpay->value,
+            PaymentMethod::Cod->value,
         ], true)) {
             return false;
         }
 
         // COD chỉ được hoàn khi đã giao thành công và đã thu tiền.
         // VNPay cũng chỉ được hoàn khi callback thanh toán đã thành công.
-        if ($this->payment_status !== self::PAYMENT_PAID) {
+        if ($this->payment_status !== OrderPaymentStatus::Paid->value) {
             return false;
         }
 
-        if ($this->order_status !== self::STATUS_DELIVERED) {
+        if ($this->order_status !== OrderStatus::Delivered->value) {
             return false;
         }
 
         // Nếu đơn có vận đơn GHN thì phải chờ GHN báo delivered.
-        if ($this->ghn_order_code && $this->ghn_status !== 'delivered') {
+        if ($this->ghn_order_code && $this->ghn_status !== GhnOrderStatus::Delivered->value) {
             return false;
         }
 
@@ -576,7 +471,7 @@ class Order extends Model
             return false;
         }
 
-        if (($this->refund_status ?? self::REFUND_NONE) === self::REFUND_REFUNDED) {
+        if (($this->refund_status ?? OrderRefundStatus::None->value) === OrderRefundStatus::Refunded->value) {
             return false;
         }
 
@@ -591,5 +486,4 @@ class Order extends Model
     {
         return $this->canRequestRefund();
     }
-
 }

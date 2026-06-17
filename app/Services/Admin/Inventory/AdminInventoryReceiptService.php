@@ -5,9 +5,10 @@ namespace App\Services\Admin\Inventory;
 use App\Contracts\Repositories\InventoryReceiptItemRepositoryInterface;
 use App\Contracts\Repositories\InventoryReceiptRepositoryInterface;
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
+use App\Enums\InventoryReceiptStatus;
+use App\Enums\StockMovementType;
 use App\Events\Inventory\StockMovementRecorded;
 use App\Models\InventoryReceipt;
-use App\Models\StockMovement;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -26,7 +27,7 @@ class AdminInventoryReceiptService
             $receipt = $this->receipts->create([
                 'receipt_code' => $this->generateReceiptCode(),
                 'created_by' => $userId,
-                'status' => InventoryReceipt::STATUS_DRAFT,
+                'status' => InventoryReceiptStatus::Draft->value,
                 'note' => trim((string) ($data['note'] ?? '')) ?: null,
             ]);
 
@@ -60,12 +61,12 @@ class AdminInventoryReceiptService
         DB::transaction(function () use ($receipt, $userId) {
             $receipt = $this->receipts->lockById($receipt->id);
 
-            if ($receipt->status !== InventoryReceipt::STATUS_DRAFT) {
+            if ($receipt->status !== InventoryReceiptStatus::Draft->value) {
                 throw new RuntimeException('Chỉ có thể hủy phiếu nhập đang nháp.');
             }
 
             $this->receipts->update($receipt, [
-                'status' => InventoryReceipt::STATUS_CANCELLED,
+                'status' => InventoryReceiptStatus::Cancelled->value,
                 'cancelled_at' => now(),
                 'cancelled_by' => $userId,
             ]);
@@ -77,7 +78,7 @@ class AdminInventoryReceiptService
         $receipt = $this->receipts->lockById($receipt->id);
         $receipt = $this->receipts->loadItems($receipt);
 
-        if ($receipt->status !== InventoryReceipt::STATUS_DRAFT) {
+        if ($receipt->status !== InventoryReceiptStatus::Draft->value) {
             throw new RuntimeException('Chỉ có thể xác nhận phiếu nhập đang nháp.');
         }
 
@@ -105,7 +106,7 @@ class AdminInventoryReceiptService
 
             StockMovementRecorded::dispatch(
                 (int) $variant->id,
-                StockMovement::TYPE_IMPORT,
+                StockMovementType::Import->value,
                 $quantity,
                 $stockBefore,
                 $stockAfter,
@@ -118,7 +119,7 @@ class AdminInventoryReceiptService
         }
 
         $this->receipts->update($receipt, [
-            'status' => InventoryReceipt::STATUS_POSTED,
+            'status' => InventoryReceiptStatus::Posted->value,
             'posted_at' => now(),
             'posted_by' => $userId,
         ]);

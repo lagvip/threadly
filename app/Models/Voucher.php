@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
-use App\Models\Order;
+use App\Enums\OrderStatus;
+use App\Enums\VoucherStatus;
+use App\Enums\VoucherType;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Carbon\Carbon;
 
 class Voucher extends Model
 {
@@ -30,8 +32,8 @@ class Voucher extends Model
 
     protected $casts = [
         'start_date' => 'datetime',
-        'end_date'   => 'datetime',
-        'status'     => 'string',
+        'end_date' => 'datetime',
+        'status' => 'string',
     ];
 
     /**
@@ -42,7 +44,7 @@ class Voucher extends Model
         $now = Carbon::now();
 
         if ($this->end_date && $now->gt($this->end_date)) {
-            return 'expired';
+            return VoucherStatus::Expired->value;
         }
 
         return $this->status;
@@ -58,10 +60,14 @@ class Voucher extends Model
     public function isValid($orderTotal, int $currentUses = 0, int $usesInOrder = 1): bool
     {
         // Bị tắt hoặc hết hạn
-        if ($this->actual_status !== 'active') return false;
+        if ($this->actual_status !== VoucherStatus::Active->value) {
+            return false;
+        }
 
         // Hết lượt dùng, nhưng 0 được coi là vô hạn
-        if ($this->quantity < 0) return false;
+        if ($this->quantity < 0) {
+            return false;
+        }
 
         $now = Carbon::now();
 
@@ -70,7 +76,7 @@ class Voucher extends Model
             return false;
         }
 
-        if (!is_null($this->quantity) && $this->quantity <= 0) {
+        if (! is_null($this->quantity) && $this->quantity <= 0) {
             return false;
         }
 
@@ -84,15 +90,15 @@ class Voucher extends Model
             return false;
         }
 
-        if (!is_null($this->min_order_value) && $orderTotal < $this->min_order_value) {
+        if (! is_null($this->min_order_value) && $orderTotal < $this->min_order_value) {
             return false;
         }
 
-        if (!$this->canUserUse(null, $currentUses)) {
+        if (! $this->canUserUse(null, $currentUses)) {
             return false;
         }
 
-        if (!$this->canUseInOrder($usesInOrder)) {
+        if (! $this->canUseInOrder($usesInOrder)) {
             return false;
         }
 
@@ -104,17 +110,17 @@ class Voucher extends Model
      */
     public function getDiscount($orderTotal)
     {
-        if ($this->type === 'percent') {
+        if ($this->type === VoucherType::Percent->value) {
             $discount = $orderTotal * ($this->value / 100);
 
-            if (!is_null($this->max_discount)) {
+            if (! is_null($this->max_discount)) {
                 $discount = min($discount, $this->max_discount);
             }
 
             return round($discount, 2);
         }
 
-        if ($this->type === 'fixed') {
+        if ($this->type === VoucherType::Fixed->value) {
             return min($this->value, $orderTotal);
         }
 
@@ -164,7 +170,7 @@ class Voucher extends Model
     public function hasAppliedOrders(): bool
     {
         return $this->orders()
-            ->where('order_status', '!=', Order::STATUS_CANCELLED)
+            ->where('order_status', '!=', OrderStatus::Cancelled->value)
             ->exists();
     }
 
@@ -175,9 +181,9 @@ class Voucher extends Model
     {
         $now = Carbon::now();
 
-        return $this->actual_status === 'active'
+        return $this->actual_status === VoucherStatus::Active->value
             && $this->quantity > 0
-            && (!$this->start_date || !$now->lt($this->start_date))
-            && (!$this->end_date || !$now->gt($this->end_date));
+            && (! $this->start_date || ! $now->lt($this->start_date))
+            && (! $this->end_date || ! $now->gt($this->end_date));
     }
 }

@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests\Client\Orders;
 
+use App\Enums\OrderPaymentStatus;
+use App\Enums\OrderStatus;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class IndexClientOrdersRequest extends FormRequest
 {
@@ -16,8 +19,8 @@ class IndexClientOrdersRequest extends FormRequest
         return [
             'order_code' => ['nullable', 'string', 'max:100'],
             'customer' => ['nullable', 'string', 'max:250'],
-            'payment_status' => ['nullable', 'string', 'max:50'],
-            'order_status' => ['nullable', 'string', 'max:50'],
+            'payment_status' => ['nullable', Rule::in(OrderPaymentStatus::values())],
+            'order_status' => ['nullable', Rule::in(OrderStatus::values())],
         ];
     }
 
