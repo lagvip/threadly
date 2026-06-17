@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Actions\Checkout;
+namespace App\Services\Checkout;
 
 use App\Contracts\Repositories\CartRepositoryInterface;
 use RuntimeException;
 
-class SelectCheckoutItemsAction
+class SelectCheckoutItemsService
 {
     public function __construct(
         protected CartRepositoryInterface $carts,

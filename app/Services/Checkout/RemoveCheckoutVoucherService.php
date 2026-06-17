@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Actions\Checkout;
+namespace App\Services\Checkout;
 
-class RemoveCheckoutVoucherAction
+class RemoveCheckoutVoucherService
 {
     public function execute(): void
     {

@@ -2,11 +2,6 @@
 
 namespace App\Http\Controllers\Client;
 
-use App\Actions\Checkout\ApplyCheckoutVoucherAction;
-use App\Actions\Checkout\BuyNowCheckoutAction;
-use App\Actions\Checkout\RemoveCheckoutVoucherAction;
-use App\Actions\Checkout\SelectCheckoutItemsAction;
-use App\Actions\Checkout\StoreCheckoutAddressAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Checkout\ApplyVoucherRequest;
 use App\Http\Requests\Checkout\BuyNowRequest;
@@ -18,13 +13,18 @@ use App\Http\Requests\Checkout\SelectCheckoutItemsRequest;
 use App\Http\Requests\Checkout\StoreCheckoutAddressRequest;
 use App\Http\Requests\Checkout\StoreCheckoutRequest;
 use App\Http\Requests\Checkout\VnpayCallbackRequest;
+use App\Services\Checkout\ApplyCheckoutVoucherService;
+use App\Services\Checkout\BuyNowCheckoutService;
 use App\Services\Checkout\CheckoutAddressPresenter;
 use App\Services\Checkout\CheckoutPageService;
 use App\Services\Checkout\CheckoutShippingFeeService;
 use App\Services\Checkout\GhnLocationService;
 use App\Services\Checkout\PlaceCheckoutOrderService;
+use App\Services\Checkout\RemoveCheckoutVoucherService;
 use App\Services\Checkout\ReorderService;
 use App\Services\Checkout\RepayVnpayService;
+use App\Services\Checkout\SelectCheckoutItemsService;
+use App\Services\Checkout\StoreCheckoutAddressService;
 use App\Services\Checkout\VnpayCallbackService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -39,13 +39,13 @@ class CheckoutController extends Controller
         protected VnpayCallbackService $vnpayCallback,
         protected ReorderService $reorder,
         protected RepayVnpayService $repayVnpay,
-        protected SelectCheckoutItemsAction $selectCheckoutItems,
-        protected BuyNowCheckoutAction $buyNowCheckout,
+        protected SelectCheckoutItemsService $selectCheckoutItems,
+        protected BuyNowCheckoutService $buyNowCheckout,
         protected GhnLocationService $ghnLocations,
-        protected StoreCheckoutAddressAction $storeCheckoutAddress,
+        protected StoreCheckoutAddressService $storeCheckoutAddress,
         protected CheckoutAddressPresenter $addressPresenter,
-        protected ApplyCheckoutVoucherAction $applyCheckoutVoucher,
-        protected RemoveCheckoutVoucherAction $removeCheckoutVoucher,
+        protected ApplyCheckoutVoucherService $applyCheckoutVoucher,
+        protected RemoveCheckoutVoucherService $removeCheckoutVoucher,
     ) {}
 
     public function index()
