@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Admin\Vouchers;
 
+use App\Enums\VoucherType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateVoucherRequest extends FormRequest
 {
@@ -17,8 +19,8 @@ class UpdateVoucherRequest extends FormRequest
         $voucherId = is_object($voucher) ? $voucher->id : $voucher;
 
         return [
-            'code' => ['required', 'unique:vouchers,code,' . $voucherId],
-            'type' => ['required', 'in:percent,fixed'],
+            'code' => ['required', 'unique:vouchers,code,'.$voucherId],
+            'type' => ['required', Rule::in(VoucherType::values())],
             'value' => ['required', 'numeric', 'min:1'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],

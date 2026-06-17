@@ -4,6 +4,9 @@ namespace App\Services\Checkout;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
+use App\Enums\OrderPaymentStatus;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -22,7 +25,7 @@ class RepayVnpayService
     {
         $order = $this->orders->findForUserWithDetails($orderId, (int) $user->id);
 
-        if ($order->payment_method !== 'vnpay') {
+        if ($order->payment_method !== PaymentMethod::Vnpay->value) {
             throw new RuntimeException('Đơn này không phải thanh toán VNPay.');
         }
 
@@ -56,8 +59,8 @@ class RepayVnpayService
 
                 $this->orders->update($order, [
                     'previous_status' => $order->order_status,
-                    'order_status' => 'pending',
-                    'payment_status' => 'pending',
+                    'order_status' => OrderStatus::Pending->value,
+                    'payment_status' => OrderPaymentStatus::Pending->value,
                     'cancel_reason' => null,
                 ]);
             });

@@ -4,6 +4,7 @@ namespace App\Services\Admin\Products;
 
 use App\Contracts\Repositories\OrderDetailRepositoryInterface;
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
+use App\Enums\ProductStatus;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -33,7 +34,7 @@ class AdminProductVariantService
             }
 
             if (! isset($data['status']) || empty($data['status'])) {
-                $data['status'] = 'active';
+                $data['status'] = ProductStatus::Active->value;
             }
 
             if (! isset($data['price']) || $data['price'] === null || $data['price'] === '') {
@@ -57,7 +58,7 @@ class AdminProductVariantService
         try {
             $variant = $this->variants->findWithProduct((int) $id);
 
-            if (isset($data['status']) && $data['status'] === 'active' && $variant->product && $variant->product->status !== 'active') {
+            if (isset($data['status']) && $data['status'] === ProductStatus::Active->value && $variant->product && $variant->product->status !== ProductStatus::Active->value) {
                 throw new \Exception('Không thể kích hoạt biến thể khi sản phẩm cha đang không hoạt động.');
             }
 
@@ -80,7 +81,7 @@ class AdminProductVariantService
             }
 
             if (! isset($data['status']) || empty($data['status'])) {
-                $data['status'] = $variant->status ?? 'active';
+                $data['status'] = $variant->status ?? ProductStatus::Active->value;
             }
 
             $this->variants->update($variant, $data);
@@ -98,7 +99,7 @@ class AdminProductVariantService
         try {
             $variant = $this->variants->findWithProduct((int) $id);
             // Nếu đang kích hoạt biến thể nhưng sản phẩm cha không hoạt động, trả về lỗi
-            if ($status === 'active' && $variant->product && $variant->product->status !== 'active') {
+            if ($status === ProductStatus::Active->value && $variant->product && $variant->product->status !== ProductStatus::Active->value) {
                 return false;
             }
 

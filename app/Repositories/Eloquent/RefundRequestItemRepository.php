@@ -3,7 +3,7 @@
 namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\RefundRequestItemRepositoryInterface;
-use App\Models\RefundRequest;
+use App\Enums\RefundRequestStatus;
 use App\Models\RefundRequestItem;
 use Illuminate\Support\Collection;
 
@@ -30,7 +30,7 @@ class RefundRequestItemRepository implements RefundRequestItemRepositoryInterfac
         return RefundRequestItem::query()
             ->join('refund_requests', 'refund_request_items.refund_request_id', '=', 'refund_requests.id')
             ->where('refund_requests.order_id', $orderId)
-            ->where('refund_requests.status', RefundRequest::STATUS_APPROVED)
+            ->where('refund_requests.status', RefundRequestStatus::Approved->value)
             ->groupBy('refund_request_items.order_detail_id')
             ->selectRaw('refund_request_items.order_detail_id')
             ->selectRaw('COALESCE(SUM(refund_request_items.quantity), 0) as refunded_quantity')

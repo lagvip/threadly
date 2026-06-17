@@ -3,6 +3,7 @@
 namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
+use App\Enums\OrderPaymentStatus;
 use App\Models\Order;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -86,7 +87,10 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function countPendingPayment(): int
     {
-        return Order::whereIn('payment_status', ['unpaid', 'pending'])->count();
+        return Order::whereIn('payment_status', [
+            OrderPaymentStatus::Unpaid->value,
+            OrderPaymentStatus::Pending->value,
+        ])->count();
     }
 
     public function recentForUser(int $userId, int $limit = 5)

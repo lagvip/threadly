@@ -4,6 +4,7 @@ namespace App\Services\Admin\Users;
 
 use App\Contracts\Repositories\RoleRepositoryInterface;
 use App\Contracts\Repositories\UserRepositoryInterface;
+use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -134,7 +135,7 @@ class AdminUserService
         }
 
         $this->users->update($user, [
-            'status' => User::STATUS_BANNED,
+            'status' => UserStatus::Banned->value,
             'ban_reason' => $reason,
             'banned_at' => now(),
             'banned_by' => $adminId,
@@ -144,7 +145,7 @@ class AdminUserService
     public function unban(int $id): void
     {
         $this->users->update($this->users->findWithRoles($id), [
-            'status' => User::STATUS_ACTIVE,
+            'status' => UserStatus::Active->value,
             'ban_reason' => null,
             'banned_at' => null,
             'banned_by' => null,

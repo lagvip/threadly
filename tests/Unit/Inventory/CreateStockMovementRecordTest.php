@@ -3,6 +3,7 @@
 namespace Tests\Unit\Inventory;
 
 use App\Contracts\Repositories\StockMovementRepositoryInterface;
+use App\Enums\StockMovementType;
 use App\Events\Inventory\StockMovementRecorded;
 use App\Listeners\Inventory\CreateStockMovementRecord;
 use Illuminate\Support\Facades\Schema;
@@ -27,7 +28,7 @@ class CreateStockMovementRecordTest extends TestCase
             ->method('create')
             ->with([
                 'product_variant_id' => 12,
-                'type' => 'sale',
+                'type' => StockMovementType::Sale->value,
                 'quantity_change' => -2,
                 'stock_before' => 10,
                 'stock_after' => 8,
@@ -39,7 +40,7 @@ class CreateStockMovementRecordTest extends TestCase
             ]);
 
         (new CreateStockMovementRecord($movements))->handle(
-            new StockMovementRecorded(12, 'sale', -2, 10, 8, 'order', 5, 7, 'Sold from order.', 10000.0)
+            new StockMovementRecorded(12, StockMovementType::Sale->value, -2, 10, 8, 'order', 5, 7, 'Sold from order.', 10000.0)
         );
     }
 }

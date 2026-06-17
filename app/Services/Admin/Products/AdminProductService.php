@@ -5,6 +5,7 @@ namespace App\Services\Admin\Products;
 use App\Contracts\Repositories\OrderDetailRepositoryInterface;
 use App\Contracts\Repositories\ProductRepositoryInterface;
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
+use App\Enums\ProductStatus;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -116,7 +117,7 @@ class AdminProductService
                             'id_size' => $variantData['id_size'],
                             'price' => $variantData['price'] ?? 0,
                             'quantity' => $variantData['quantity'] ?? 0,
-                            'status' => $variantData['status'] ?? ($variant->status ?? 'active'),
+                            'status' => $variantData['status'] ?? ($variant->status ?? ProductStatus::Active->value),
                         ];
 
                         if (isset($variantImageFiles[$index]['image'])) {
@@ -157,7 +158,7 @@ class AdminProductService
                             'id_size' => $variantNew['id_size'],
                             'price' => $variantNew['price'] ?? 0,
                             'quantity' => $variantNew['quantity'] ?? 0,
-                            'status' => $variantNew['status'] ?? 'active',
+                            'status' => $variantNew['status'] ?? ProductStatus::Active->value,
                         ];
 
                         if (isset($newVariantImageFiles[$index]['image'])) {
@@ -294,10 +295,10 @@ class AdminProductService
         return $this->products->adminListQuery()
             ->with(['variants.color', 'variants.size'])
             ->where('id_category', $categoryId)
-            ->where('status', 'active')
+            ->where('status', ProductStatus::Active->value)
             ->whereHas('variants', function ($query) {
                 $query->where('price', '>', 0)
-                    ->where('status', 'active');
+                    ->where('status', ProductStatus::Active->value);
             });
     }
 }

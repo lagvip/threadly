@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\OrderRefundRecordStatus;
+use App\Enums\OrderRefundRecordType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -33,15 +35,6 @@ class OrderRefund extends Model
         'response_payload' => 'array',
     ];
 
-    public const TYPE_FULL = 'full';
-    public const TYPE_PARTIAL = 'partial';
-
-    public const STATUS_REQUESTED = 'requested';
-    public const STATUS_PROCESSING = 'processing';
-    public const STATUS_SUCCESS = 'success';
-    public const STATUS_FAILED = 'failed';
-    public const STATUS_REJECTED = 'rejected';
-
     public function order()
     {
         return $this->belongsTo(Order::class, 'order_id');
@@ -59,34 +52,19 @@ class OrderRefund extends Model
 
     public function getRefundTypeLabelAttribute(): string
     {
-        return match ($this->refund_type) {
-            self::TYPE_FULL => 'Hoàn toàn phần',
-            self::TYPE_PARTIAL => 'Hoàn một phần',
-            default => ucfirst((string) $this->refund_type),
-        };
+        return OrderRefundRecordType::tryFrom((string) $this->refund_type)?->label()
+            ?? ucfirst((string) $this->refund_type);
     }
 
     public function getStatusLabelAttribute(): string
     {
-        return match ($this->status) {
-            self::STATUS_REQUESTED => 'Đã tạo yêu cầu',
-            self::STATUS_PROCESSING => 'Đang xử lý',
-            self::STATUS_SUCCESS => 'Thành công',
-            self::STATUS_FAILED => 'Thất bại',
-            self::STATUS_REJECTED => 'Bị từ chối',
-            default => ucfirst((string) $this->status),
-        };
+        return OrderRefundRecordStatus::tryFrom((string) $this->status)?->label()
+            ?? ucfirst((string) $this->status);
     }
 
     public function getStatusBadgeAttribute(): string
     {
-        return match ($this->status) {
-            self::STATUS_REQUESTED => 'secondary',
-            self::STATUS_PROCESSING => 'warning',
-            self::STATUS_SUCCESS => 'success',
-            self::STATUS_FAILED => 'danger',
-            self::STATUS_REJECTED => 'dark',
-            default => 'secondary',
-        };
+        return OrderRefundRecordStatus::tryFrom((string) $this->status)?->badge()
+            ?? 'secondary';
     }
 }

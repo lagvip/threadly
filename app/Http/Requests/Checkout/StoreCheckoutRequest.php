@@ -3,8 +3,10 @@
 namespace App\Http\Requests\Checkout;
 
 use App\DTOs\Checkout\CheckoutOrderData;
+use App\Enums\PaymentMethod;
 use App\Http\Requests\Concerns\NormalizesVietnamPhone;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreCheckoutRequest extends FormRequest
 {
@@ -29,7 +31,7 @@ class StoreCheckoutRequest extends FormRequest
             'phone' => $this->vietnamPhoneRules(),
             'address_id' => ['required', 'exists:addresses,id'],
             'customer_note' => ['nullable', 'string', 'max:1000'],
-            'payment_method' => ['required', 'in:cod,vnpay'],
+            'payment_method' => ['required', Rule::in(PaymentMethod::values())],
         ];
     }
 

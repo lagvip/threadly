@@ -5,6 +5,7 @@ namespace Tests\Unit\Api;
 use App\Contracts\Repositories\GhnWebhookLogRepositoryInterface;
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\DTOs\Integrations\Ghn\GhnWebhookData;
+use App\Enums\GhnOrderStatus;
 use App\Models\GhnWebhookLog;
 use App\Services\Api\GhnWebhookService;
 use App\Services\Integrations\Ghn\GhnService;
@@ -40,7 +41,7 @@ class GhnWebhookServiceTest extends TestCase
             'Type' => 'switch_status',
             'OrderCode' => 'GHN123',
             'ClientOrderCode' => 'LOCAL-OD001-1',
-            'Status' => 'delivered',
+            'Status' => GhnOrderStatus::Delivered->value,
         ];
 
         $webhookLogs = $this->createMock(GhnWebhookLogRepositoryInterface::class);
@@ -50,7 +51,7 @@ class GhnWebhookServiceTest extends TestCase
                 return $data['order_code'] === 'GHN123'
                     && $data['client_order_code'] === 'LOCAL-OD001-1'
                     && $data['type'] === 'switch_status'
-                    && $data['status'] === 'delivered'
+                    && $data['status'] === GhnOrderStatus::Delivered->value
                     && $data['payload'] === $payload
                     && $data['processed'] === false;
             }))

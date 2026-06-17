@@ -81,15 +81,14 @@
 
                            
                                 <td>
-                                    @if($v->type == 'percent')
-                                        <span class="badge bg-info">%</span>
-                                    @else
-                                        <span class="badge bg-warning text-dark">₫</span>
-                                    @endif
+                                    @php($typeInfo = $voucherTypeOptions[$v->type] ?? null)
+                                    <span class="badge bg-{{ $typeInfo['badge'] ?? 'secondary' }}">
+                                        {{ $typeInfo['unit'] ?? $v->type }}
+                                    </span>
                                 </td>
 
                                 <td>
-                                    {{ $v->type == 'percent'
+                                    {{ ($typeInfo['unit'] ?? null) === '%'
                                         ? $v->value.'%'
                                         : number_format($v->value,0,',','.') . 'đ' }}
                                 </td>
@@ -106,7 +105,7 @@
                                     <span class="text-muted">
                                         → {{ $v->end_date->format('d/m/Y') }}
                                     </span>
-                                    @if($v->actual_status == 'active')
+                                    @if($v->actual_status == \App\Enums\VoucherStatus::Active->value)
                                         <br>
                                         <span class="badge bg-danger countdown-timer" 
                                               data-end-date="{{ $v->end_date->format('Y-m-d H:i:s') }}">
@@ -122,13 +121,10 @@
                                 <td>{{ $v->max_uses_per_order }}</td>
 
                                 <td>
-                                    @if($v->actual_status == 'active')
-                                        <span class="badge bg-success">Hoạt động</span>
-                                    @elseif($v->actual_status == 'inactive')
-                                        <span class="badge bg-warning">Tắt</span>
-                                    @else
-                                        <span class="badge bg-danger">Hết hạn</span>
-                                    @endif
+                                    @php($statusInfo = $voucherStatusOptions[$v->actual_status] ?? null)
+                                    <span class="badge bg-{{ $statusInfo['badge'] ?? 'secondary' }}">
+                                        {{ $statusInfo['label'] ?? $v->actual_status }}
+                                    </span>
                                 </td>
 
                                 <td>

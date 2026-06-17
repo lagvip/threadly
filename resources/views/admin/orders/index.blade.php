@@ -415,24 +415,22 @@
                 <div class="col-xl-2 col-lg-4 col-md-6">
                     <select name="payment_status" class="form-select">
                         <option value="">-- Trạng thái thanh toán --</option>
-                        <option value="paid" {{ request('payment_status') == 'paid' ? 'selected' : '' }}>Đã thanh toán</option>
-                        <option value="unpaid" {{ request('payment_status') == 'unpaid' ? 'selected' : '' }}>Chưa thanh toán</option>
-                        <option value="pending" {{ request('payment_status') == 'pending' ? 'selected' : '' }}>Đang chờ thanh toán</option>
-                        <option value="failed" {{ request('payment_status') == 'failed' ? 'selected' : '' }}>Thanh toán lỗi</option>
-                        <option value="cancelled" {{ request('payment_status') == 'cancelled' ? 'selected' : '' }}>Thanh toán đã hủy</option>
-                        <option value="expired" {{ request('payment_status') == 'expired' ? 'selected' : '' }}>Thanh toán hết hạn</option>
+                        @foreach($paymentStatusOptions as $value => $option)
+                            <option value="{{ $value }}" {{ request('payment_status') == $value ? 'selected' : '' }}>
+                                {{ $option['label'] }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
 
                 <div class="col-xl-2 col-lg-4 col-md-6">
                     <select name="order_status" class="form-select">
                         <option value="">-- Trạng thái đơn hàng --</option>
-                        <option value="pending" {{ request('order_status') == 'pending' ? 'selected' : '' }}>Chờ xử lý</option>
-                        <option value="processing" {{ request('order_status') == 'processing' ? 'selected' : '' }}>Đang xử lý</option>
-                        <option value="shipped" {{ request('order_status') == 'shipped' ? 'selected' : '' }}>Đang giao hàng</option>
-                        <option value="delivered" {{ request('order_status') == 'delivered' ? 'selected' : '' }}>Đã giao</option>
-                        <option value="cancelled" {{ request('order_status') == 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
-                        <option value="waiting_for_cancellation" {{ request('order_status') == 'waiting_for_cancellation' ? 'selected' : '' }}>Chờ duyệt hủy</option>
+                        @foreach($orderStatusOptions as $value => $option)
+                            <option value="{{ $value }}" {{ request('order_status') == $value ? 'selected' : '' }}>
+                                {{ $option['label'] }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
 
@@ -461,59 +459,20 @@
                         <tbody>
                             @forelse ($orders as $order)
                                 @php
-                                    $paymentLabels = [
-                                        'paid' => ['label' => 'Đã thanh toán', 'color' => 'bg-success'],
-                                        'unpaid' => ['label' => 'Chưa thanh toán', 'color' => 'bg-secondary'],
-                                        'pending' => ['label' => 'Đang chờ thanh toán', 'color' => 'bg-warning text-dark'],
-                                        'failed' => ['label' => 'Thanh toán thất bại', 'color' => 'bg-danger'],
-                                        'cancelled' => ['label' => 'Thanh toán đã hủy', 'color' => 'bg-dark'],
-                                        'expired' => ['label' => 'Thanh toán hết hạn', 'color' => 'bg-secondary'],
+                                    $paymentInfo = $paymentStatusOptions[$order->payment_status] ?? [
+                                        'label' => $order->payment_status_label,
+                                        'color' => 'bg-'.$order->payment_status_badge,
                                     ];
-
-                                    $paymentInfo = $paymentLabels[$order->payment_status] ?? [
-                                        'label' => ucfirst((string) $order->payment_status),
-                                        'color' => 'bg-light text-dark',
+                                    $statusInfo = $orderStatusOptions[$order->order_status] ?? [
+                                        'label' => $order->order_status_label,
+                                        'color' => 'bg-'.$order->order_status_badge,
                                     ];
-
-                                    $statusLabels = [
-                                        'pending' => ['label' => 'Chờ xử lý', 'color' => 'bg-warning text-dark'],
-                                        'processing' => ['label' => 'Đang xử lý', 'color' => 'bg-info'],
-                                        'shipped' => ['label' => 'Đang giao hàng', 'color' => 'bg-primary'],
-                                        'delivered' => ['label' => 'Đã giao', 'color' => 'bg-success'],
-                                        'cancelled' => ['label' => 'Đã hủy', 'color' => 'bg-danger'],
-                                        'waiting_for_cancellation' => ['label' => 'Chờ duyệt hủy', 'color' => 'bg-dark'],
-                                    ];
-
-                                    $statusInfo = $statusLabels[$order->order_status] ?? [
-                                        'label' => ucfirst((string) $order->order_status),
-                                        'color' => 'bg-light text-dark',
-                                    ];
-
                                     $refundStatus = $order->refund_status ?? 'none';
                                     $refundedAmount = (float) ($order->refunded_amount ?? 0);
                                     $netPaidAmount = max((float) $order->total_price - $refundedAmount, 0);
+                                    $refundInfo = $refundStatusOptions[$refundStatus] ?? null;
 
-                                    $refundInfo = match ($refundStatus) {
-                                        'requested' => [
-                                            'label' => 'Chờ hoàn tiền',
-                                            'class' => 'bg-warning text-dark',
-                                        ],
-                                        'partially_refunded' => [
-                                            'label' => 'Hoàn một phần',
-                                            'class' => 'bg-info',
-                                        ],
-                                        'refunded' => [
-                                            'label' => 'Đã hoàn tiền',
-                                            'class' => 'bg-danger',
-                                        ],
-                                        'rejected' => [
-                                            'label' => 'Từ chối hoàn',
-                                            'class' => 'bg-secondary',
-                                        ],
-                                        default => null,
-                                    };
-
-                                    $customerEmail = $order->user->email ?? $order->email ?? 'Không có';
+                                    $customerEmail = $order->user->email ?? $order->email ?? 'Kh�ng c�';
                                 @endphp
 
                                 <tr>
@@ -605,8 +564,8 @@
 
                                             @if (
                                                 !$order->ghn_order_code
-                                                && !in_array($order->order_status, ['delivered', 'cancelled'], true)
-                                                && ($order->payment_method === 'cod' || $order->payment_status === 'paid')
+                                                && !in_array($order->order_status, [$deliveredOrderStatus, $cancelledOrderStatus], true)
+                                                && ($order->payment_method === $codPaymentMethod || $order->payment_status === $paidPaymentStatus)
                                             )
                                                 <form action="{{ route('orders.ghn.create', $order) }}" method="POST">
                                                     @csrf
@@ -636,7 +595,7 @@
                                                     <i class="bi bi-printer"></i>
                                                 </a>
 
-                                                @if (!in_array($order->ghn_status, ['delivered', 'cancel', 'returned', 'lost', 'damage'], true))
+                                                @if (!in_array($order->ghn_status, $ghnTerminalStatuses, true))
                                                     <form action="{{ route('orders.ghn.cancel', $order) }}" method="POST">
                                                         @csrf
                                                         <button type="submit"
@@ -649,7 +608,7 @@
                                                 @endif
                                             @endif
 
-                                            @if ($order->order_status === 'cancelled')
+                                            @if ($order->order_status === $cancelledOrderStatus)
                                                 <button onclick="showDeleteModal({{ $order->id }})"
                                                         class="btn btn-sm btn-outline-danger"
                                                         title="Xóa">

@@ -88,10 +88,10 @@
                                                    type="checkbox"
                                                    role="switch"
                                                    disabled
-                                                   {{ $product->status === 'active' ? 'checked' : '' }}>
+                                                   {{ $product->status === $activeProductStatus ? 'checked' : '' }}>
                                         </div>
-                                        <span class="status-toggle-text {{ $product->status === 'active' ? '' : 'inactive' }}">
-                                            {{ $product->status === 'active' ? 'Hoạt động' : 'Không hoạt động' }}
+                                        <span class="status-toggle-text {{ $product->status === $activeProductStatus ? '' : 'inactive' }}">
+                                            {{ $productStatusOptions[$product->status] ?? $product->status }}
                                         </span>
                                     </div>
                                 </div>
@@ -153,10 +153,10 @@
                                     <label class="form-label d-block">Trạng thái</label>
                                     <div class="status-switch-wrap">
                                         <div class="form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" role="switch" disabled {{ $variant->status === 'active' ? 'checked' : '' }}>
+                                            <input class="form-check-input" type="checkbox" role="switch" disabled {{ $variant->status === $activeProductStatus ? 'checked' : '' }}>
                                         </div>
-                                        <span class="status-toggle-text {{ $variant->status === 'active' ? '' : 'inactive' }}">
-                                            {{ $variant->status === 'active' ? 'Hoạt động' : 'Không hoạt động' }}
+                                        <span class="status-toggle-text {{ $variant->status === $activeProductStatus ? '' : 'inactive' }}">
+                                            {{ $productStatusOptions[$variant->status] ?? $variant->status }}
                                         </span>
                                     </div>
                                 </div>

@@ -3,6 +3,7 @@
 namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\WalletTransactionRepositoryInterface;
+use App\Enums\WalletTransactionType;
 use App\Models\WalletTransaction;
 
 class WalletTransactionRepository implements WalletTransactionRepositoryInterface
@@ -10,7 +11,7 @@ class WalletTransactionRepository implements WalletTransactionRepositoryInterfac
     public function refundCreditExists(int $refundRequestId): bool
     {
         return WalletTransaction::where('refund_request_id', $refundRequestId)
-            ->where('type', WalletTransaction::TYPE_REFUND_CREDIT)
+            ->where('type', WalletTransactionType::RefundCredit->value)
             ->exists();
     }
 

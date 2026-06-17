@@ -9,6 +9,9 @@ use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Contracts\Repositories\VoucherRepositoryInterface;
 use App\DTOs\Checkout\CheckoutOrderData;
 use App\DTOs\Checkout\CheckoutOrderResult;
+use App\Enums\OrderPaymentStatus;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Events\Sales\OrderPlaced;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -82,8 +85,10 @@ class PlaceCheckoutOrderService
                 'ghn_to_district_id' => $address->ghn_district_id,
                 'ghn_to_ward_code' => $address->ghn_ward_code,
                 'payment_method' => $data->paymentMethod,
-                'payment_status' => $data->paymentMethod === 'vnpay' ? 'pending' : 'unpaid',
-                'order_status' => 'pending',
+                'payment_status' => $data->paymentMethod === PaymentMethod::Vnpay->value
+                    ? OrderPaymentStatus::Pending->value
+                    : OrderPaymentStatus::Unpaid->value,
+                'order_status' => OrderStatus::Pending->value,
                 'shipping_fee' => $shippingFee,
                 'discount' => $voucherData['discount'],
                 'voucher_id' => $voucherData['voucher_id'],
@@ -110,7 +115,7 @@ class PlaceCheckoutOrderService
 
             session()->forget(config('threadly.checkout.voucher_session_key'));
 
-            if ($data->paymentMethod === 'cod') {
+            if ($data->paymentMethod === PaymentMethod::Cod->value) {
                 $this->checkoutInventory->decreaseStockFromOrder($order);
 
                 if ($checkoutSource === 'buy_now') {

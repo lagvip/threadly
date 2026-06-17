@@ -4,7 +4,10 @@ namespace App\Services\Integrations\Ghn;
 
 use App\Contracts\Repositories\AddressRepositoryInterface;
 use App\Contracts\Repositories\OrderRepositoryInterface;
+use App\Enums\GhnOrderStatus;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Events\Sales\OrderStatusChanged;
 use App\Models\Order;
 use Illuminate\Support\Facades\Http;
@@ -138,15 +141,15 @@ class GhnService
         }
 
         // VNPay phải paid mới được tạo vận đơn.
-        if ($order->payment_method === Order::PAYMENT_METHOD_VNPAY && $order->payment_status !== Order::PAYMENT_PAID) {
+        if ($order->payment_method === PaymentMethod::Vnpay->value && $order->payment_status !== OrderPaymentStatus::Paid->value) {
             throw new RuntimeException('Đơn VNPay chưa thanh toán thành công, không thể tạo vận đơn GHN.');
         }
 
         // Đơn thanh toán lỗi/hủy/hết hạn thì không gửi GHN.
         if (in_array($order->payment_status, [
-            Order::PAYMENT_FAILED,
-            Order::PAYMENT_CANCELLED,
-            Order::PAYMENT_EXPIRED,
+            OrderPaymentStatus::Failed->value,
+            OrderPaymentStatus::Cancelled->value,
+            OrderPaymentStatus::Expired->value,
         ], true)) {
             throw new RuntimeException('Đơn có trạng thái thanh toán không hợp lệ, không thể tạo vận đơn GHN.');
         }
@@ -189,7 +192,7 @@ class GhnService
 
         $data = (array) data_get($json, 'data', []);
         $ghnOrderCode = (string) data_get($data, 'order_code');
-        $ghnStatus = (string) data_get($data, 'status', 'ready_to_pick');
+        $ghnStatus = (string) data_get($data, 'status', GhnOrderStatus::ReadyToPick->value);
 
         // Tạo vận đơn thành công thì bắt buộc phải có order_code từ GHN.
         if ($ghnOrderCode === '') {
@@ -349,19 +352,19 @@ class GhnService
         // COD giao thành công thì coi như đã thu tiền.
         if (
             $localStatus === OrderStatus::Delivered->value
-            && $order->payment_method === Order::PAYMENT_METHOD_COD
+            && $order->payment_method === PaymentMethod::Cod->value
         ) {
-            $updates['payment_status'] = Order::PAYMENT_PAID;
+            $updates['payment_status'] = OrderPaymentStatus::Paid->value;
             $updates['paid_at'] = $order->paid_at ?: now();
         }
 
         // COD bị hủy khi chưa paid thì cập nhật payment_status cancelled.
         if (
             $localStatus === OrderStatus::Cancelled->value
-            && $order->payment_method === Order::PAYMENT_METHOD_COD
-            && $order->payment_status !== Order::PAYMENT_PAID
+            && $order->payment_method === PaymentMethod::Cod->value
+            && $order->payment_status !== OrderPaymentStatus::Paid->value
         ) {
-            $updates['payment_status'] = Order::PAYMENT_CANCELLED;
+            $updates['payment_status'] = OrderPaymentStatus::Cancelled->value;
         }
 
         // Cập nhật order theo dữ liệu GHN.
@@ -380,140 +383,22 @@ class GhnService
 
     public function mapStatusToOrderStatus(string $ghnStatus): ?string
     {
-        // Map trạng thái GHN sang trạng thái đơn trong project.
-        return match ($ghnStatus) {
-            'ready_to_pick',
-            'picking',
-            'money_collect_picking' => OrderStatus::Processing->value,
-
-            'picked',
-            'storing',
-            'transporting',
-            'sorting',
-            'delivering',
-            'money_collect_delivering',
-            'delivery_fail',
-            'waiting_to_return',
-            'return',
-            'return_transporting',
-            'return_sorting',
-            'returning',
-            'return_fail' => OrderStatus::Shipped->value,
-
-            'delivered' => OrderStatus::Delivered->value,
-
-            'cancel',
-            'returned',
-            'exception',
-            'damage',
-            'lost' => OrderStatus::Cancelled->value,
-
-            default => null,
-        };
+        return GhnOrderStatus::toOrderStatusValue($ghnStatus);
     }
 
     public function statusGroup(string $ghnStatus): string
     {
-        // Gom các trạng thái GHN thành nhóm dễ hiển thị trên giao diện.
-        return match ($ghnStatus) {
-            'ready_to_pick',
-            'picking',
-            'money_collect_picking' => 'Chờ bàn giao',
-
-            'picked',
-            'storing',
-            'transporting',
-            'sorting',
-            'delivering',
-            'money_collect_delivering' => 'Đã bàn giao - Đang giao',
-
-            'delivery_fail' => 'Chờ xác nhận giao lại',
-
-            'waiting_to_return',
-            'return',
-            'return_transporting',
-            'return_sorting',
-            'returning',
-            'return_fail',
-            'returned' => 'Đã bàn giao - đang hoàn hàng',
-
-            'delivered' => 'Hoàn tất',
-
-            'cancel' => 'Đơn hủy',
-
-            'exception',
-            'damage',
-            'lost' => 'Hàng thất lạc - hư hỏng',
-
-            default => 'Không xác định',
-        };
+        return GhnOrderStatus::groupFor($ghnStatus);
     }
 
     public function statusGroupBadge(string $ghnStatus): string
     {
-        // Trả class badge Bootstrap tương ứng nhóm trạng thái GHN.
-        return match ($ghnStatus) {
-            'ready_to_pick',
-            'picking',
-            'money_collect_picking' => 'bg-primary',
-
-            'picked',
-            'storing',
-            'transporting',
-            'sorting',
-            'delivering',
-            'money_collect_delivering' => 'bg-info',
-
-            'delivery_fail' => 'bg-warning text-dark',
-
-            'waiting_to_return',
-            'return',
-            'return_transporting',
-            'return_sorting',
-            'returning',
-            'return_fail',
-            'returned' => 'bg-secondary',
-
-            'delivered' => 'bg-success',
-
-            'cancel' => 'bg-danger',
-
-            'exception',
-            'damage',
-            'lost' => 'bg-dark',
-
-            default => 'bg-light text-dark',
-        };
+        return GhnOrderStatus::badgeFor($ghnStatus);
     }
 
     public function statusName(string $ghnStatus): string
     {
-        // Dịch mã trạng thái GHN sang tiếng Việt để hiển thị cho admin/user.
-        return match ($ghnStatus) {
-            'ready_to_pick' => 'Mới tạo đơn hàng / Chờ lấy hàng',
-            'picking' => 'Nhân viên đang lấy hàng',
-            'money_collect_picking' => 'Nhân viên đang thu tiền người gửi',
-            'picked' => 'Nhân viên đã lấy hàng',
-            'storing' => 'Hàng đang ở kho GHN',
-            'transporting' => 'Đang luân chuyển hàng',
-            'sorting' => 'Đang phân loại hàng hóa',
-            'delivering' => 'Nhân viên đang giao cho người nhận',
-            'money_collect_delivering' => 'Nhân viên đang thu tiền người nhận',
-            'delivered' => 'Đã giao hàng thành công',
-            'delivery_fail' => 'Giao hàng thất bại',
-            'waiting_to_return' => 'Đang đợi trả hàng về người gửi',
-            'return' => 'Trả hàng',
-            'return_transporting' => 'Đang luân chuyển hàng trả',
-            'return_sorting' => 'Đang phân loại hàng trả',
-            'returning' => 'Nhân viên đang đi trả hàng',
-            'return_fail' => 'Trả hàng thất bại',
-            'returned' => 'Trả hàng thành công',
-            'cancel' => 'Đã hủy đơn hàng',
-            'exception' => 'Đơn hàng ngoại lệ',
-            'damage' => 'Hàng bị hư hỏng',
-            'lost' => 'Hàng bị mất',
-            default => $ghnStatus,
-        };
+        return GhnOrderStatus::labelFor($ghnStatus);
     }
 
     protected function buildCreateOrderPayload(Order $order): array
@@ -526,7 +411,7 @@ class GhnService
         $clientOrderCode = $order->ghn_client_order_code ?: $this->buildClientOrderCode($order);
 
         // COD thì GHN thu hộ tổng tiền đơn, VNPay thì không thu hộ.
-        $codAmount = $order->payment_method === Order::PAYMENT_METHOD_COD
+        $codAmount = $order->payment_method === PaymentMethod::Cod->value
             ? (int) round((float) $order->total_price)
             : 0;
 

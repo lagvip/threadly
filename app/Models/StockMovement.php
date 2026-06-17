@@ -7,12 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StockMovement extends Model
 {
-    public const TYPE_IMPORT = 'import';
-    public const TYPE_SALE = 'sale';
-    public const TYPE_CANCEL_RELEASE = 'cancel_release';
-    public const TYPE_REFUND_RESTOCK = 'refund_restock';
-    public const TYPE_ADJUSTMENT = 'adjustment';
-
     protected $fillable = [
         'product_variant_id',
         'type',

@@ -283,6 +283,189 @@ class ArchitectureConventionsTest extends TestCase
         $this->assertSame([], $violations);
     }
 
+    public function test_order_status_enum_is_the_single_source_of_truth(): void
+    {
+        $contents = file_get_contents(base_path('app/Models/Order.php'));
+
+        $this->assertDoesNotMatchRegularExpression('/public const STATUS_[A-Z_]+\s*=/', $contents);
+        $this->assertStringContainsString('use App\\Enums\\OrderStatus;', $contents);
+    }
+
+    public function test_order_payment_and_refund_enums_are_the_single_source_of_truth(): void
+    {
+        $orderModel = file_get_contents(base_path('app/Models/Order.php'));
+        $violations = [];
+
+        $this->assertDoesNotMatchRegularExpression('/public const (PAYMENT|REFUND)_[A-Z_]+\s*=/', $orderModel);
+        $this->assertStringContainsString('use App\\Enums\\OrderPaymentStatus;', $orderModel);
+        $this->assertStringContainsString('use App\\Enums\\OrderRefundStatus;', $orderModel);
+        $this->assertStringContainsString('use App\\Enums\\PaymentMethod;', $orderModel);
+
+        foreach ($this->phpFiles(['app', 'tests']) as $file) {
+            $relativePath = $this->relativePath($file);
+
+            if ($relativePath === 'tests/Unit/Architecture/ArchitectureConventionsTest.php') {
+                continue;
+            }
+
+            $contents = file_get_contents($file->getPathname());
+
+            if (preg_match('/Order::(PAYMENT|REFUND)_[A-Z_]+/', $contents)) {
+                $violations[] = $relativePath;
+            }
+        }
+
+        $this->assertSame([], $violations);
+    }
+
+    public function test_domain_enums_are_the_single_source_of_truth_for_refund_inventory_wallet_and_user_statuses(): void
+    {
+        $modelChecks = [
+            'app/Models/RefundRequest.php' => '/public const (STATUS|TYPE)_[A-Z_]+\s*=/',
+            'app/Models/InventoryReceipt.php' => '/public const STATUS_[A-Z_]+\s*=/',
+            'app/Models/StockMovement.php' => '/public const TYPE_[A-Z_]+\s*=/',
+            'app/Models/WalletTransaction.php' => '/public const TYPE_[A-Z_]+\s*=/',
+            'app/Models/User.php' => '/public const STATUS_[A-Z_]+\s*=/',
+            'app/Models/OrderRefund.php' => '/public const (STATUS|TYPE)_[A-Z_]+\s*=/',
+        ];
+
+        foreach ($modelChecks as $path => $pattern) {
+            $this->assertDoesNotMatchRegularExpression($pattern, file_get_contents(base_path($path)), $path);
+        }
+
+        $violations = [];
+
+        foreach ($this->phpFiles(['app', 'tests']) as $file) {
+            $relativePath = $this->relativePath($file);
+
+            if ($relativePath === 'tests/Unit/Architecture/ArchitectureConventionsTest.php') {
+                continue;
+            }
+
+            $contents = file_get_contents($file->getPathname());
+
+            if (preg_match('/(RefundRequest::(STATUS|TYPE)_|InventoryReceipt::STATUS_|StockMovement::TYPE_|WalletTransaction::TYPE_|User::STATUS_|OrderRefund::(STATUS|TYPE)_)/', $contents)) {
+                $violations[] = $relativePath;
+            }
+        }
+
+        $this->assertSame([], $violations);
+    }
+
+    public function test_ghn_status_vocabulary_is_centralized_in_enum(): void
+    {
+        $violations = [];
+        $pattern = "/'(ready_to_pick|delivery_fail|waiting_to_return|return_transporting|return_sorting|return_fail|returned|damage|lost)'/";
+
+        foreach ($this->phpFiles(['app', 'resources/views', 'tests']) as $file) {
+            $relativePath = $this->relativePath($file);
+
+            if (
+                in_array($relativePath, [
+                    'app/Enums/GhnOrderStatus.php',
+                    'tests/Unit/Architecture/ArchitectureConventionsTest.php',
+                ], true)
+            ) {
+                continue;
+            }
+
+            $contents = file_get_contents($file->getPathname());
+
+            if (preg_match($pattern, $contents)) {
+                $violations[] = $relativePath;
+            }
+        }
+
+        $this->assertSame([], $violations);
+    }
+
+    public function test_voucher_type_and_status_vocabulary_is_centralized_in_enums(): void
+    {
+        $violations = [];
+        $pattern = "/'(percent|fixed|expired)'|in:percent,fixed/";
+
+        foreach ($this->phpFiles([
+            'app/Console/Commands',
+            'app/Http/Requests/Admin/Vouchers',
+            'app/Models',
+            'app/Repositories',
+            'app/Services/Admin/Vouchers',
+            'app/Services/Checkout',
+            'resources/views/admin/vouchers',
+            'resources/views/client/checkout',
+            'tests/Unit/Admin',
+        ]) as $file) {
+            $relativePath = $this->relativePath($file);
+
+            if (
+                in_array($relativePath, [
+                    'app/Enums/VoucherStatus.php',
+                    'app/Enums/VoucherType.php',
+                    'tests/Unit/Architecture/ArchitectureConventionsTest.php',
+                ], true)
+            ) {
+                continue;
+            }
+
+            $contents = file_get_contents($file->getPathname());
+
+            if (preg_match($pattern, $contents)) {
+                $violations[] = $relativePath;
+            }
+        }
+
+        $this->assertSame([], $violations);
+    }
+
+    public function test_product_status_vocabulary_is_centralized_in_enum_for_backend_code(): void
+    {
+        $violations = [];
+        $pattern = "/'active'|'inactive'|in:active,inactive|status = 'active'/";
+
+        foreach ($this->phpFiles([
+            'app/Actions',
+            'app/Http/Requests/Admin/Products',
+            'app/Models',
+            'app/Repositories',
+            'app/Services',
+        ]) as $file) {
+            $relativePath = $this->relativePath($file);
+
+            if (
+                in_array($relativePath, [
+                    'app/Enums/ProductStatus.php',
+                    'tests/Unit/Architecture/ArchitectureConventionsTest.php',
+                ], true)
+            ) {
+                continue;
+            }
+
+            $contents = file_get_contents($file->getPathname());
+
+            if (preg_match($pattern, $contents)) {
+                $violations[] = $relativePath;
+            }
+        }
+
+        $this->assertSame([], $violations);
+    }
+
+    public function test_product_admin_views_receive_status_vocabulary_from_page_service(): void
+    {
+        $violations = [];
+        $pattern = "/status\s*(?:={2,3})\s*'active'|old\('status',\s*'active'\)|value=\"(?:active|inactive)\"|textContent\s*=\s*'(?:Hoạt động|Không hoạt động)'/";
+
+        foreach ($this->phpFiles(['resources/views/admin/product']) as $file) {
+            $contents = file_get_contents($file->getPathname());
+
+            if (preg_match($pattern, $contents)) {
+                $violations[] = $this->relativePath($file);
+            }
+        }
+
+        $this->assertSame([], $violations);
+    }
+
     public function test_external_callback_services_use_dtos_instead_of_raw_payload_arrays(): void
     {
         $violations = [];

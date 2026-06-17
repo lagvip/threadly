@@ -16,8 +16,7 @@ class VoucherController extends Controller
     public function __construct(
         protected AdminVoucherQueryService $queries,
         protected AdminVoucherService $vouchers
-    ) {
-    }
+    ) {}
 
     public function index(IndexVouchersRequest $request)
     {
@@ -30,7 +29,7 @@ class VoucherController extends Controller
     {
         $this->authorize('create', Voucher::class);
 
-        return view('admin.vouchers.create');
+        return view('admin.vouchers.create', $this->queries->formData());
     }
 
     public function store(StoreVoucherRequest $request)
@@ -50,14 +49,14 @@ class VoucherController extends Controller
     {
         $this->authorize('view', $voucher);
 
-        return view('admin.vouchers.edit', compact('voucher'));
+        return view('admin.vouchers.edit', array_merge(compact('voucher'), $this->queries->formData()));
     }
 
     public function edit(Voucher $voucher)
     {
         $this->authorize('update', $voucher);
 
-        return view('admin.vouchers.edit', compact('voucher'));
+        return view('admin.vouchers.edit', array_merge(compact('voucher'), $this->queries->formData()));
     }
 
     public function update(UpdateVoucherRequest $request, Voucher $voucher)

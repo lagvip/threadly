@@ -5,6 +5,7 @@ namespace App\Services\Client\Account;
 use App\Contracts\Repositories\AddressRepositoryInterface;
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Contracts\Repositories\UserRepositoryInterface;
+use App\Enums\OrderStatus;
 use App\Models\Address;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -26,9 +27,13 @@ class ClientAccountService
             'recentOrders' => $this->orders->recentForUser($user->id),
             'stats' => [
                 'total_orders' => $this->orders->countForUser($user->id),
-                'pending_orders' => $this->orders->countForUserByStatuses($user->id, ['pending', 'processing', 'waiting_for_cancellation']),
-                'delivered_orders' => $this->orders->countForUserByStatus($user->id, 'delivered'),
-                'cancelled_orders' => $this->orders->countForUserByStatus($user->id, 'cancelled'),
+                'pending_orders' => $this->orders->countForUserByStatuses($user->id, [
+                    OrderStatus::Pending->value,
+                    OrderStatus::Processing->value,
+                    OrderStatus::WaitingForCancellation->value,
+                ]),
+                'delivered_orders' => $this->orders->countForUserByStatus($user->id, OrderStatus::Delivered->value),
+                'cancelled_orders' => $this->orders->countForUserByStatus($user->id, OrderStatus::Cancelled->value),
             ],
         ];
     }

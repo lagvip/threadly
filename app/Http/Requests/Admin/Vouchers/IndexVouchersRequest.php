@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests\Admin\Vouchers;
 
+use App\Enums\VoucherStatus;
+use App\Enums\VoucherType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class IndexVouchersRequest extends FormRequest
 {
@@ -15,8 +18,8 @@ class IndexVouchersRequest extends FormRequest
     {
         return [
             'search' => ['nullable', 'string', 'max:255'],
-            'type' => ['nullable', 'in:percent,fixed'],
-            'status' => ['nullable', 'string', 'max:50'],
+            'type' => ['nullable', Rule::in(VoucherType::values())],
+            'status' => ['nullable', Rule::in(VoucherStatus::values())],
         ];
     }
 

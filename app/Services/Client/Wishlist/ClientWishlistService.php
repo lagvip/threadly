@@ -4,6 +4,7 @@ namespace App\Services\Client\Wishlist;
 
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
 use App\Contracts\Repositories\WishlistRepositoryInterface;
+use App\Enums\ProductStatus;
 use RuntimeException;
 
 class ClientWishlistService
@@ -26,7 +27,7 @@ class ClientWishlistService
     {
         $variant = $this->variants->findWithProduct($variantId);
 
-        if ($variant->status !== 'active') {
+        if ($variant->status !== ProductStatus::Active->value) {
             throw new RuntimeException('Biến thể này hiện không khả dụng.');
         }
 

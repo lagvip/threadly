@@ -3,6 +3,9 @@
 namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\VoucherRepositoryInterface;
+use App\Enums\OrderPaymentStatus;
+use App\Enums\OrderStatus;
+use App\Enums\VoucherStatus;
 use App\Models\Order;
 use App\Models\Voucher;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -90,7 +93,7 @@ class VoucherRepository implements VoucherRepositoryInterface
     public function findActiveForCheckout(float $subtotal, int $userId): Collection
     {
         return Voucher::query()
-            ->where('status', 'active')
+            ->where('status', VoucherStatus::Active->value)
             ->where('quantity', '>', 0)
             ->where('start_date', '<=', now())
             ->where('end_date', '>=', now())
@@ -106,8 +109,12 @@ class VoucherRepository implements VoucherRepositoryInterface
     {
         return Order::where('user_id', $userId)
             ->where('voucher_id', $voucher->id)
-            ->where('order_status', '!=', 'cancelled')
-            ->whereNotIn('payment_status', ['failed', 'expired', 'cancelled'])
+            ->where('order_status', '!=', OrderStatus::Cancelled->value)
+            ->whereNotIn('payment_status', [
+                OrderPaymentStatus::Failed->value,
+                OrderPaymentStatus::Expired->value,
+                OrderPaymentStatus::Cancelled->value,
+            ])
             ->count();
     }
 }

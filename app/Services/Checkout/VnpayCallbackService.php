@@ -4,6 +4,8 @@ namespace App\Services\Checkout;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\DTOs\Checkout\VnpayCallbackData;
+use App\Enums\OrderPaymentStatus;
+use App\Enums\OrderStatus;
 use App\Events\Sales\OrderPlaced;
 use App\Models\Order;
 use Illuminate\Support\Facades\DB;
@@ -50,13 +52,13 @@ class VnpayCallbackService
 
             DB::transaction(function () use ($order, $data, $success, &$shouldSendMail) {
                 if ($success) {
-                    if ($order->payment_status !== 'paid') {
+                    if ($order->payment_status !== OrderPaymentStatus::Paid->value) {
                         $this->inventory->decreaseStockFromOrder($order);
                         $this->cart->clearUserCartByOrder($order);
 
                         $this->orders->update($order, array_merge([
-                            'payment_status' => 'paid',
-                            'order_status' => 'pending',
+                            'payment_status' => OrderPaymentStatus::Paid->value,
+                            'order_status' => OrderStatus::Pending->value,
                         ], $this->vnpay->paymentMeta($data)));
 
                         $shouldSendMail = true;
@@ -116,13 +118,13 @@ class VnpayCallbackService
 
             DB::transaction(function () use ($order, $data, &$shouldSendMail) {
                 if ($data->isSuccessful()) {
-                    if ($order->payment_status !== 'paid') {
+                    if ($order->payment_status !== OrderPaymentStatus::Paid->value) {
                         $this->inventory->decreaseStockFromOrder($order);
                         $this->cart->clearUserCartByOrder($order);
 
                         $this->orders->update($order, array_merge([
-                            'payment_status' => 'paid',
-                            'order_status' => 'pending',
+                            'payment_status' => OrderPaymentStatus::Paid->value,
+                            'order_status' => OrderStatus::Pending->value,
                         ], $this->vnpay->paymentMeta($data)));
 
                         $shouldSendMail = true;

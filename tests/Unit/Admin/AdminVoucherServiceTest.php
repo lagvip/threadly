@@ -3,6 +3,7 @@
 namespace Tests\Unit\Admin;
 
 use App\Contracts\Repositories\VoucherRepositoryInterface;
+use App\Enums\VoucherType;
 use App\Services\Admin\Vouchers\AdminVoucherService;
 use RuntimeException;
 use Tests\TestCase;
@@ -16,7 +17,7 @@ class AdminVoucherServiceTest extends TestCase
         $this->expectException(RuntimeException::class);
 
         $service->create($this->voucherData([
-            'type' => 'percent',
+            'type' => VoucherType::Percent->value,
             'value' => 101,
         ]));
     }
@@ -37,7 +38,7 @@ class AdminVoucherServiceTest extends TestCase
     {
         return array_merge([
             'code' => 'SALE10',
-            'type' => 'percent',
+            'type' => VoucherType::Percent->value,
             'value' => 10,
             'max_discount' => null,
             'min_order_value' => null,

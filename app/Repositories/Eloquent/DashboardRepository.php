@@ -3,7 +3,9 @@
 namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\DashboardRepositoryInterface;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
+use App\Enums\RefundRequestStatus;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use Carbon\Carbon;
@@ -15,7 +17,7 @@ class DashboardRepository implements DashboardRepositoryInterface
     {
         return Order::query()
             ->where('order_status', OrderStatus::Delivered->value)
-            ->where('payment_status', 'paid')
+            ->where('payment_status', OrderPaymentStatus::Paid->value)
             ->whereNotNull('customer_confirmed_at')
             ->whereBetween('customer_confirmed_at', [$fromDay, $toDay]);
     }
@@ -28,7 +30,7 @@ class DashboardRepository implements DashboardRepositoryInterface
                 $join->on('approved_refund_items.order_detail_id', '=', 'order_details.id');
             })
             ->where('orders.order_status', OrderStatus::Delivered->value)
-            ->where('orders.payment_status', 'paid')
+            ->where('orders.payment_status', OrderPaymentStatus::Paid->value)
             ->whereNotNull('orders.customer_confirmed_at')
             ->whereBetween('orders.customer_confirmed_at', [$fromDay, $toDay])
             ->selectRaw('COALESCE(SUM(GREATEST(order_details.quantity - COALESCE(approved_refund_items.refunded_quantity, 0), 0)), 0) as sold_qty')
@@ -44,7 +46,7 @@ class DashboardRepository implements DashboardRepositoryInterface
                 $join->on('approved_refund_items.order_detail_id', '=', 'order_details.id');
             })
             ->where('orders.order_status', OrderStatus::Delivered->value)
-            ->where('orders.payment_status', 'paid')
+            ->where('orders.payment_status', OrderPaymentStatus::Paid->value)
             ->whereNotNull('orders.customer_confirmed_at')
             ->whereBetween('orders.customer_confirmed_at', [$fromDay, $toDay])
             ->groupBy('order_details.product_id', 'products.name')
@@ -68,7 +70,7 @@ class DashboardRepository implements DashboardRepositoryInterface
                 $join->on('approved_refund_items.order_detail_id', '=', 'order_details.id');
             })
             ->where('orders.order_status', OrderStatus::Delivered->value)
-            ->where('orders.payment_status', 'paid')
+            ->where('orders.payment_status', OrderPaymentStatus::Paid->value)
             ->whereNotNull('orders.customer_confirmed_at')
             ->whereBetween('orders.customer_confirmed_at', [$fromDay, $toDay])
             ->groupBy('categories.id', 'categories.name')
@@ -85,7 +87,7 @@ class DashboardRepository implements DashboardRepositoryInterface
     {
         return Order::query()
             ->where('order_status', OrderStatus::Delivered->value)
-            ->where('payment_status', 'paid')
+            ->where('payment_status', OrderPaymentStatus::Paid->value)
             ->whereNotNull('customer_confirmed_at')
             ->whereBetween('customer_confirmed_at', [$fromDay, $toDay])
             ->groupBy(DB::raw('DATE(customer_confirmed_at)'))
@@ -99,7 +101,7 @@ class DashboardRepository implements DashboardRepositoryInterface
     {
         return DB::table('refund_request_items')
             ->join('refund_requests', 'refund_requests.id', '=', 'refund_request_items.refund_request_id')
-            ->where('refund_requests.status', 'approved')
+            ->where('refund_requests.status', RefundRequestStatus::Approved->value)
             ->groupBy('refund_request_items.order_detail_id')
             ->selectRaw('refund_request_items.order_detail_id')
             ->selectRaw('COALESCE(SUM(refund_request_items.quantity), 0) as refunded_quantity')

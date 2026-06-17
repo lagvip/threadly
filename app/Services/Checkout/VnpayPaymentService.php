@@ -4,6 +4,8 @@ namespace App\Services\Checkout;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\DTOs\Checkout\VnpayCallbackData;
+use App\Enums\OrderPaymentStatus;
+use App\Enums\OrderStatus;
 use App\Models\Order;
 
 class VnpayPaymentService
@@ -82,7 +84,10 @@ class VnpayPaymentService
 
     public function updateFailureState(Order $order, string $responseCode, ?string $transactionStatus = null): void
     {
-        if ($order->payment_status === 'paid' || $order->payment_status !== 'pending') {
+        if (
+            $order->payment_status === OrderPaymentStatus::Paid->value ||
+            $order->payment_status !== OrderPaymentStatus::Pending->value
+        ) {
             return;
         }
 
@@ -90,8 +95,8 @@ class VnpayPaymentService
 
         if ($responseCode === '97') {
             $this->orders->update($order, [
-                'order_status' => 'pending',
-                'payment_status' => 'failed',
+                'order_status' => OrderStatus::Pending->value,
+                'payment_status' => OrderPaymentStatus::Failed->value,
                 'cancel_reason' => 'Sai lệch số tiền VNPay trả về',
                 'payment_response_code' => $responseCode,
                 'payment_transaction_status' => $transactionStatus,
@@ -102,8 +107,8 @@ class VnpayPaymentService
 
         if ($responseCode === '24') {
             $this->orders->update($order, [
-                'order_status' => 'pending',
-                'payment_status' => 'cancelled',
+                'order_status' => OrderStatus::Pending->value,
+                'payment_status' => OrderPaymentStatus::Cancelled->value,
                 'cancel_reason' => 'Khách hủy phiên thanh toán VNPay',
                 'payment_response_code' => $responseCode,
                 'payment_transaction_status' => $transactionStatus,
@@ -115,8 +120,8 @@ class VnpayPaymentService
         if ($responseCode === '11') {
             $this->orders->update($order, [
                 'previous_status' => $order->order_status,
-                'order_status' => 'cancelled',
-                'payment_status' => 'expired',
+                'order_status' => OrderStatus::Cancelled->value,
+                'payment_status' => OrderPaymentStatus::Expired->value,
                 'cancel_reason' => 'Quá hạn thanh toán VNPay',
                 'payment_response_code' => $responseCode,
                 'payment_transaction_status' => $transactionStatus,
@@ -126,8 +131,8 @@ class VnpayPaymentService
         }
 
         $this->orders->update($order, [
-            'order_status' => 'pending',
-            'payment_status' => 'failed',
+            'order_status' => OrderStatus::Pending->value,
+            'payment_status' => OrderPaymentStatus::Failed->value,
             'cancel_reason' => 'Thanh toán VNPay thất bại',
             'payment_response_code' => $responseCode,
             'payment_transaction_status' => $transactionStatus,

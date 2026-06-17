@@ -263,22 +263,16 @@
 
                 <select name="payment_status" class="form-select">
                     <option value="">-- Trạng thái thanh toán --</option>
-                    <option value="paid" {{ request('payment_status') === 'paid' ? 'selected' : '' }}>Đã thanh toán</option>
-                    <option value="unpaid" {{ request('payment_status') === 'unpaid' ? 'selected' : '' }}>Chưa thanh toán</option>
-                    <option value="pending" {{ request('payment_status') === 'pending' ? 'selected' : '' }}>Đang chờ thanh toán</option>
-                    <option value="failed" {{ request('payment_status') === 'failed' ? 'selected' : '' }}>Thanh toán thất bại</option>
-                    <option value="cancelled" {{ request('payment_status') === 'cancelled' ? 'selected' : '' }}>Thanh toán đã hủy</option>
-                    <option value="expired" {{ request('payment_status') === 'expired' ? 'selected' : '' }}>Thanh toán hết hạn</option>
+                    @foreach($paymentStatusOptions as $value => $label)
+                        <option value="{{ $value }}" {{ request('payment_status') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
                 </select>
 
                 <select name="order_status" class="form-select">
                     <option value="">-- Trạng thái đơn hàng --</option>
-                    <option value="pending" {{ request('order_status') === 'pending' ? 'selected' : '' }}>Chờ xử lý</option>
-                    <option value="processing" {{ request('order_status') === 'processing' ? 'selected' : '' }}>Đang xử lý</option>
-                    <option value="shipped" {{ request('order_status') === 'shipped' ? 'selected' : '' }}>Đang giao hàng</option>
-                    <option value="delivered" {{ request('order_status') === 'delivered' ? 'selected' : '' }}>Đã giao</option>
-                    <option value="cancelled" {{ request('order_status') === 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
-                    <option value="waiting_for_cancellation" {{ request('order_status') === 'waiting_for_cancellation' ? 'selected' : '' }}>Chờ duyệt hủy</option>
+                    @foreach($orderStatusOptions as $value => $label)
+                        <option value="{{ $value }}" {{ request('order_status') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
                 </select>
 
                 <button type="submit" class="btn order-btn-main">
@@ -316,11 +310,11 @@
 
                         $latestRefundNoteTitle = 'Phản hồi hoàn tiền';
 
-                        if ($latestRefundRequest && $latestRefundRequest->status === 'approved') {
+                        if ($latestRefundRequest && $latestRefundRequest->status === $approvedRefundRequestStatus) {
                             $latestRefundNoteTitle = 'Phản hồi duyệt hoàn';
                         }
 
-                        if ($latestRefundRequest && $latestRefundRequest->status === 'rejected') {
+                        if ($latestRefundRequest && $latestRefundRequest->status === $rejectedRefundRequestStatus) {
                             $latestRefundNoteTitle = 'Lý do từ chối hoàn';
                         }
 

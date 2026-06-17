@@ -307,12 +307,12 @@
                                                        class="form-check-input product-status-switch"
                                                        name="status"
                                                        value="1"
-                                                       {{ $product->status === 'active' ? 'checked' : '' }}
+                                                       {{ $product->status === $activeProductStatus ? 'checked' : '' }}
                                                        onchange="this.form.submit()">
                                             </div>
 
-                                            <span class="table-status-text {{ $product->status === 'active' ? '' : 'inactive' }}">
-                                                {{ $product->status === 'active' ? 'Hoạt động' : 'Không hoạt động' }}
+                                            <span class="table-status-text {{ $product->status === $activeProductStatus ? '' : 'inactive' }}">
+                                                {{ $productStatusOptions[$product->status] ?? $product->status }}
                                             </span>
                                         </form>
                                     </td>

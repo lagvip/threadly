@@ -2,16 +2,15 @@
 
 namespace App\Models;
 
+use App\Enums\ProductStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Http\Request;
 
 class Product extends Model
 {
     use HasFactory;
     use SoftDeletes;
-
 
     protected $fillable = [
         'name',
@@ -26,25 +25,28 @@ class Product extends Model
         'height',
     ];
 
-
     public function category()
     {
         return $this->belongsTo(Category::class, 'id_category');
     }
+
     public function brand()
     {
         return $this->belongsTo(Brand::class, 'id_brand');
     }
+
     public function variants()
     {
         return $this->hasMany(ProductVariant::class, 'id_product');
     }
+
     public function searchProducts($keyword)
     {
-        return Product::where('name', 'like', '%' . $keyword . '%')
-                      ->orWhere('description', 'like', '%' . $keyword . '%')
-                      ->get();
+        return Product::where('name', 'like', '%'.$keyword.'%')
+            ->orWhere('description', 'like', '%'.$keyword.'%')
+            ->get();
     }
+
     public function colors()
     {
         return $this->hasManyThrough(
@@ -56,10 +58,12 @@ class Product extends Model
             'id_color'    // Foreign key on product_variants
         )->distinct(); // để tránh trùng lặp màu
     }
+
     public function firstVariant()
     {
         return $this->hasOne(ProductVariant::class, 'id_product')->orderBy('price');
     }
+
     public function sizes()
     {
         return $this->hasManyThrough(
@@ -71,20 +75,22 @@ class Product extends Model
             'id_size'
         )->distinct();
     }
+
     public function albums()
     {
         return $this->hasMany(ProductAlbum::class, 'id_product');
     }
+
     public function reviews()
     {
         return $this->hasMany(Review::class);
     }
+
     public function scopeAvailable($query)
     {
-        return $query->where('status', 'active')
+        return $query->where('status', ProductStatus::Active->value)
             ->whereHas('variants', function ($q) {
-                $q->where('status', 'active');
+                $q->where('status', ProductStatus::Active->value);
             });
     }
-
 }

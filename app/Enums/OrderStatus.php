@@ -48,6 +48,18 @@ enum OrderStatus: string
         };
     }
 
+    public function badge(): string
+    {
+        return match ($this) {
+            self::Pending => 'warning',
+            self::Processing => 'info',
+            self::Shipped => 'primary',
+            self::Delivered => 'success',
+            self::Cancelled => 'dark',
+            self::WaitingForCancellation => 'secondary',
+        };
+    }
+
     public function isTerminal(): bool
     {
         return in_array($this, [

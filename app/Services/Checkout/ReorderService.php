@@ -5,6 +5,7 @@ namespace App\Services\Checkout;
 use App\Contracts\Repositories\CartRepositoryInterface;
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
+use App\Enums\ProductStatus;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -37,7 +38,7 @@ class ReorderService
 
                     $variant = $this->variants->findWithRelationsOrNull((int) $detail->variant_id);
 
-                    if (! $variant || ! $variant->product || $variant->status !== 'active') {
+                    if (! $variant || ! $variant->product || $variant->status !== ProductStatus::Active->value) {
                         $skipped++;
 
                         continue;

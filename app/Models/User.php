@@ -2,17 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use App\Enums\UserStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
     use HasFactory, Notifiable, SoftDeletes;
-
-    public const STATUS_ACTIVE = 1;
-    public const STATUS_BANNED = 0;
 
     protected $fillable = [
         'name',
@@ -106,8 +104,9 @@ class User extends Authenticatable
 
     public function isBanned(): bool
     {
-        return (int) $this->status === self::STATUS_BANNED;
+        return (int) $this->status === UserStatus::Banned->value;
     }
+
     public function wishlist()
     {
         return $this->hasMany(Wishlist::class);

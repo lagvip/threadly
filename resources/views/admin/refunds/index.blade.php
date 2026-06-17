@@ -51,9 +51,9 @@
         <div class="col-md-3">
             <select name="status" class="form-select">
                 <option value="">-- Tất cả trạng thái --</option>
-                <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Chờ duyệt</option>
-                <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Đã hoàn</option>
-                <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>Đã từ chối</option>
+                @foreach($statusOptions as $value => $label)
+                    <option value="{{ $value }}" {{ request('status') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                @endforeach
             </select>
         </div>
         <div class="col-md-5 d-flex gap-2">

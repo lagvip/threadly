@@ -1,24 +1,11 @@
 @php
-    $isVnpay = $order->payment_method === 'vnpay';
-    $isPaid = $order->payment_status === 'paid';
-
     $formatMoney = function ($value) {
-        return number_format((float) $value, 0, ',', '.') . ' đ';
+        return number_format((float) $value, 0, ',', '.') . ' d';
     };
 
-    $paymentMethodLabel = $isVnpay ? 'VNPay' : 'Thanh toán khi nhận hàng (COD)';
-
-    $paymentStatusLabel = match ($order->payment_status) {
-        'paid' => 'Đã thanh toán',
-        'pending' => 'Chờ thanh toán',
-        'failed' => 'Thanh toán thất bại',
-        'cancelled' => 'Đã hủy thanh toán',
-        'expired' => 'Hết hạn thanh toán',
-        default => 'Chưa thanh toán',
-    };
-@endphp
-
-<!DOCTYPE html>
+    $paymentMethodLabel = $order->payment_method_label;
+    $paymentStatusLabel = $order->payment_status_label;
+@endphp<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">

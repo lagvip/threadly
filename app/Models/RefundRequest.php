@@ -2,20 +2,14 @@
 
 namespace App\Models;
 
+use App\Enums\RefundRequestStatus;
+use App\Enums\RefundRequestType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class RefundRequest extends Model
 {
     use HasFactory;
-
-    public const TYPE_FULL = 'full';
-    public const TYPE_PARTIAL = 'partial';
-
-    public const STATUS_PENDING = 'pending';
-    public const STATUS_APPROVED = 'approved';
-    public const STATUS_REJECTED = 'rejected';
-    public const STATUS_CANCELLED = 'cancelled';
 
     protected $fillable = [
         'order_id',
@@ -85,32 +79,19 @@ class RefundRequest extends Model
 
     public function getTypeLabelAttribute(): string
     {
-        return match ($this->type) {
-            self::TYPE_FULL => 'Hoàn toàn bộ tiền hàng',
-            self::TYPE_PARTIAL => 'Hoàn một phần tiền hàng',
-            default => ucfirst((string) $this->type),
-        };
+        return RefundRequestType::tryFrom((string) $this->type)?->label()
+            ?? ucfirst((string) $this->type);
     }
 
     public function getStatusLabelAttribute(): string
     {
-        return match ($this->status) {
-            self::STATUS_PENDING => 'Chờ admin duyệt',
-            self::STATUS_APPROVED => 'Đã hoàn tiền',
-            self::STATUS_REJECTED => 'Đã từ chối',
-            self::STATUS_CANCELLED => 'Đã hủy yêu cầu',
-            default => ucfirst((string) $this->status),
-        };
+        return RefundRequestStatus::tryFrom((string) $this->status)?->label()
+            ?? ucfirst((string) $this->status);
     }
 
     public function getStatusBadgeAttribute(): string
     {
-        return match ($this->status) {
-            self::STATUS_PENDING => 'warning text-dark',
-            self::STATUS_APPROVED => 'success',
-            self::STATUS_REJECTED => 'danger',
-            self::STATUS_CANCELLED => 'secondary',
-            default => 'secondary',
-        };
+        return RefundRequestStatus::tryFrom((string) $this->status)?->badge()
+            ?? 'secondary';
     }
 }
