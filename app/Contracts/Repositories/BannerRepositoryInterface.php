@@ -4,16 +4,11 @@ namespace App\Contracts\Repositories;
 
 use App\Models\Banner;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 interface BannerRepositoryInterface
 {
-    public function query(): Builder;
-
     public function paginatedForAdmin(?string $search = null, int $perPage = 10): LengthAwarePaginator;
-
-    public function trashedQuery(): Builder;
 
     public function trashedPaginatedForAdmin(int $perPage = 10): LengthAwarePaginator;
 

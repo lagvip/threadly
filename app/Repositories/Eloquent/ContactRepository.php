@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ContactRepository implements ContactRepositoryInterface
 {
-    public function newestQuery(): Builder
+    protected function newestQuery(): Builder
     {
         return Contact::orderBy('created_at', 'desc');
     }

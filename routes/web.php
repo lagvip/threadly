@@ -1,38 +1,38 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AuthController;
-use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\BannerController;
-use App\Http\Controllers\Admin\ColorController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\SizeController;
-use App\Http\Controllers\Admin\VoucherController;
 use App\Http\Controllers\Admin\BrandController;
-use App\Http\Controllers\Admin\ProductController as AdminProductController;
-use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\ChatController as AdminChatController;
+use App\Http\Controllers\Admin\ColorController;
+use App\Http\Controllers\Admin\ContactController as AdminContactController;
+use App\Http\Controllers\Admin\InventoryReceiptController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\OrderDetailController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\RefundRequestController as AdminRefundRequestController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\RoleController;
-use App\Http\Controllers\Admin\ContactController as AdminContactController;
+use App\Http\Controllers\Admin\SizeController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\VoucherController;
+use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\Client\AccountController;
+use App\Http\Controllers\Client\AddressController;
+use App\Http\Controllers\Client\CartController;
+use App\Http\Controllers\Client\CategoryController;
+use App\Http\Controllers\Client\ChatbotController;
+use App\Http\Controllers\Client\ChatController as ClientChatController;
+use App\Http\Controllers\Client\CheckoutController;
+use App\Http\Controllers\Client\ClientOrderController;
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\ProductController;
-use App\Http\Controllers\Client\CartController;
-use App\Http\Controllers\Client\CheckoutController;
-use App\Http\Controllers\Client\AccountController;
-use App\Http\Controllers\Client\ClientOrderController;
-use App\Http\Controllers\Client\AddressController;
-use App\Http\Controllers\Client\CategoryController;
-use App\Http\Controllers\Client\WishlistController;
-use App\Http\Controllers\Client\ChatbotController;
 use App\Http\Controllers\Client\RefundRequestController as ClientRefundRequestController;
-use App\Http\Controllers\Admin\RefundRequestController as AdminRefundRequestController;
-use App\Http\Controllers\Admin\InventoryReceiptController;
+use App\Http\Controllers\Client\WishlistController;
 use App\Http\Controllers\ContactController;
-use App\Http\Controllers\Client\ChatController as ClientChatController;
-use App\Http\Controllers\Admin\ChatController as AdminChatController;
+use Illuminate\Support\Facades\Route;
 
 // =======================================================
 // CLIENT
@@ -59,7 +59,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('/gio-hang/xoa/{id}', [CartController::class, 'remove'])->name('client.cart.remove');
     Route::post('/checkout/select-items', [CheckoutController::class, 'selectItems'])->name('client.checkout.selectItems');
 });
-
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('client.checkout.index');
@@ -94,11 +93,9 @@ Route::middleware(['auth'])->group(function () {
             ->whereNumber('detailId')
             ->name('reviews.submit');
         Route::post('/{id}/confirm-received', [ClientOrderController::class, 'confirmReceived'])
-        ->whereNumber('id')
-        ->name('confirm-received');
+            ->whereNumber('id')
+            ->name('confirm-received');
     });
-
-
 
     // Hoàn tiền demo VNPay và ví demo
     Route::prefix('tai-khoan/hoan-tien')->name('client.refunds.')->group(function () {
@@ -124,12 +121,12 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Trợ lý AI
-        Route::prefix('tro-ly-ai')->name('client.ai.')->group(function () {
+    Route::prefix('tro-ly-ai')->name('client.ai.')->group(function () {
         Route::get('/', [ChatbotController::class, 'index'])->name('index');
         Route::post('/hoi', [ChatbotController::class, 'ask'])->name('ask');
     });
 
-    //ưa thích
+    // ưa thích
     Route::prefix('yeu-thich')->name('client.wishlist.')->group(function () {
         Route::get('/', [WishlistController::class, 'index'])->name('index');
         Route::post('/them', [WishlistController::class, 'store'])->name('store');
@@ -145,7 +142,6 @@ Route::middleware(['auth'])->group(function () {
 // VNPay callback routes: để ngoài auth
 Route::get('/checkout/vnpay/return', [CheckoutController::class, 'paymentReturn'])->name('client.checkout.vnpay-return');
 Route::get('/checkout/vnpay/ipn', [CheckoutController::class, 'paymentIpn'])->name('client.checkout.vnpay-ipn');
-
 
 // =======================================================
 // AUTH
@@ -170,7 +166,6 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
-
 
 // =======================================================
 // TẤT CẢ ROUTE CẦN ĐĂNG NHẬP
@@ -208,7 +203,7 @@ Route::middleware(['auth'])->group(function () {
         // CATEGORY
         Route::prefix('listCategory')->name('listCategory.')->group(function () {
             Route::get('/trash', [AdminCategoryController::class, 'trash'])->name('trash');
-            Route::get('/restore/{id}', [AdminCategoryController::class, 'restore'])->name('restore');
+            Route::post('/restore/{id}', [AdminCategoryController::class, 'restore'])->name('restore');
 
             Route::get('/', [AdminCategoryController::class, 'index'])->name('list');
             Route::get('/add', [AdminCategoryController::class, 'create'])->name('addCategory');
@@ -224,7 +219,7 @@ Route::middleware(['auth'])->group(function () {
         Route::prefix('listBanner')->name('listBanner.')->group(function () {
             Route::get('/', [BannerController::class, 'index'])->name('list');
             Route::get('/trash', [BannerController::class, 'trash'])->name('trash');
-            Route::get('/restore/{id}', [BannerController::class, 'restore'])->name('restore');
+            Route::post('/restore/{id}', [BannerController::class, 'restore'])->name('restore');
             Route::get('/detail/{id}', [BannerController::class, 'show'])->name('detailBanner');
             Route::get('/add', [BannerController::class, 'create'])->name('addBanner');
             Route::post('/store', [BannerController::class, 'store'])->name('storeBanner');
@@ -245,12 +240,12 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/edit/{id}', [ColorController::class, 'edit'])->name('edit');
             Route::put('/update/{id}', [ColorController::class, 'update'])->name('update');
             Route::delete('/delete/{id}', [ColorController::class, 'destroy'])->name('delete');
-            Route::get('/restore/{id}', [ColorController::class, 'restore'])->name('restore');
+            Route::post('/restore/{id}', [ColorController::class, 'restore'])->name('restore');
             Route::get('/search', [ColorController::class, 'search'])->name('search');
         });
 
         // SIZE
-       Route::prefix('listSize')->name('listSize.')->group(function () {
+        Route::prefix('listSize')->name('listSize.')->group(function () {
             Route::get('/', [SizeController::class, 'index'])->name('list');
             Route::get('/trash', [SizeController::class, 'trash'])->name('trash');
             Route::get('/detail/{id}', [SizeController::class, 'show'])->name('detailSize');
@@ -259,7 +254,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/edit/{id}', [SizeController::class, 'edit'])->name('editSize');
             Route::put('/update/{id}', [SizeController::class, 'update'])->name('updateSize');
             Route::delete('/delete/{id}', [SizeController::class, 'destroy'])->name('deleteSize');
-            Route::get('/restore/{id}', [SizeController::class, 'restore'])->name('restoreSize');
+            Route::post('/restore/{id}', [SizeController::class, 'restore'])->name('restoreSize');
             Route::get('/search', [SizeController::class, 'search'])->name('searchSize');
         });
 
@@ -273,7 +268,7 @@ Route::middleware(['auth'])->group(function () {
         // BRAND
         Route::prefix('brands')->name('brands.')->group(function () {
             Route::get('/trash', [BrandController::class, 'trash'])->name('trash');
-            Route::get('/restore/{id}', [BrandController::class, 'restore'])->name('restore');
+            Route::post('/restore/{id}', [BrandController::class, 'restore'])->name('restore');
 
             Route::get('/', [BrandController::class, 'index'])->name('index');
             Route::get('/create', [BrandController::class, 'create'])->name('create');
@@ -292,9 +287,9 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/update/{id}', [AdminProductController::class, 'postEdit'])->name('postEdit');
             Route::get('/detail/{id}', [AdminProductController::class, 'detail'])->name('detail');
             Route::get('/show/{id}', [AdminProductController::class, 'show'])->name('show');
-            Route::get('/delete/{id}', [AdminProductController::class, 'destroy'])->name('destroy'); // Xóa mềm
+            Route::delete('/delete/{id}', [AdminProductController::class, 'destroy'])->name('destroy'); // Xóa mềm
             Route::get('/trash', [AdminProductController::class, 'trash'])->name('trash');
-            Route::get('/restore/{id}', [AdminProductController::class, 'restore'])->name('restore');
+            Route::post('/restore/{id}', [AdminProductController::class, 'restore'])->name('restore');
             Route::post('/bulk-delete', [AdminProductController::class, 'bulkDelete'])->name('bulkDelete');
             Route::post('/bulk-restore', [AdminProductController::class, 'bulkRestore'])->name('bulkRestore');
             Route::get('/search', [AdminProductController::class, 'search'])->name('search');
@@ -337,7 +332,6 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/restore', [OrderController::class, 'restore'])->name('restore');
         });
 
-
         // REFUND REQUESTS / DEMO WALLET
         Route::prefix('refunds')->name('admin.refunds.')->group(function () {
             Route::get('/', [AdminRefundRequestController::class, 'index'])->name('index');
@@ -354,7 +348,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/{review}/edit', [ReviewController::class, 'edit'])->name('edit');
             Route::put('/{review}', [ReviewController::class, 'update'])->name('update');
             Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
-            Route::get('/restore/{id}', [ReviewController::class, 'restore'])->name('restore');
+            Route::post('/restore/{id}', [ReviewController::class, 'restore'])->name('restore');
             Route::post('/bulk-restore', [ReviewController::class, 'bulkRestore'])->name('bulkRestore');
         });
     });
@@ -379,7 +373,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/search', [UserController::class, 'search'])->name('search');
             Route::post('/{id}/assign-role', [UserController::class, 'assignRole'])->name('assignRole');
             Route::get('/trash', [UserController::class, 'trash'])->name('trash');
-            Route::get('/restore/{id}', [UserController::class, 'restore'])->name('restore');
+            Route::post('/restore/{id}', [UserController::class, 'restore'])->name('restore');
             Route::delete('/force-delete/{id}', [UserController::class, 'forceDelete'])->name('forceDelete');
             Route::patch('/{id}/ban', [UserController::class, 'ban'])->name('ban');
             Route::patch('/{id}/unban', [UserController::class, 'unban'])->name('unban');
@@ -395,7 +389,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/edit/{id}', [RoleController::class, 'edit'])->name('edit');
             Route::put('/update/{id}', [RoleController::class, 'update'])->name('update');
             Route::delete('/delete/{id}', [RoleController::class, 'destroy'])->name('delete');
-            Route::get('/restore/{id}', [RoleController::class, 'restore'])->name('restore');
+            Route::post('/restore/{id}', [RoleController::class, 'restore'])->name('restore');
             Route::delete('/force-delete/{id}', [RoleController::class, 'forceDelete'])->name('forceDelete');
         });
 
@@ -422,7 +416,7 @@ Route::middleware(['auth'])->group(function () {
 
         // PRODUCT - FORCE DELETE
         Route::prefix('product')->name('product.')->group(function () {
-            Route::get('/force-delete/{id}', [AdminProductController::class, 'forceDelete'])->name('forceDelete');
+            Route::delete('/force-delete/{id}', [AdminProductController::class, 'forceDelete'])->name('forceDelete');
             Route::post('/variant-force-delete', [AdminProductController::class, 'variantForceDelete'])->name('variant.forceDelete');
         });
 
@@ -431,8 +425,8 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/force-delete', [OrderController::class, 'forceDelete'])->name('forceDelete');
         });
         // REVIEW - FORCE DELETE
-         Route::prefix('reviews')->name('reviews.')->group(function () {
-            Route::get('/force-delete/{id}', [ReviewController::class, 'forceDelete'])->name('forceDelete');
+        Route::prefix('reviews')->name('reviews.')->group(function () {
+            Route::delete('/force-delete/{id}', [ReviewController::class, 'forceDelete'])->name('forceDelete');
         });
         // SIZE - FORCE DELETE
         Route::prefix('listSize')->name('listSize.')->group(function () {

@@ -4,13 +4,30 @@ namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
 class UserRepository implements UserRepositoryInterface
 {
-    public function adminIndexQuery(): Builder
+    protected function adminIndexQuery(): Builder
     {
         return User::with('roles')->withCount(['allOrders as orders_count']);
+    }
+
+    public function paginateForAdmin(array $filters = [], int $perPage = 10): LengthAwarePaginator
+    {
+        return $this->adminIndexQuery()
+            ->when($filters['role'] ?? null, function ($q, $role) {
+                $q->whereHas('roles', fn ($r) => $r->where('slug', $role));
+            })
+            ->when($filters['keyword'] ?? null, function ($q, $keyword) {
+                $q->where(function ($qq) use ($keyword) {
+                    $qq->where('name', 'LIKE', "%{$keyword}%")
+                        ->orWhere('email', 'LIKE', "%{$keyword}%");
+                });
+            })
+            ->orderByDesc('id')
+            ->paginate($perPage);
     }
 
     public function findWithRoles(int $id): User
@@ -23,11 +40,13 @@ class UserRepository implements UserRepositoryInterface
         return User::onlyTrashed()->with('roles')->findOrFail($id);
     }
 
-    public function trashedForAdmin(): Builder
+    public function paginateTrashedForAdmin(int $perPage = 10): LengthAwarePaginator
     {
         return User::onlyTrashed()
             ->with('roles')
-            ->withCount(['allOrders as orders_count']);
+            ->withCount(['allOrders as orders_count'])
+            ->orderByDesc('deleted_at')
+            ->paginate($perPage);
     }
 
     public function countAdmins(): int

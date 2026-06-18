@@ -36,7 +36,7 @@ class VnpayCallbackService
             Log::warning('VNPay return amount mismatch', $this->amountMismatchContext($order, $data));
 
             try {
-                DB::transaction(fn () => $this->vnpay->updateFailureState($order, '97', $data->transactionStatus()));
+                $this->markFailureWithCode($order, '97', $data->transactionStatus());
             } catch (\Throwable $e) {
                 Log::error('VNPay return amount mismatch process error: '.$e->getMessage());
 
@@ -47,39 +47,16 @@ class VnpayCallbackService
         }
 
         try {
-            $success = $data->isSuccessful();
-            $shouldSendMail = false;
+            if ($data->isSuccessful()) {
+                $this->markPaidOnce($order, $data);
 
-            DB::transaction(function () use ($order, $data, $success, &$shouldSendMail) {
-                if ($success) {
-                    if ($order->payment_status !== OrderPaymentStatus::Paid->value) {
-                        $this->inventory->decreaseStockFromOrder($order);
-                        $this->cart->clearUserCartByOrder($order);
-
-                        $this->orders->update($order, array_merge([
-                            'payment_status' => OrderPaymentStatus::Paid->value,
-                            'order_status' => OrderStatus::Pending->value,
-                        ], $this->vnpay->paymentMeta($data)));
-
-                        $shouldSendMail = true;
-                    }
-
-                    return;
-                }
-
-                $this->vnpay->updateFailureState($order, $data->responseCode(), $data->transactionStatus());
-            });
-
-            if ($success) {
                 session()->forget(config('threadly.checkout.buy_now_session_key'));
                 session()->forget(config('threadly.checkout.cart_session_key'));
 
-                if ($shouldSendMail) {
-                    OrderPlaced::dispatch((int) $order->id);
-                }
-
                 return ['ok' => true, 'message' => 'Thanh toán VNPay thành công.'];
             }
+
+            $this->markFailedOnce($order, $data);
 
             return ['ok' => false, 'message' => 'Thanh toán VNPay thất bại hoặc bị hủy.'];
         } catch (\Throwable $e) {
@@ -105,7 +82,7 @@ class VnpayCallbackService
             Log::warning('VNPay IPN amount mismatch', $this->amountMismatchContext($order, $data));
 
             try {
-                DB::transaction(fn () => $this->vnpay->updateFailureState($order, '97', $data->transactionStatus()));
+                $this->markFailureWithCode($order, '97', $data->transactionStatus());
             } catch (\Throwable $e) {
                 Log::error('VNPay IPN amount mismatch process error: '.$e->getMessage());
             }
@@ -114,28 +91,10 @@ class VnpayCallbackService
         }
 
         try {
-            $shouldSendMail = false;
-
-            DB::transaction(function () use ($order, $data, &$shouldSendMail) {
-                if ($data->isSuccessful()) {
-                    if ($order->payment_status !== OrderPaymentStatus::Paid->value) {
-                        $this->inventory->decreaseStockFromOrder($order);
-                        $this->cart->clearUserCartByOrder($order);
-
-                        $this->orders->update($order, array_merge([
-                            'payment_status' => OrderPaymentStatus::Paid->value,
-                            'order_status' => OrderStatus::Pending->value,
-                        ], $this->vnpay->paymentMeta($data)));
-
-                        $shouldSendMail = true;
-                    }
-                } else {
-                    $this->vnpay->updateFailureState($order, $data->responseCode(), $data->transactionStatus());
-                }
-            });
-
-            if ($shouldSendMail) {
-                OrderPlaced::dispatch((int) $order->id);
+            if ($data->isSuccessful()) {
+                $this->markPaidOnce($order, $data);
+            } else {
+                $this->markFailedOnce($order, $data);
             }
 
             return ['RspCode' => '00', 'Message' => 'Confirm Success'];
@@ -144,6 +103,41 @@ class VnpayCallbackService
 
             return ['RspCode' => '99', 'Message' => 'Unknown error'];
         }
+    }
+
+    protected function markPaidOnce(Order $order, VnpayCallbackData $data): void
+    {
+        DB::transaction(function () use ($order, $data) {
+            $lockedOrder = $this->orders->lockById((int) $order->id);
+
+            if ($lockedOrder->payment_status === OrderPaymentStatus::Paid->value) {
+                return;
+            }
+
+            $this->inventory->decreaseStockFromOrder($lockedOrder);
+            $this->cart->clearUserCartByOrder($lockedOrder);
+
+            $this->orders->update($lockedOrder, array_merge([
+                'payment_status' => OrderPaymentStatus::Paid->value,
+                'order_status' => OrderStatus::Pending->value,
+            ], $this->vnpay->paymentMeta($data)));
+
+            DB::afterCommit(fn () => OrderPlaced::dispatch((int) $lockedOrder->id));
+        });
+    }
+
+    protected function markFailedOnce(Order $order, VnpayCallbackData $data): void
+    {
+        $this->markFailureWithCode($order, $data->responseCode(), $data->transactionStatus());
+    }
+
+    protected function markFailureWithCode(Order $order, string $responseCode, ?string $transactionStatus): void
+    {
+        DB::transaction(function () use ($order, $responseCode, $transactionStatus) {
+            $lockedOrder = $this->orders->lockById((int) $order->id);
+
+            $this->vnpay->updateFailureState($lockedOrder, $responseCode, $transactionStatus);
+        });
     }
 
     protected function amountMismatchContext(Order $order, VnpayCallbackData $data): array

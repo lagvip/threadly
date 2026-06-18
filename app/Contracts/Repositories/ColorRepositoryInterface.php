@@ -4,15 +4,10 @@ namespace App\Contracts\Repositories;
 
 use App\Models\Color;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 interface ColorRepositoryInterface
 {
-    public function query(): Builder;
-
-    public function trashedQuery(): Builder;
-
     public function all(): Collection;
 
     public function paginatedForAdmin(string $keyword = '', bool $trashed = false, int $perPage = 10): LengthAwarePaginator;

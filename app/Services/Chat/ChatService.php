@@ -15,9 +15,7 @@ class ChatService
     public function adminIndexData(): array
     {
         return [
-            'conversations' => $this->chats->conversationsForAdmin()
-                ->orderByRaw('COALESCE(last_message_at, created_at) DESC')
-                ->paginate(20),
+            'conversations' => $this->chats->paginateConversationsForAdmin(20),
         ];
     }
 

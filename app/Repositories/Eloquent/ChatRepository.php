@@ -5,12 +5,13 @@ namespace App\Repositories\Eloquent;
 use App\Contracts\Repositories\ChatRepositoryInterface;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class ChatRepository implements ChatRepositoryInterface
 {
-    public function conversationsForAdmin(): Builder
+    protected function conversationsForAdmin(): Builder
     {
         return ChatConversation::with(['user', 'latestMessage.sender'])
             ->withCount([
@@ -18,6 +19,13 @@ class ChatRepository implements ChatRepositoryInterface
                     $query->where('sender_role', 'user')->whereNull('read_at');
                 },
             ]);
+    }
+
+    public function paginateConversationsForAdmin(int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->conversationsForAdmin()
+            ->orderByRaw('COALESCE(last_message_at, created_at) DESC')
+            ->paginate($perPage);
     }
 
     public function findConversation(int $id): ?ChatConversation

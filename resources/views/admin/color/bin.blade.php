@@ -62,11 +62,13 @@
                                 </td>
                                 <td>{{ optional($color->deleted_at)->format('d/m/Y H:i') }}</td>
                                 <td class="d-flex gap-2">
-                                    <a href="{{ route('listColor.restore', $color->id) }}"
-                                       class="btn btn-success btn-sm"
-                                       onclick="return confirm('Khôi phục màu này?')">
-                                        Khôi phục
-                                    </a>
+                                    <form action="{{ route('listColor.restore', $color->id) }}" method="POST"
+                                          onsubmit="return confirm('Khôi phục màu này?')">
+                                        @csrf
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            Khôi phục
+                                        </button>
+                                    </form>
 
                                     <form action="{{ route('listColor.forceDelete', $color->id) }}" method="POST"
                                           onsubmit="return confirm('Xóa vĩnh viễn màu này?')">

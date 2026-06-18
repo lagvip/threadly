@@ -5,14 +5,41 @@ namespace App\Repositories\Eloquent;
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Enums\OrderPaymentStatus;
 use App\Models\Order;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 class OrderRepository implements OrderRepositoryInterface
 {
-    public function adminIndexQuery(): Builder
+    public function paginateForAdmin(array $filters = [], int $perPage = 10): LengthAwarePaginator
     {
-        return Order::with('user');
+        $query = Order::with('user');
+
+        if (! empty($filters['order_code'])) {
+            $query->where('order_code', 'like', '%'.$filters['order_code'].'%');
+        }
+
+        if (! empty($filters['customer'])) {
+            $customer = $filters['customer'];
+
+            $query->where(function ($q) use ($customer) {
+                $q->where('email', 'like', '%'.$customer.'%')
+                    ->orWhere('name', 'like', '%'.$customer.'%')
+                    ->orWhereHas('user', function ($subQuery) use ($customer) {
+                        $subQuery->where('email', 'like', '%'.$customer.'%')
+                            ->orWhere('name', 'like', '%'.$customer.'%');
+                    });
+            });
+        }
+
+        if (! empty($filters['payment_status'])) {
+            $query->where('payment_status', $filters['payment_status']);
+        }
+
+        if (! empty($filters['order_status'])) {
+            $query->where('order_status', $filters['order_status']);
+        }
+
+        return $query->latest()->paginate($perPage);
     }
 
     public function create(array $data): Order
@@ -75,9 +102,12 @@ class OrderRepository implements OrderRepositoryInterface
         return Order::whereKey($id)->lockForUpdate()->firstOrFail();
     }
 
-    public function trashedForAdmin(): Builder
+    public function paginateTrashedForAdmin(int $perPage = 10): LengthAwarePaginator
     {
-        return Order::onlyTrashed()->with('user');
+        return Order::onlyTrashed()
+            ->with('user')
+            ->latest()
+            ->paginate($perPage);
     }
 
     public function countByStatus(string $status): int
@@ -126,9 +156,9 @@ class OrderRepository implements OrderRepositoryInterface
         return Order::where('user_id', $userId)->where('order_status', $status)->count();
     }
 
-    public function clientIndexQuery(int $userId): Builder
+    public function paginateForUser(int $userId, array $filters = [], int $perPage = 10): LengthAwarePaginator
     {
-        return Order::with([
+        $query = Order::with([
             'details.variant',
             'details.product',
             'reviews.variant.color',
@@ -136,6 +166,31 @@ class OrderRepository implements OrderRepositoryInterface
             'refundRequests.admin',
         ])
             ->where('user_id', $userId);
+
+        if (! empty($filters['order_code'])) {
+            $query->where('order_code', 'like', '%'.$filters['order_code'].'%');
+        }
+
+        if (! empty($filters['customer'])) {
+            $keyword = $filters['customer'];
+
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'like', '%'.$keyword.'%')
+                    ->orWhere('email', 'like', '%'.$keyword.'%')
+                    ->orWhere('phone', 'like', '%'.$keyword.'%')
+                    ->orWhere('address', 'like', '%'.$keyword.'%');
+            });
+        }
+
+        if (! empty($filters['payment_status'])) {
+            $query->where('payment_status', $filters['payment_status']);
+        }
+
+        if (! empty($filters['order_status'])) {
+            $query->where('order_status', $filters['order_status']);
+        }
+
+        return $query->latest('id')->paginate($perPage);
     }
 
     public function findForUserWithDetail(int $id, int $userId): Order

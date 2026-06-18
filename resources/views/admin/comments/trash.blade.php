@@ -120,17 +120,22 @@
 
                                         <td>
                                             <div class="d-flex gap-2">
-                                                <a href="{{ route('reviews.restore', $review->id) }}"
-                                                   class="btn btn-soft-success btn-sm"
-                                                   onclick="return confirm('Khôi phục bình luận này?')">
-                                                    <iconify-icon icon="solar:refresh-circle-broken" class="align-middle fs-18"></iconify-icon>
-                                                </a>
+                                                <form action="{{ route('reviews.restore', $review->id) }}" method="POST"
+                                                      onsubmit="return confirm('Khôi phục bình luận này?')">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-soft-success btn-sm">
+                                                        <iconify-icon icon="solar:refresh-circle-broken" class="align-middle fs-18"></iconify-icon>
+                                                    </button>
+                                                </form>
 
-                                                <a href="{{ route('reviews.forceDelete', $review->id) }}"
-                                                   class="btn btn-soft-danger btn-sm"
-                                                   onclick="return confirm('Xóa vĩnh viễn bình luận này?')">
-                                                    <iconify-icon icon="solar:trash-bin-minimalistic-2-broken" class="align-middle fs-18"></iconify-icon>
-                                                </a>
+                                                <form action="{{ route('reviews.forceDelete', $review->id) }}" method="POST"
+                                                      onsubmit="return confirm('Xóa vĩnh viễn bình luận này?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-soft-danger btn-sm">
+                                                        <iconify-icon icon="solar:trash-bin-minimalistic-2-broken" class="align-middle fs-18"></iconify-icon>
+                                                    </button>
+                                                </form>
                                             </div>
                                         </td>
                                     </tr>

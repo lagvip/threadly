@@ -10,7 +10,7 @@ use Illuminate\Support\Collection;
 
 class CategoryRepository implements CategoryRepositoryInterface
 {
-    public function query(): Builder
+    protected function query(): Builder
     {
         return Category::query();
     }
@@ -23,7 +23,7 @@ class CategoryRepository implements CategoryRepositoryInterface
             ->paginate($perPage);
     }
 
-    public function trashedQuery(): Builder
+    protected function trashedQuery(): Builder
     {
         return Category::onlyTrashed();
     }

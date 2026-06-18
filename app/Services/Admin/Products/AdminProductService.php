@@ -22,21 +22,7 @@ class AdminProductService
 
     public function getAllProducts(array $filters = [])
     {
-        $query = $this->products->adminListQuery();
-
-        if (! empty($filters['search'])) {
-            $query->where('name', 'like', '%'.trim($filters['search']).'%');
-        }
-
-        if (! empty($filters['brand_id'])) {
-            $query->where('id_brand', $filters['brand_id']);
-        }
-
-        if (! empty($filters['category_id'])) {
-            $query->where('id_category', $filters['category_id']);
-        }
-
-        return $query->latest('created_at')->paginate(10);
+        return $this->products->paginateForAdmin($filters, 10);
     }
 
     public function getProductById($id)
@@ -46,14 +32,25 @@ class AdminProductService
 
     public function createProduct($data)
     {
+        $newPrimaryImagePath = null;
+
         try {
             if (isset($data['image_primary']) && $data['image_primary'] instanceof UploadedFile) {
-                $data['image_primary'] = $data['image_primary']->store('products', 'public');
+                $newPrimaryImagePath = $data['image_primary']->store('products', 'public');
+                $data['image_primary'] = $newPrimaryImagePath;
             }
 
             unset($data['variants']);
 
-            return $this->products->create($data);
+            try {
+                return DB::transaction(fn () => $this->products->create($data));
+            } catch (\Throwable $e) {
+                if ($newPrimaryImagePath) {
+                    Storage::disk('public')->delete($newPrimaryImagePath);
+                }
+
+                throw $e;
+            }
         } catch (\Exception $e) {
             Log::error('Lỗi khi tạo sản phẩm: '.$e->getMessage());
 
@@ -63,118 +60,143 @@ class AdminProductService
 
     public function updateProduct(array $data, $id, array $variantImageFiles = [], array $newVariantImageFiles = [])
     {
+        $newPrimaryImagePath = null;
+        $newVariantImagePaths = [];
 
         try {
-            return DB::transaction(function () use ($data, $id, $variantImageFiles, $newVariantImageFiles) {
-                $product = $this->products->find((int) $id);
-                $payload = $data;
+            $product = $this->products->find((int) $id);
+            $payload = $data;
+            $oldPrimaryImagePath = $product->image_primary;
 
-                if (isset($payload['image_primary']) && $payload['image_primary'] instanceof UploadedFile) {
-                    if ($product->image_primary) {
-                        Storage::disk('public')->delete($product->image_primary);
+            if (isset($payload['image_primary']) && $payload['image_primary'] instanceof UploadedFile) {
+                $newPrimaryImagePath = $payload['image_primary']->store('products', 'public');
+                $payload['image_primary'] = $newPrimaryImagePath;
+            } else {
+                unset($payload['image_primary']);
+            }
+
+            try {
+                return DB::transaction(function () use ($data, $variantImageFiles, $newVariantImageFiles, $product, $payload, $oldPrimaryImagePath, $newPrimaryImagePath, &$newVariantImagePaths) {
+                    unset($payload['variants'], $payload['variants_new']);
+
+                    $this->products->update($product, $payload);
+
+                    if ($newPrimaryImagePath && $oldPrimaryImagePath && $oldPrimaryImagePath !== $newPrimaryImagePath) {
+                        DB::afterCommit(fn () => Storage::disk('public')->delete($oldPrimaryImagePath));
                     }
-                    $payload['image_primary'] = $payload['image_primary']->store('products', 'public');
-                } else {
-                    unset($payload['image_primary']);
-                }
 
-                unset($payload['variants'], $payload['variants_new']);
+                    $usedCombinations = [];
 
-                $this->products->update($product, $payload);
+                    if (! empty($data['variants']) && is_array($data['variants'])) {
+                        foreach ($data['variants'] as $index => $variantData) {
+                            if (empty($variantData['id'])) {
+                                continue;
+                            }
 
-                $usedCombinations = [];
+                            $variant = $this->variants->findForProduct((int) $variantData['id'], (int) $product->id);
 
-                if (! empty($data['variants']) && is_array($data['variants'])) {
-                    foreach ($data['variants'] as $index => $variantData) {
-                        if (empty($variantData['id'])) {
-                            continue;
-                        }
+                            if (! $variant) {
+                                continue;
+                            }
 
-                        $variant = $this->variants->findForProduct((int) $variantData['id'], (int) $product->id);
+                            $delete = (int) ($variantData['delete'] ?? 0);
 
-                        if (! $variant) {
-                            continue;
-                        }
+                            if ($delete === 1) {
+                                $this->variantService->deleteProductVariant($variant->id);
 
-                        $delete = (int) ($variantData['delete'] ?? 0);
+                                continue;
+                            }
 
-                        if ($delete === 1) {
-                            $this->variantService->deleteProductVariant($variant->id);
+                            $key = $variantData['id_color'].'-'.$variantData['id_size'];
 
-                            continue;
-                        }
+                            if (in_array($key, $usedCombinations)) {
+                                throw new \Exception('Biến thể bị trùng màu sắc và kích cỡ.');
+                            }
 
-                        $key = $variantData['id_color'].'-'.$variantData['id_size'];
+                            $usedCombinations[] = $key;
 
-                        if (in_array($key, $usedCombinations)) {
-                            throw new \Exception('Biến thể bị trùng màu sắc và kích cỡ.');
-                        }
+                            $updateData = [
+                                'id_color' => $variantData['id_color'],
+                                'id_size' => $variantData['id_size'],
+                                'price' => $variantData['price'] ?? 0,
+                                'quantity' => $variantData['quantity'] ?? 0,
+                                'status' => $variantData['status'] ?? ($variant->status ?? ProductStatus::Active->value),
+                            ];
 
-                        $usedCombinations[] = $key;
+                            if (isset($variantImageFiles[$index]['image'])) {
+                                $updateData['image'] = $variantImageFiles[$index]['image'];
+                            }
 
-                        $updateData = [
-                            'id_color' => $variantData['id_color'],
-                            'id_size' => $variantData['id_size'],
-                            'price' => $variantData['price'] ?? 0,
-                            'quantity' => $variantData['quantity'] ?? 0,
-                            'status' => $variantData['status'] ?? ($variant->status ?? ProductStatus::Active->value),
-                        ];
+                            $updated = $this->variantService->updateProductVariant($updateData, $variant->id);
 
-                        if (isset($variantImageFiles[$index]['image'])) {
-                            $updateData['image'] = $variantImageFiles[$index]['image'];
-                        }
+                            if (! $updated) {
+                                throw new \Exception('Không thể cập nhật biến thể sản phẩm.');
+                            }
 
-                        $updated = $this->variantService->updateProductVariant($updateData, $variant->id);
-
-                        if (! $updated) {
-                            throw new \Exception('Không thể cập nhật biến thể sản phẩm.');
-                        }
-                    }
-                }
-
-                if (! empty($data['variants_new']) && is_array($data['variants_new'])) {
-                    foreach ($data['variants_new'] as $index => $variantNew) {
-                        $key = $variantNew['id_color'].'-'.$variantNew['id_size'];
-
-                        if (in_array($key, $usedCombinations)) {
-                            throw new \Exception('Biến thể mới bị trùng màu sắc và kích cỡ.');
-                        }
-
-                        $exists = $this->variants->existsActiveCombination(
-                            (int) $product->id,
-                            (int) $variantNew['id_color'],
-                            (int) $variantNew['id_size']
-                        );
-
-                        if ($exists) {
-                            throw new \Exception('Biến thể mới đã tồn tại.');
-                        }
-
-                        $usedCombinations[] = $key;
-
-                        $newData = [
-                            'id_product' => $product->id,
-                            'id_color' => $variantNew['id_color'],
-                            'id_size' => $variantNew['id_size'],
-                            'price' => $variantNew['price'] ?? 0,
-                            'quantity' => $variantNew['quantity'] ?? 0,
-                            'status' => $variantNew['status'] ?? ProductStatus::Active->value,
-                        ];
-
-                        if (isset($newVariantImageFiles[$index]['image'])) {
-                            $newData['image'] = $newVariantImageFiles[$index]['image'];
-                        }
-
-                        $created = $this->variantService->createProductVariant($newData);
-
-                        if (! $created) {
-                            throw new \Exception('Không thể tạo biến thể mới.');
+                            if (isset($variantImageFiles[$index]['image']) && $updated->image) {
+                                $newVariantImagePaths[] = $updated->image;
+                            }
                         }
                     }
+
+                    if (! empty($data['variants_new']) && is_array($data['variants_new'])) {
+                        foreach ($data['variants_new'] as $index => $variantNew) {
+                            $key = $variantNew['id_color'].'-'.$variantNew['id_size'];
+
+                            if (in_array($key, $usedCombinations)) {
+                                throw new \Exception('Biến thể mới bị trùng màu sắc và kích cỡ.');
+                            }
+
+                            $exists = $this->variants->existsActiveCombination(
+                                (int) $product->id,
+                                (int) $variantNew['id_color'],
+                                (int) $variantNew['id_size']
+                            );
+
+                            if ($exists) {
+                                throw new \Exception('Biến thể mới đã tồn tại.');
+                            }
+
+                            $usedCombinations[] = $key;
+
+                            $newData = [
+                                'id_product' => $product->id,
+                                'id_color' => $variantNew['id_color'],
+                                'id_size' => $variantNew['id_size'],
+                                'price' => $variantNew['price'] ?? 0,
+                                'quantity' => $variantNew['quantity'] ?? 0,
+                                'status' => $variantNew['status'] ?? ProductStatus::Active->value,
+                            ];
+
+                            if (isset($newVariantImageFiles[$index]['image'])) {
+                                $newData['image'] = $newVariantImageFiles[$index]['image'];
+                            }
+
+                            $created = $this->variantService->createProductVariant($newData);
+
+                            if (! $created) {
+                                throw new \Exception('Không thể tạo biến thể mới.');
+                            }
+
+                            if (isset($newVariantImageFiles[$index]['image']) && $created->image) {
+                                $newVariantImagePaths[] = $created->image;
+                            }
+                        }
+                    }
+
+                    return $product;
+                });
+            } catch (\Exception $e) {
+                if ($newPrimaryImagePath) {
+                    Storage::disk('public')->delete($newPrimaryImagePath);
                 }
 
-                return $product;
-            });
+                foreach (array_unique($newVariantImagePaths) as $newVariantImagePath) {
+                    Storage::disk('public')->delete($newVariantImagePath);
+                }
+
+                throw $e;
+            }
         } catch (\Exception $e) {
             Log::error('Lỗi khi cập nhật sản phẩm: '.$e->getMessage());
 
@@ -245,11 +267,15 @@ class AdminProductService
                 return false;
             }
 
-            if ($product->image_primary) {
-                Storage::disk('public')->delete($product->image_primary);
-            }
+            $primaryImagePath = $product->image_primary;
 
-            $this->products->forceDelete($product);
+            DB::transaction(function () use ($product, $primaryImagePath) {
+                $this->products->forceDelete($product);
+
+                if ($primaryImagePath) {
+                    DB::afterCommit(fn () => Storage::disk('public')->delete($primaryImagePath));
+                }
+            });
 
             return true;
         } catch (\Exception $e) {
@@ -292,13 +318,6 @@ class AdminProductService
 
     public function getProductsByCategory($categoryId)
     {
-        return $this->products->adminListQuery()
-            ->with(['variants.color', 'variants.size'])
-            ->where('id_category', $categoryId)
-            ->where('status', ProductStatus::Active->value)
-            ->whereHas('variants', function ($query) {
-                $query->where('price', '>', 0)
-                    ->where('status', ProductStatus::Active->value);
-            });
+        return $this->products->activeProductsForCategory((int) $categoryId);
     }
 }

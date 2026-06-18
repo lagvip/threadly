@@ -62,9 +62,12 @@
                                             </td>
                                             <td>
                                                 <div class="d-flex gap-2">
-                                                    <a href="{{ route('listBanner.restore', $value->id) }}" class="btn btn-soft-success btn-sm" onclick="return confirm('Khôi phục banner này?')">
-                                                        <iconify-icon icon="solar:undo-left-broken" class="align-middle fs-18"></iconify-icon>
-                                                    </a>
+                                                    <form action="{{ route('listBanner.restore', $value->id) }}" method="POST" style="display:inline" onsubmit="return confirm('Khôi phục banner này?')">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-soft-success btn-sm">
+                                                            <iconify-icon icon="solar:undo-left-broken" class="align-middle fs-18"></iconify-icon>
+                                                        </button>
+                                                    </form>
                                                 </div>
                                             </td>
                                         </tr>

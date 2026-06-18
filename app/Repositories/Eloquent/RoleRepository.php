@@ -4,19 +4,34 @@ namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\RoleRepositoryInterface;
 use App\Models\Role;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class RoleRepository implements RoleRepositoryInterface
 {
-    public function queryWithUserCount(): Builder
+    protected function queryWithUserCount(): Builder
     {
         return Role::withCount(['usersWithTrashed as users_count']);
     }
 
-    public function trashedQueryWithUserCount(): Builder
+    protected function trashedQueryWithUserCount(): Builder
     {
         return Role::onlyTrashed()->withCount(['usersWithTrashed as users_count']);
+    }
+
+    public function paginateForAdmin(int $perPage = 10): LengthAwarePaginator
+    {
+        return $this->queryWithUserCount()
+            ->latest()
+            ->paginate($perPage);
+    }
+
+    public function paginateTrashedForAdmin(int $perPage = 10): LengthAwarePaginator
+    {
+        return $this->trashedQueryWithUserCount()
+            ->latest()
+            ->paginate($perPage);
     }
 
     public function ordered(): Collection
@@ -27,6 +42,11 @@ class RoleRepository implements RoleRepositoryInterface
     public function find(int $id): Role
     {
         return Role::findOrFail($id);
+    }
+
+    public function findWithUserCount(int $id): Role
+    {
+        return $this->queryWithUserCount()->findOrFail($id);
     }
 
     public function findBySlug(string $slug): ?Role

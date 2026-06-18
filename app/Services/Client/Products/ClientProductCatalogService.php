@@ -6,7 +6,6 @@ use App\Contracts\Repositories\BrandRepositoryInterface;
 use App\Contracts\Repositories\CategoryRepositoryInterface;
 use App\Contracts\Repositories\ProductRepositoryInterface;
 use App\Contracts\Repositories\ReviewRepositoryInterface;
-use App\Enums\ProductStatus;
 use App\Models\Category;
 use App\Models\Product;
 
@@ -40,20 +39,22 @@ class ClientProductCatalogService
 
     public function searchData(array $filters): array
     {
-        $productsQuery = $this->baseProductQuery();
+        $categoryIds = [];
 
-        $this->applyKeyword($productsQuery, $filters['q'] ?? '', true);
-        $this->applyCategory($productsQuery, $filters['category_id'] ?? null);
-        $this->applyBrands($productsQuery, $filters['brand'] ?? []);
-        $this->applyPrice($productsQuery, $filters['price_min'] ?? null, $filters['price_max'] ?? null);
-        $this->applySort($productsQuery, $filters['sort'] ?? 'newest');
+        if (! empty($filters['category_id'])) {
+            $category = $this->categories->findWithChildrenOrNull((int) $filters['category_id']);
+            $categoryIds = $category ? $this->collectCategoryIds($category) : [];
+            unset($filters['category_id']);
+        }
+
+        $priceRange = $this->products->activeVariantPriceRange($categoryIds);
 
         return [
-            'products' => $productsQuery->paginate(16)->appends($filters),
+            'products' => $this->products->paginateAvailableCatalog($filters, $categoryIds, true, 16)->appends($filters),
             'categories' => $this->rootCategories(),
             'brands' => $this->brands(),
-            'priceRangeMin' => (clone $this->products->activeVariantsQuery())->min('price'),
-            'priceRangeMax' => (clone $this->products->activeVariantsQuery())->max('price'),
+            'priceRangeMin' => $priceRange['min'],
+            'priceRangeMax' => $priceRange['max'],
             'keyword' => $filters['q'] ?? '',
         ];
     }
@@ -62,104 +63,17 @@ class ClientProductCatalogService
     {
         $category = $this->categories->findWithChildren($id);
         $categoryIds = $this->collectCategoryIds($category);
-        $productsQuery = $this->baseProductQuery()
-            ->whereIn('id_category', $categoryIds);
-
-        $this->applyKeyword($productsQuery, $filters['q'] ?? '', false);
-        $this->applyBrands($productsQuery, $filters['brand'] ?? []);
-        $this->applyPrice($productsQuery, $filters['price_min'] ?? null, $filters['price_max'] ?? null);
-        $this->applySort($productsQuery, $filters['sort'] ?? 'newest');
-
-        $variantsQuery = $this->products->activeVariantsQuery($categoryIds);
+        $priceRange = $this->products->activeVariantPriceRange($categoryIds);
 
         return [
             'category' => $category,
-            'products' => $productsQuery->paginate(16)->appends($filters),
+            'products' => $this->products->paginateAvailableCatalog($filters, $categoryIds, false, 16)->appends($filters),
             'categories' => $this->rootCategories(),
             'activeCategoryIds' => $this->collectActiveCategoryPathIds($category),
             'brands' => $this->brands(),
-            'priceRangeMin' => (clone $variantsQuery)->min('price'),
-            'priceRangeMax' => (clone $variantsQuery)->max('price'),
+            'priceRangeMin' => $priceRange['min'],
+            'priceRangeMax' => $priceRange['max'],
         ];
-    }
-
-    protected function baseProductQuery()
-    {
-        return $this->products->availableCatalogQuery();
-    }
-
-    protected function applyKeyword($query, string $keyword, bool $includeBrandCategory): void
-    {
-        if ($keyword === '') {
-            return;
-        }
-
-        if (! $includeBrandCategory) {
-            $query->where(fn ($q) => $q->where('name', 'like', '%'.$keyword.'%')->orWhere('description', 'like', '%'.$keyword.'%'));
-
-            return;
-        }
-
-        $keywordLike = '%'.addcslashes(mb_strtolower($keyword, 'UTF-8'), '\\%_').'%';
-
-        $query->where(function ($q) use ($keywordLike) {
-            $q->whereRaw('LOWER(products.name) COLLATE utf8mb4_bin LIKE ?', [$keywordLike])
-                ->orWhereHas('brand', fn ($brandQuery) => $brandQuery->whereRaw('LOWER(brands.name) COLLATE utf8mb4_bin LIKE ?', [$keywordLike]))
-                ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery->whereRaw('LOWER(categories.name) COLLATE utf8mb4_bin LIKE ?', [$keywordLike]));
-        });
-    }
-
-    protected function applyCategory($query, $categoryId): void
-    {
-        if (! $categoryId) {
-            return;
-        }
-
-        $category = $this->categories->findWithChildrenOrNull((int) $categoryId);
-
-        if ($category) {
-            $query->whereIn('id_category', $this->collectCategoryIds($category));
-        }
-    }
-
-    protected function applyBrands($query, array $brandIds): void
-    {
-        if (! empty($brandIds)) {
-            $query->whereIn('id_brand', $brandIds);
-        }
-    }
-
-    protected function applyPrice($query, $priceMin, $priceMax): void
-    {
-        if (! is_numeric($priceMin) && ! is_numeric($priceMax)) {
-            return;
-        }
-
-        $min = is_numeric($priceMin) ? (float) $priceMin : 0;
-        $max = is_numeric($priceMax) ? (float) $priceMax : null;
-
-        $query->whereHas('variants', function ($q) use ($min, $max) {
-            $q->where('status', ProductStatus::Active->value)->where('price', '>=', $min);
-
-            if ($max !== null) {
-                $q->where('price', '<=', $max);
-            }
-        });
-    }
-
-    protected function applySort($query, string $sort): void
-    {
-        if ($sort === 'price_asc' || $sort === 'price_desc') {
-            $query->orderByRaw(
-                '(select min(pv.price) from product_variants pv where pv.id_product = products.id and pv.status = ? and pv.deleted_at is null) '
-                .($sort === 'price_asc' ? 'asc' : 'desc'),
-                [ProductStatus::Active->value]
-            );
-
-            return;
-        }
-
-        $query->orderByDesc('created_at');
     }
 
     protected function relatedProducts(Product $product)

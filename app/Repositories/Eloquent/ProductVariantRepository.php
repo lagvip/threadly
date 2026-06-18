@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
 
 class ProductVariantRepository implements ProductVariantRepositoryInterface
 {
-    public function query(): Builder
+    protected function query(): Builder
     {
         return ProductVariant::query();
     }

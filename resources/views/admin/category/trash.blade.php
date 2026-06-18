@@ -70,11 +70,13 @@
                                             <td>
                                                 <div class="d-flex gap-2">
                                                     {{-- Nút Khôi phục --}}
-                                                    <a href="{{ route('listCategory.restore', $value->id) }}" 
-                                                       class="btn btn-soft-success btn-sm" title="Khôi phục">
-                                                        <iconify-icon icon="solar:restart-broken" class="align-middle fs-18 me-1"></iconify-icon>
-                                                        Khôi phục
-                                                    </a>
+                                                    <form action="{{ route('listCategory.restore', $value->id) }}" method="POST" style="display:inline">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-soft-success btn-sm" title="Khôi phục">
+                                                            <iconify-icon icon="solar:restart-broken" class="align-middle fs-18 me-1"></iconify-icon>
+                                                            Khôi phục
+                                                        </button>
+                                                    </form>
 
                                                     {{-- Form Xóa vĩnh viễn --}}
                                                     <form action="{{ route('listCategory.forceDelete', $value->id) }}" method="post" style="display:inline">

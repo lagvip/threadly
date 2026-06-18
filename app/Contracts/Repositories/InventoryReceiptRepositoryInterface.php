@@ -3,11 +3,11 @@
 namespace App\Contracts\Repositories;
 
 use App\Models\InventoryReceipt;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 interface InventoryReceiptRepositoryInterface
 {
-    public function queryForAdmin(): Builder;
+    public function paginateForAdmin(array $filters = [], int $perPage = 10): LengthAwarePaginator;
 
     public function create(array $data): InventoryReceipt;
 

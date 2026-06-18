@@ -21,44 +21,15 @@ class AdminReviewService
 
     public function indexData(array $filters): array
     {
-        $query = $this->reviews->queryWithRelations($this->relations);
-
-        if (! empty($filters['search'])) {
-            $search = $filters['search'];
-
-            $query->where(function ($q) use ($search) {
-                $q->where('comment', 'like', "%{$search}%")
-                    ->orWhere('admin_reply', 'like', "%{$search}%")
-                    ->orWhereHas('product', fn ($productQuery) => $productQuery->where('name', 'like', "%{$search}%"))
-                    ->orWhereHas('user', function ($userQuery) use ($search) {
-                        $userQuery->where('name', 'like', "%{$search}%")
-                            ->orWhere('first_name', 'like', "%{$search}%")
-                            ->orWhere('last_name', 'like', "%{$search}%");
-                    });
-            });
-        }
-
-        if (($filters['status'] ?? null) === 'replied') {
-            $query->whereNotNull('admin_reply');
-        } elseif (($filters['status'] ?? null) === 'unreplied') {
-            $query->whereNull('admin_reply');
-        }
-
-        if (! empty($filters['rating'])) {
-            $query->where('rating', (int) $filters['rating']);
-        }
-
         return [
-            'reviews' => Pagination::withQueryString($query->latest()->paginate(10)),
+            'reviews' => Pagination::withQueryString($this->reviews->paginateForAdmin($filters, 10)),
         ];
     }
 
     public function trashData(): array
     {
         return [
-            'trashedReviews' => $this->reviews->trashedWithRelations($this->relations)
-                ->latest('deleted_at')
-                ->paginate(10),
+            'trashedReviews' => $this->reviews->paginateTrashedForAdmin(10),
         ];
     }
 

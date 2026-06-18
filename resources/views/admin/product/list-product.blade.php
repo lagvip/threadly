@@ -331,11 +331,14 @@
                                                 <iconify-icon icon="solar:pen-2-broken" class="align-middle fs-18"></iconify-icon>
                                             </a>
 
-                                            <a href="{{ route('product.destroy', $product->id) }}"
-                                               onclick="return confirm('Bạn có chắc chắn muốn xóa?')"
-                                               class="btn btn-soft-danger btn-sm">
-                                                <iconify-icon icon="solar:trash-bin-minimalistic-2-broken" class="align-middle fs-18"></iconify-icon>
-                                            </a>
+                                            <form action="{{ route('product.destroy', $product->id) }}" method="POST"
+                                                  onsubmit="return confirm('Bạn có chắc chắn muốn xóa?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-soft-danger btn-sm">
+                                                    <iconify-icon icon="solar:trash-bin-minimalistic-2-broken" class="align-middle fs-18"></iconify-icon>
+                                                </button>
+                                            </form>
                                         </div>
                                     </td>
                                 </tr>

@@ -165,6 +165,19 @@ class ArchitectureConventionsTest extends TestCase
         $this->assertSame([], $violations);
     }
 
+    public function test_mutating_admin_routes_do_not_use_get(): void
+    {
+        $contents = file_get_contents(base_path('routes/web.php'));
+        $violations = [];
+        $pattern = '/Route::get\\([^\\n]*(restore|delete|force-delete|destroy)/';
+
+        if (preg_match_all($pattern, $contents, $matches)) {
+            $violations = $matches[0];
+        }
+
+        $this->assertSame([], $violations);
+    }
+
     public function test_view_composers_delegate_to_services(): void
     {
         $violations = [];
@@ -229,6 +242,40 @@ class ArchitectureConventionsTest extends TestCase
         }
 
         $this->assertSame([], $violations);
+    }
+
+    public function test_repository_interfaces_do_not_expose_eloquent_builders(): void
+    {
+        $violations = [];
+
+        foreach ($this->phpFiles(['app/Contracts/Repositories']) as $file) {
+            $contents = file_get_contents($file->getPathname());
+
+            if (
+                str_contains($contents, 'Illuminate\\Database\\Eloquent\\Builder')
+                || preg_match('/:\s*Builder\b/', $contents)
+            ) {
+                $violations[] = $this->relativePath($file);
+            }
+        }
+
+        $this->assertSame([], $violations);
+    }
+
+    public function test_threadly_checkout_session_keys_are_configured(): void
+    {
+        $keys = [
+            'threadly.checkout.cart_session_key',
+            'threadly.checkout.buy_now_session_key',
+            'threadly.checkout.voucher_session_key',
+        ];
+
+        foreach ($keys as $key) {
+            $value = config($key);
+
+            $this->assertIsString($value, $key.' must be configured as a string.');
+            $this->assertNotSame('', trim($value), $key.' must not be empty.');
+        }
     }
 
     public function test_services_do_not_use_db_table_directly(): void

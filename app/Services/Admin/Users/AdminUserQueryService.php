@@ -2,34 +2,22 @@
 
 namespace App\Services\Admin\Users;
 
-use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Contracts\Repositories\RoleRepositoryInterface;
+use App\Contracts\Repositories\UserRepositoryInterface;
 
 class AdminUserQueryService
 {
     public function __construct(
         protected UserRepositoryInterface $users,
         protected RoleRepositoryInterface $roles,
-    ) {
-    }
+    ) {}
 
     public function indexData(array $filters): array
     {
         $role = $filters['role'] ?? null;
         $keyword = $filters['keyword'] ?? null;
 
-        $users = $this->users->adminIndexQuery()
-            ->when($role, function ($q) use ($role) {
-                $q->whereHas('roles', fn ($r) => $r->where('slug', $role));
-            })
-            ->when($keyword, function ($q) use ($keyword) {
-                $q->where(function ($qq) use ($keyword) {
-                    $qq->where('name', 'LIKE', "%{$keyword}%")
-                        ->orWhere('email', 'LIKE', "%{$keyword}%");
-                });
-            })
-            ->orderByDesc('id')
-            ->paginate(10)
+        $users = $this->users->paginateForAdmin($filters, 10)
             ->appends(array_filter([
                 'role' => $role,
                 'keyword' => $keyword,
@@ -46,9 +34,7 @@ class AdminUserQueryService
     public function trashData(): array
     {
         return [
-            'users' => $this->users->trashedForAdmin()
-                ->orderByDesc('deleted_at')
-                ->paginate(10),
+            'users' => $this->users->paginateTrashedForAdmin(10),
         ];
     }
 
@@ -70,7 +56,7 @@ class AdminUserQueryService
         $roles = $this->roles->ordered();
         $hasAdmin = $this->users->adminExistsExcept($user->id);
 
-        if ($this->countAdminUsers() >= 1 && !$user->hasRole('admin')) {
+        if ($this->countAdminUsers() >= 1 && ! $user->hasRole('admin')) {
             $roles = $roles->reject(fn ($role) => $role->slug === 'admin');
         }
 

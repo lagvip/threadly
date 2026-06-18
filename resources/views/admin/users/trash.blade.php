@@ -59,11 +59,13 @@
                                 <td>{{ $user->deleted_at ? $user->deleted_at->format('d/m/Y H:i') : '' }}</td>
                                 <td>
                                     <div class="d-flex gap-2">
-                                        <a href="{{ route('users.restore', $user->id) }}"
-                                           class="btn btn-success btn-sm"
-                                           onclick="return confirm('Khôi phục người dùng này?')">
-                                            Khôi phục
-                                        </a>
+                                        <form action="{{ route('users.restore', $user->id) }}" method="POST"
+                                              onsubmit="return confirm('Khôi phục người dùng này?')">
+                                            @csrf
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                Khôi phục
+                                            </button>
+                                        </form>
 
                                         @if(($user->orders_count ?? 0) == 0)
                                             <form action="{{ route('users.forceDelete', $user->id) }}" method="POST"
