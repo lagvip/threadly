@@ -13,27 +13,8 @@ class AdminRefundQueryService
 
     public function paginated(array $filters): array
     {
-        $query = $this->refundRequests->adminIndexQuery()->latest('id');
-
-        if (! empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
-        if (! empty($filters['keyword'])) {
-            $keyword = trim((string) $filters['keyword']);
-
-            $query->where(function ($q) use ($keyword) {
-                $q->whereHas('order', function ($orderQuery) use ($keyword) {
-                    $orderQuery->where('order_code', 'like', '%'.$keyword.'%');
-                })->orWhereHas('user', function ($userQuery) use ($keyword) {
-                    $userQuery->where('email', 'like', '%'.$keyword.'%')
-                        ->orWhere('name', 'like', '%'.$keyword.'%');
-                });
-            });
-        }
-
         return [
-            'refundRequests' => Pagination::withQueryString($query->paginate(10)),
+            'refundRequests' => Pagination::withQueryString($this->refundRequests->paginateForAdmin($filters, 10)),
             'counts' => $this->counts(),
             'statusOptions' => $this->statusOptions(),
         ];

@@ -4,14 +4,56 @@ namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\ReviewRepositoryInterface;
 use App\Models\Review;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class ReviewRepository implements ReviewRepositoryInterface
 {
-    public function queryWithRelations(array $relations): Builder
+    protected array $adminRelations = [
+        'user',
+        'product',
+        'variant.color',
+        'variant.size',
+        'orderDetail',
+        'admin',
+    ];
+
+    protected function queryWithRelations(array $relations): Builder
     {
         return Review::with($relations);
+    }
+
+    public function paginateForAdmin(array $filters = [], int $perPage = 10): LengthAwarePaginator
+    {
+        $query = $this->queryWithRelations($this->adminRelations);
+
+        if (! empty($filters['search'])) {
+            $search = $filters['search'];
+
+            $query->where(function ($q) use ($search) {
+                $q->where('comment', 'like', "%{$search}%")
+                    ->orWhere('admin_reply', 'like', "%{$search}%")
+                    ->orWhereHas('product', fn ($productQuery) => $productQuery->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        if (($filters['status'] ?? null) === 'replied') {
+            $query->whereNotNull('admin_reply');
+        } elseif (($filters['status'] ?? null) === 'unreplied') {
+            $query->whereNull('admin_reply');
+        }
+
+        if (! empty($filters['rating'])) {
+            $query->where('rating', (int) $filters['rating']);
+        }
+
+        return $query->latest()->paginate($perPage);
     }
 
     public function productComments(int $productId): Collection
@@ -28,9 +70,12 @@ class ReviewRepository implements ReviewRepositoryInterface
         return Review::updateOrCreate($attributes, $values);
     }
 
-    public function trashedWithRelations(array $relations): Builder
+    public function paginateTrashedForAdmin(int $perPage = 10): LengthAwarePaginator
     {
-        return Review::onlyTrashed()->with($relations);
+        return Review::onlyTrashed()
+            ->with($this->adminRelations)
+            ->latest('deleted_at')
+            ->paginate($perPage);
     }
 
     public function findTrashed(int $id): Review

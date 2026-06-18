@@ -15,12 +15,12 @@ use Illuminate\Support\Str;
 
 class VoucherRepository implements VoucherRepositoryInterface
 {
-    public function query(): Builder
+    protected function query(): Builder
     {
         return Voucher::query();
     }
 
-    public function trashedQuery(): Builder
+    protected function trashedQuery(): Builder
     {
         return Voucher::onlyTrashed();
     }

@@ -22,35 +22,8 @@ class AdminOrderQueryService
 
     public function indexData(array $filters): array
     {
-        $query = $this->orders->adminIndexQuery();
-
-        if (! empty($filters['order_code'])) {
-            $query->where('order_code', 'like', '%'.$filters['order_code'].'%');
-        }
-
-        if (! empty($filters['customer'])) {
-            $customer = $filters['customer'];
-
-            $query->where(function ($q) use ($customer) {
-                $q->where('email', 'like', '%'.$customer.'%')
-                    ->orWhere('name', 'like', '%'.$customer.'%')
-                    ->orWhereHas('user', function ($subQuery) use ($customer) {
-                        $subQuery->where('email', 'like', '%'.$customer.'%')
-                            ->orWhere('name', 'like', '%'.$customer.'%');
-                    });
-            });
-        }
-
-        if (! empty($filters['payment_status'])) {
-            $query->where('payment_status', $filters['payment_status']);
-        }
-
-        if (! empty($filters['order_status'])) {
-            $query->where('order_status', $filters['order_status']);
-        }
-
         return [
-            'orders' => Pagination::withQueryString($query->latest()->paginate(10)),
+            'orders' => Pagination::withQueryString($this->orders->paginateForAdmin($filters, 10)),
             'orderCancel' => $this->orders->countByStatus(OrderStatus::Cancelled->value),
             'orderDelivering' => $this->orders->countByStatus(OrderStatus::Shipped->value),
             'pendingPayment' => $this->orders->countPendingPayment(),
@@ -103,9 +76,7 @@ class AdminOrderQueryService
     public function trashData(): array
     {
         return [
-            'orders' => $this->orders->trashedForAdmin()
-                ->latest()
-                ->paginate(10),
+            'orders' => $this->orders->paginateTrashedForAdmin(10),
         ];
     }
 

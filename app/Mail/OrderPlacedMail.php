@@ -40,6 +40,10 @@ class OrderPlacedMail extends Mailable
         }
 
         return $this->subject($subject)
-            ->view('emails.order-placed');
+            ->view('emails.order-placed')
+            ->with([
+                'isVnpay' => $this->order->payment_method === PaymentMethod::Vnpay->value,
+                'isPaid' => $this->order->payment_status === OrderPaymentStatus::Paid->value,
+            ]);
     }
 }

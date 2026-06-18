@@ -3,18 +3,20 @@
 namespace App\Contracts\Repositories;
 
 use App\Models\Role;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 interface RoleRepositoryInterface
 {
-    public function queryWithUserCount(): Builder;
+    public function paginateForAdmin(int $perPage = 10): LengthAwarePaginator;
 
-    public function trashedQueryWithUserCount(): Builder;
+    public function paginateTrashedForAdmin(int $perPage = 10): LengthAwarePaginator;
 
     public function ordered(): Collection;
 
     public function find(int $id): Role;
+
+    public function findWithUserCount(int $id): Role;
 
     public function findBySlug(string $slug): ?Role;
 

@@ -54,12 +54,12 @@
                                             <td>{{ $product->deleted_at }}</td>
                                             <td>
                                                 <div class="d-flex gap-2">
-                                                    <a href="{{ route('product.restore', $product->id) }}" class="btn btn-soft-success btn-sm" onclick="return confirm('Khôi phục?')">
+                                                    <button type="submit" form="restore-product-{{ $product->id }}" class="btn btn-soft-success btn-sm" onclick="return confirm('Khôi phục?')">
                                                         <iconify-icon icon="solar:refresh-circle-broken" class="align-middle fs-18"></iconify-icon>
-                                                    </a>
-                                                    <a href="{{ route('product.forceDelete', $product->id) }}" class="btn btn-soft-danger btn-sm" onclick="return confirm('Xóa vĩnh viễn?')">
+                                                    </button>
+                                                    <button type="submit" form="force-delete-product-{{ $product->id }}" class="btn btn-soft-danger btn-sm" onclick="return confirm('Xóa vĩnh viễn?')">
                                                         <iconify-icon icon="solar:trash-bin-minimalistic-2-broken" class="align-middle fs-18"></iconify-icon>
-                                                    </a>
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -80,6 +80,19 @@
             </div>
         </div>
     </form>
+
+    @if($trashedProducts && $trashedProducts->count() > 0)
+        @foreach($trashedProducts as $product)
+            <form id="restore-product-{{ $product->id }}" action="{{ route('product.restore', $product->id) }}" method="POST" class="d-none">
+                @csrf
+            </form>
+
+            <form id="force-delete-product-{{ $product->id }}" action="{{ route('product.forceDelete', $product->id) }}" method="POST" class="d-none">
+                @csrf
+                @method('DELETE')
+            </form>
+        @endforeach
+    @endif
 
     <script>
         // Xử lý sự kiện cho checkbox "Chọn tất cả" và các checkbox hàng

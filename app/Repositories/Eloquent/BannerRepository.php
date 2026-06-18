@@ -10,7 +10,7 @@ use Illuminate\Support\Collection;
 
 class BannerRepository implements BannerRepositoryInterface
 {
-    public function query(): Builder
+    protected function query(): Builder
     {
         return Banner::query();
     }
@@ -23,7 +23,7 @@ class BannerRepository implements BannerRepositoryInterface
             ->paginate($perPage);
     }
 
-    public function trashedQuery(): Builder
+    protected function trashedQuery(): Builder
     {
         return Banner::onlyTrashed();
     }

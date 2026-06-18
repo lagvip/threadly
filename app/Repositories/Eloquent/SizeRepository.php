@@ -11,12 +11,12 @@ use Illuminate\Support\Facades\DB;
 
 class SizeRepository implements SizeRepositoryInterface
 {
-    public function query(): Builder
+    protected function query(): Builder
     {
         return Size::query();
     }
 
-    public function trashedQuery(): Builder
+    protected function trashedQuery(): Builder
     {
         return Size::onlyTrashed();
     }

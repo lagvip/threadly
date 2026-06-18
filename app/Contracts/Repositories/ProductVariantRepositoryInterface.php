@@ -3,13 +3,10 @@
 namespace App\Contracts\Repositories;
 
 use App\Models\ProductVariant;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 interface ProductVariantRepositoryInterface
 {
-    public function query(): Builder;
-
     public function allWithRelations(): Collection;
 
     public function find(int $id): ProductVariant;

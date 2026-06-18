@@ -11,12 +11,12 @@ use Illuminate\Support\Facades\DB;
 
 class ColorRepository implements ColorRepositoryInterface
 {
-    public function query(): Builder
+    protected function query(): Builder
     {
         return Color::query();
     }
 
-    public function trashedQuery(): Builder
+    protected function trashedQuery(): Builder
     {
         return Color::onlyTrashed();
     }

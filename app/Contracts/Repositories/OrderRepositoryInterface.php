@@ -3,12 +3,12 @@
 namespace App\Contracts\Repositories;
 
 use App\Models\Order;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 interface OrderRepositoryInterface
 {
-    public function adminIndexQuery(): Builder;
+    public function paginateForAdmin(array $filters = [], int $perPage = 10): LengthAwarePaginator;
 
     public function create(array $data): Order;
 
@@ -30,7 +30,7 @@ interface OrderRepositoryInterface
 
     public function lockById(int $id): Order;
 
-    public function trashedForAdmin(): Builder;
+    public function paginateTrashedForAdmin(int $perPage = 10): LengthAwarePaginator;
 
     public function countByStatus(string $status): int;
 
@@ -46,7 +46,7 @@ interface OrderRepositoryInterface
 
     public function countForUserByStatus(int $userId, string $status): int;
 
-    public function clientIndexQuery(int $userId): Builder;
+    public function paginateForUser(int $userId, array $filters = [], int $perPage = 10): LengthAwarePaginator;
 
     public function findForUserWithDetail(int $id, int $userId): Order;
 

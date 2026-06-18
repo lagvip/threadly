@@ -33,9 +33,7 @@ class AdminCategoryQueryService
     {
         $category = $this->categories->findWithParentAndChildren($id);
         $categoryIds = array_merge([$category->id], $category->children->pluck('id')->toArray());
-        $products = $this->products->byCategoryIdsQuery($categoryIds)
-            ->latest('id')
-            ->paginate(10);
+        $products = $this->products->paginateForCategoryIds($categoryIds, 10);
 
         return compact('category', 'products');
     }

@@ -3,11 +3,11 @@
 namespace App\Contracts\Repositories;
 
 use App\Models\RefundRequest;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 interface RefundRequestRepositoryInterface
 {
-    public function adminIndexQuery(): Builder;
+    public function paginateForAdmin(array $filters = [], int $perPage = 10): LengthAwarePaginator;
 
     public function loadForShow(RefundRequest $refundRequest): RefundRequest;
 

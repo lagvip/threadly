@@ -4,13 +4,38 @@ namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\RefundRequestRepositoryInterface;
 use App\Models\RefundRequest;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
 class RefundRequestRepository implements RefundRequestRepositoryInterface
 {
-    public function adminIndexQuery(): Builder
+    protected function adminIndexQuery(): Builder
     {
         return RefundRequest::with(['order', 'user', 'evidences', 'items']);
+    }
+
+    public function paginateForAdmin(array $filters = [], int $perPage = 10): LengthAwarePaginator
+    {
+        $query = $this->adminIndexQuery()->latest('id');
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['keyword'])) {
+            $keyword = trim((string) $filters['keyword']);
+
+            $query->where(function ($q) use ($keyword) {
+                $q->whereHas('order', function ($orderQuery) use ($keyword) {
+                    $orderQuery->where('order_code', 'like', '%'.$keyword.'%');
+                })->orWhereHas('user', function ($userQuery) use ($keyword) {
+                    $userQuery->where('email', 'like', '%'.$keyword.'%')
+                        ->orWhere('name', 'like', '%'.$keyword.'%');
+                });
+            });
+        }
+
+        return $query->paginate($perPage);
     }
 
     public function loadForShow(RefundRequest $refundRequest): RefundRequest

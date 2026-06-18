@@ -38,11 +38,13 @@
                                 <td>{{ $role->users_count ?? 0 }}</td>
                                 <td>{{ $role->deleted_at }}</td>
                                 <td class="d-flex gap-2">
-                                    <a href="{{ route('roles.restore', $role->id) }}"
-                                       class="btn btn-success btn-sm"
-                                       onclick="return confirm('Khôi phục vai trò này?')">
-                                        Khôi phục
-                                    </a>
+                                    <form action="{{ route('roles.restore', $role->id) }}" method="POST"
+                                          onsubmit="return confirm('Khôi phục vai trò này?')">
+                                        @csrf
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            Khôi phục
+                                        </button>
+                                    </form>
 
                                     @if(($role->users_count ?? 0) == 0)
                                         <form action="{{ route('roles.forceDelete', $role->id) }}" method="POST"

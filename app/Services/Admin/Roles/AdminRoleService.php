@@ -14,16 +14,14 @@ class AdminRoleService
     public function indexData(): array
     {
         return [
-            'roles' => $this->roles->queryWithUserCount()->latest()->paginate(10),
+            'roles' => $this->roles->paginateForAdmin(10),
         ];
     }
 
     public function trashData(): array
     {
         return [
-            'roles' => $this->roles->trashedQueryWithUserCount()
-                ->latest()
-                ->paginate(10),
+            'roles' => $this->roles->paginateTrashedForAdmin(10),
         ];
     }
 
@@ -54,7 +52,7 @@ class AdminRoleService
 
     public function softDelete(int $id): void
     {
-        $role = $this->roles->queryWithUserCount()->findOrFail($id);
+        $role = $this->roles->findWithUserCount($id);
 
         if ($role->users_count > 0) {
             throw new RuntimeException('Role này vẫn còn user, không thể xóa.');

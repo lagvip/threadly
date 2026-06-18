@@ -6,6 +6,7 @@ use App\Contracts\Repositories\OrderDetailRepositoryInterface;
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
 use App\Enums\ProductStatus;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -28,9 +29,12 @@ class AdminProductVariantService
 
     public function createProductVariant($data)
     {
+        $newImagePath = null;
+
         try {
             if (isset($data['image']) && $data['image'] instanceof UploadedFile && $data['image']->isValid()) {
-                $data['image'] = $data['image']->store('variants', 'public');
+                $newImagePath = $data['image']->store('variants', 'public');
+                $data['image'] = $newImagePath;
             }
 
             if (! isset($data['status']) || empty($data['status'])) {
@@ -45,7 +49,15 @@ class AdminProductVariantService
                 $data['quantity'] = 0;
             }
 
-            return $this->variants->create($data);
+            try {
+                return DB::transaction(fn () => $this->variants->create($data));
+            } catch (\Throwable $e) {
+                if ($newImagePath) {
+                    Storage::disk('public')->delete($newImagePath);
+                }
+
+                throw $e;
+            }
         } catch (\Exception $e) {
             Log::error('Lỗi khi tạo biến thể sản phẩm: '.$e->getMessage());
 
@@ -55,19 +67,19 @@ class AdminProductVariantService
 
     public function updateProductVariant($data, $id)
     {
+        $newImagePath = null;
+
         try {
             $variant = $this->variants->findWithProduct((int) $id);
+            $oldImagePath = $variant->image;
 
             if (isset($data['status']) && $data['status'] === ProductStatus::Active->value && $variant->product && $variant->product->status !== ProductStatus::Active->value) {
                 throw new \Exception('Không thể kích hoạt biến thể khi sản phẩm cha đang không hoạt động.');
             }
 
             if (isset($data['image']) && $data['image'] instanceof UploadedFile && $data['image']->isValid()) {
-                if ($variant->image) {
-                    Storage::disk('public')->delete($variant->image);
-                }
-
-                $data['image'] = $data['image']->store('variants', 'public');
+                $newImagePath = $data['image']->store('variants', 'public');
+                $data['image'] = $newImagePath;
             } else {
                 unset($data['image']);
             }
@@ -84,7 +96,21 @@ class AdminProductVariantService
                 $data['status'] = $variant->status ?? ProductStatus::Active->value;
             }
 
-            $this->variants->update($variant, $data);
+            try {
+                DB::transaction(function () use ($variant, $data, $oldImagePath, $newImagePath) {
+                    $this->variants->update($variant, $data);
+
+                    if ($newImagePath && $oldImagePath && $oldImagePath !== $newImagePath) {
+                        DB::afterCommit(fn () => Storage::disk('public')->delete($oldImagePath));
+                    }
+                });
+            } catch (\Throwable $e) {
+                if ($newImagePath) {
+                    Storage::disk('public')->delete($newImagePath);
+                }
+
+                throw $e;
+            }
 
             return $variant;
         } catch (\Exception $e) {
@@ -157,16 +183,19 @@ class AdminProductVariantService
     {
         try {
             $variant = $this->variants->findTrashed((int) $id);
+            $imagePath = $variant->image;
 
             if ($this->orderDetails->existsForVariant((int) $id)) {
                 return false;
             }
 
-            if ($variant->image) {
-                Storage::disk('public')->delete($variant->image);
-            }
+            DB::transaction(function () use ($variant, $imagePath) {
+                $this->variants->forceDelete($variant);
 
-            $this->variants->forceDelete($variant);
+                if ($imagePath) {
+                    DB::afterCommit(fn () => Storage::disk('public')->delete($imagePath));
+                }
+            });
 
             return true;
         } catch (\Exception $e) {

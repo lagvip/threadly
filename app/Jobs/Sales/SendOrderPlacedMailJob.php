@@ -32,7 +32,13 @@ class SendOrderPlacedMailJob implements ShouldQueue
             return;
         }
 
-        Mail::to($order->email)->send(new OrderPlacedMail($order));
+        try {
+            Mail::to($order->email)->send(new OrderPlacedMail($order));
+        } catch (\Throwable $e) {
+            Log::error('Send order mail job failed: '.$e->getMessage(), [
+                'order_id' => $this->orderId,
+            ]);
+        }
     }
 
     public function failed(\Throwable $e): void

@@ -26,7 +26,10 @@
                     <td>{{ $brand->name }}</td>
                     <td>{{ $brand->deleted_at->format('d/m/Y H:i') }}</td>
                     <td>
-                        <a href="{{ route('brands.restore', $brand->id) }}" class="btn btn-success btn-sm">Khôi phục</a>
+                        <form action="{{ route('brands.restore', $brand->id) }}" method="POST" style="display:inline">
+                            @csrf
+                            <button type="submit" class="btn btn-success btn-sm">Khôi phục</button>
+                        </form>
                         
                         <form action="{{ route('brands.forceDelete', $brand->id) }}" method="POST" style="display:inline">
                             @csrf

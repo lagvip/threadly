@@ -4,12 +4,13 @@ namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\InventoryReceiptRepositoryInterface;
 use App\Models\InventoryReceipt;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 class InventoryReceiptRepository implements InventoryReceiptRepositoryInterface
 {
-    public function queryForAdmin(): Builder
+    protected function queryForAdmin(): Builder
     {
         return InventoryReceipt::query()
             ->with('creator')
@@ -20,6 +21,26 @@ class InventoryReceiptRepository implements InventoryReceiptRepositoryInterface
                     ->selectRaw('COALESCE(SUM(quantity * COALESCE(unit_cost, 0)), 0)')
                     ->whereColumn('inventory_receipt_items.inventory_receipt_id', 'inventory_receipts.id'),
             ]);
+    }
+
+    public function paginateForAdmin(array $filters = [], int $perPage = 10): LengthAwarePaginator
+    {
+        $query = $this->queryForAdmin();
+
+        if (! empty($filters['keyword'])) {
+            $keyword = trim((string) $filters['keyword']);
+
+            $query->where(function ($q) use ($keyword) {
+                $q->where('receipt_code', 'like', '%'.$keyword.'%')
+                    ->orWhereHas('creator', fn ($userQuery) => $userQuery->where('name', 'like', '%'.$keyword.'%'));
+            });
+        }
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        return $query->latest('id')->paginate($perPage);
     }
 
     public function create(array $data): InventoryReceipt

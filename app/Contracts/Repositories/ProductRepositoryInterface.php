@@ -3,7 +3,7 @@
 namespace App\Contracts\Repositories;
 
 use App\Models\Product;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 interface ProductRepositoryInterface
@@ -28,7 +28,7 @@ interface ProductRepositoryInterface
 
     public function forceDelete(Product $product): bool;
 
-    public function adminListQuery(): Builder;
+    public function paginateForAdmin(array $filters = [], int $perPage = 10): LengthAwarePaginator;
 
     public function trashedForAdmin();
 
@@ -36,15 +36,19 @@ interface ProductRepositoryInterface
 
     public function deleteMany(array $ids): int;
 
-    public function byCategoryIdsQuery(array $categoryIds): Builder;
+    public function paginateForCategoryIds(array $categoryIds, int $perPage = 10): LengthAwarePaginator;
 
     public function relatedAvailable(Product $product, int $limit = 8);
 
-    public function availableCatalogQuery(): Builder;
+    public function paginateAvailableCatalog(array $filters = [], array $categoryIds = [], bool $includeBrandCategory = true, int $perPage = 16): LengthAwarePaginator;
 
-    public function activeProductsQuery(): Builder;
+    public function randomActiveProducts(int $limit): Collection;
 
-    public function activeVariantsQuery(array $categoryIds = []): Builder;
+    public function featuredActiveProducts(array $soldProductIds, int $limit = 10): Collection;
+
+    public function activeVariantPriceRange(array $categoryIds = []): array;
+
+    public function activeProductsForCategory(int $categoryId): Collection;
 
     public function topSoldProductIds(int $limit = 12): array;
 

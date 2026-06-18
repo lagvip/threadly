@@ -22,23 +22,8 @@ class AdminInventoryReceiptQueryService
 
     public function indexData(array $filters): array
     {
-        $query = $this->receipts->queryForAdmin();
-
-        if (! empty($filters['keyword'])) {
-            $keyword = trim((string) $filters['keyword']);
-
-            $query->where(function ($q) use ($keyword) {
-                $q->where('receipt_code', 'like', '%'.$keyword.'%')
-                    ->orWhereHas('creator', fn ($userQuery) => $userQuery->where('name', 'like', '%'.$keyword.'%'));
-            });
-        }
-
-        if (! empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
         return [
-            'receipts' => Pagination::withQueryString($query->latest('id')->paginate(10)),
+            'receipts' => Pagination::withQueryString($this->receipts->paginateForAdmin($filters, 10)),
             'filters' => $filters,
             'receiptStatusLabels' => $this->receiptStatusLabels(),
             'receiptStatusBadges' => $this->receiptStatusBadges(),
@@ -63,28 +48,8 @@ class AdminInventoryReceiptQueryService
 
     public function movementsData(array $filters): array
     {
-        $query = $this->stockMovements->queryForAdmin();
-
-        if (! empty($filters['keyword'])) {
-            $keyword = trim((string) $filters['keyword']);
-
-            $query->where(function ($q) use ($keyword) {
-                if (ctype_digit($keyword)) {
-                    $q->orWhere('product_variant_id', (int) $keyword);
-                }
-
-                $q->orWhereHas('variant.product', fn ($productQuery) => $productQuery->where('name', 'like', '%'.$keyword.'%'))
-                    ->orWhereHas('variant.color', fn ($colorQuery) => $colorQuery->where('name', 'like', '%'.$keyword.'%'))
-                    ->orWhereHas('variant.size', fn ($sizeQuery) => $sizeQuery->where('name', 'like', '%'.$keyword.'%'));
-            });
-        }
-
-        if (! empty($filters['type'])) {
-            $query->where('type', $filters['type']);
-        }
-
         return [
-            'movements' => Pagination::withQueryString($query->paginate(20)),
+            'movements' => Pagination::withQueryString($this->stockMovements->paginateForAdmin($filters, 20)),
             'filters' => $filters,
             'movementTypeLabels' => $this->movementTypeLabels(),
             'importMovementType' => StockMovementType::Import->value,

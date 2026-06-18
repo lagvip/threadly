@@ -4,12 +4,12 @@ namespace App\Contracts\Repositories;
 
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 interface ChatRepositoryInterface
 {
-    public function conversationsForAdmin(): Builder;
+    public function paginateConversationsForAdmin(int $perPage = 20): LengthAwarePaginator;
 
     public function findConversation(int $id): ?ChatConversation;
 

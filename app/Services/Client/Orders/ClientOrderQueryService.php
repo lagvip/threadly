@@ -14,33 +14,8 @@ class ClientOrderQueryService
 
     public function indexData(int $userId, array $filters): array
     {
-        $query = $this->orders->clientIndexQuery($userId);
-
-        if (! empty($filters['order_code'])) {
-            $query->where('order_code', 'like', '%'.$filters['order_code'].'%');
-        }
-
-        if (! empty($filters['customer'])) {
-            $keyword = $filters['customer'];
-
-            $query->where(function ($q) use ($keyword) {
-                $q->where('name', 'like', '%'.$keyword.'%')
-                    ->orWhere('email', 'like', '%'.$keyword.'%')
-                    ->orWhere('phone', 'like', '%'.$keyword.'%')
-                    ->orWhere('address', 'like', '%'.$keyword.'%');
-            });
-        }
-
-        if (! empty($filters['payment_status'])) {
-            $query->where('payment_status', $filters['payment_status']);
-        }
-
-        if (! empty($filters['order_status'])) {
-            $query->where('order_status', $filters['order_status']);
-        }
-
         return [
-            'orders' => Pagination::withQueryString($query->latest('id')->paginate(10)),
+            'orders' => Pagination::withQueryString($this->orders->paginateForUser($userId, $filters, 10)),
             'paymentStatusOptions' => $this->paymentStatusOptions(),
             'orderStatusOptions' => $this->orderStatusOptions(),
             'approvedRefundRequestStatus' => RefundRequestStatus::Approved->value,
