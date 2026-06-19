@@ -101,10 +101,12 @@ class GhnService
         $json = $response->json();
 
         // Log response để debug khi GHN lỗi hoặc phí ship trả về sai.
-        Log::info('GHN fee response', [
-            'status' => $response->status(),
-            'body' => $json,
-        ]);
+        if ($this->shouldLogPayloads()) {
+            Log::info('GHN fee response', [
+                'status' => $response->status(),
+                'body' => $json,
+            ]);
+        }
 
         // Nếu API lỗi thì trả 0 để không làm vỡ checkout.
         if (! $response->successful()) {
@@ -167,11 +169,13 @@ class GhnService
         // Tạo payload theo format GHN yêu cầu.
         $payload = $this->buildCreateOrderPayload($order);
 
-        Log::info('GHN create order payload', [
-            'order_id' => $order->id,
-            'order_code' => $order->order_code,
-            'payload' => $payload,
-        ]);
+        if ($this->shouldLogPayloads()) {
+            Log::info('GHN create order payload', [
+                'order_id' => $order->id,
+                'order_code' => $order->order_code,
+                'payload' => $payload,
+            ]);
+        }
 
         // Gọi API GHN tạo vận đơn.
         $response = Http::withHeaders($this->headers())
@@ -179,11 +183,13 @@ class GhnService
 
         $json = $response->json();
 
-        Log::info('GHN create order response', [
-            'order_id' => $order->id,
-            'status' => $response->status(),
-            'body' => $json,
-        ]);
+        if ($this->shouldLogPayloads()) {
+            Log::info('GHN create order response', [
+                'order_id' => $order->id,
+                'status' => $response->status(),
+                'body' => $json,
+            ]);
+        }
 
         // Nếu GHN trả lỗi thì ném exception để controller báo admin.
         if (! $response->successful() || (int) data_get($json, 'code') !== 200) {
@@ -238,11 +244,13 @@ class GhnService
 
         $json = $response->json();
 
-        Log::info('GHN order detail response', [
-            'ghn_order_code' => $ghnOrderCode,
-            'status' => $response->status(),
-            'body' => $json,
-        ]);
+        if ($this->shouldLogPayloads()) {
+            Log::info('GHN order detail response', [
+                'ghn_order_code' => $ghnOrderCode,
+                'status' => $response->status(),
+                'body' => $json,
+            ]);
+        }
 
         if (! $response->successful() || (int) data_get($json, 'code') !== 200) {
             throw new RuntimeException(data_get($json, 'message') ?: 'Không lấy được thông tin đơn GHN.');
@@ -557,10 +565,12 @@ class GhnService
 
         $json = $response->json();
 
-        Log::info('GHN available-services response', [
-            'status' => $response->status(),
-            'body' => $json,
-        ]);
+        if ($this->shouldLogPayloads()) {
+            Log::info('GHN available-services response', [
+                'status' => $response->status(),
+                'body' => $json,
+            ]);
+        }
 
         // Nếu API lỗi thì trả null để bên ngoài fallback hoặc báo lỗi.
         if (! $response->successful() || (int) data_get($json, 'code', 500) !== 200) {
@@ -651,5 +661,10 @@ class GhnService
             OrderStatus::Delivered->value,
             OrderStatus::Cancelled->value,
         ], true);
+    }
+
+    protected function shouldLogPayloads(): bool
+    {
+        return (bool) config('threadly.integrations.log_payloads', false);
     }
 }

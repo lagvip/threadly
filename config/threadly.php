@@ -13,4 +13,8 @@ return [
             'client.partials.footer',
         ],
     ],
+
+    'integrations' => [
+        'log_payloads' => env('THREADLY_LOG_INTEGRATION_PAYLOADS', false),
+    ],
 ];

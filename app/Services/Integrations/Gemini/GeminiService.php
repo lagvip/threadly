@@ -69,11 +69,13 @@ class GeminiService
         $json = $response->json();
 
         // Log response thô để debug khi Gemini trả lỗi, trả rỗng hoặc bị cắt output.
-        Log::info('Gemini raw response', [
-            'finishReason' => data_get($json, 'candidates.0.finishReason'),
-            'usageMetadata' => data_get($json, 'usageMetadata'),
-            'response' => $json,
-        ]);
+        if ((bool) config('threadly.integrations.log_payloads', false)) {
+            Log::info('Gemini raw response', [
+                'finishReason' => data_get($json, 'candidates.0.finishReason'),
+                'usageMetadata' => data_get($json, 'usageMetadata'),
+                'response' => $json,
+            ]);
+        }
 
         // Lấy các phần text trong câu trả lời của Gemini.
         $parts = data_get($json, 'candidates.0.content.parts', []);

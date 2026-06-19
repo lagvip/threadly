@@ -16,7 +16,7 @@ class StoreCategoryRequest extends FormRequest
     {
         return [
             'name' => ['required', Rule::unique('categories', 'name')],
-            'image' => ['required', 'image', 'max:2048'],
+            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:2048'],
             'id_parent' => ['nullable', 'exists:categories,id'],
         ];
     }

@@ -178,6 +178,25 @@ class ArchitectureConventionsTest extends TestCase
         $this->assertSame([], $violations);
     }
 
+    public function test_image_upload_requests_whitelist_safe_bitmap_mimes(): void
+    {
+        $violations = [];
+
+        foreach ($this->phpFiles(['app/Http/Requests']) as $file) {
+            foreach (file($file->getPathname()) ?: [] as $lineNumber => $line) {
+                if (! str_contains($line, "'image'")) {
+                    continue;
+                }
+
+                if (! str_contains($line, 'mimes:') || str_contains($line, 'svg')) {
+                    $violations[] = $this->relativePath($file).':'.($lineNumber + 1);
+                }
+            }
+        }
+
+        $this->assertSame([], $violations);
+    }
+
     public function test_view_composers_delegate_to_services(): void
     {
         $violations = [];

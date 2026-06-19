@@ -16,7 +16,7 @@ class UpdateCategoryRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255', Rule::unique('categories', 'name')->ignore($this->route('id'))],
-            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:2048'],
             'id_parent' => ['nullable', 'exists:categories,id'],
         ];
     }
@@ -28,7 +28,7 @@ class UpdateCategoryRequest extends FormRequest
             'name.unique' => 'Tên danh mục đã tồn tại.',
             'name.max' => 'Tên danh mục không được vượt quá 255 ký tự.',
             'image.image' => 'File tải lên phải là hình ảnh.',
-            'image.mimes' => 'Hình ảnh phải có định dạng: jpeg, png, jpg, gif, svg.',
+            'image.mimes' => 'Hình ảnh phải có định dạng: jpg, jpeg, png, webp, gif.',
             'image.max' => 'Kích thước hình ảnh không được vượt quá 2MB.',
             'id_parent.exists' => 'Danh mục cha không tồn tại.',
         ];

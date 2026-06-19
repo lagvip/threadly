@@ -13,11 +13,21 @@ use Tests\TestCase;
 
 class GhnWebhookServiceTest extends TestCase
 {
-    public function test_valid_secret_returns_true_when_secret_is_not_configured(): void
+    public function test_valid_secret_allows_missing_secret_only_in_local_or_testing(): void
     {
         config(['services.ghn.webhook_secret' => '']);
 
         $this->assertTrue($this->service()->isValidSecret(GhnWebhookData::fromArray([])));
+    }
+
+    public function test_valid_secret_rejects_missing_secret_in_production(): void
+    {
+        config([
+            'app.env' => 'production',
+            'services.ghn.webhook_secret' => '',
+        ]);
+
+        $this->assertFalse($this->service()->isValidSecret(GhnWebhookData::fromArray([])));
     }
 
     public function test_valid_secret_accepts_matching_header(): void
