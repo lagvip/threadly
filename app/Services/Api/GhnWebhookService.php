@@ -22,7 +22,7 @@ class GhnWebhookService
         $secret = (string) config('services.ghn.webhook_secret');
 
         if ($secret === '') {
-            return true;
+            return in_array((string) config('app.env'), ['local', 'testing'], true);
         }
 
         $received = collect($data->secretCandidates())

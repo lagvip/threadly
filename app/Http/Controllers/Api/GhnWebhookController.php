@@ -30,9 +30,13 @@ class GhnWebhookController extends Controller
                 'message' => $result['message'],
             ]);
         } catch (\Throwable $e) {
-            Log::error('GHN webhook process failed: '.$e->getMessage(), [
-                'payload' => $data->payload,
-            ]);
+            $context = [];
+
+            if ((bool) config('threadly.integrations.log_payloads', false)) {
+                $context['payload'] = $data->payload;
+            }
+
+            Log::error('GHN webhook process failed: '.$e->getMessage(), $context);
 
             return response()->json([
                 'success' => false,

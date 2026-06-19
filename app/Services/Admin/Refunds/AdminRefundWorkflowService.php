@@ -4,6 +4,7 @@ namespace App\Services\Admin\Refunds;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
+use App\Contracts\Repositories\RefundRequestItemRepositoryInterface;
 use App\Contracts\Repositories\RefundRequestRepositoryInterface;
 use App\Contracts\Repositories\WalletRepositoryInterface;
 use App\Contracts\Repositories\WalletTransactionRepositoryInterface;
@@ -30,6 +31,7 @@ class AdminRefundWorkflowService
         protected OrderRepositoryInterface $orders,
         protected ProductVariantRepositoryInterface $variants,
         protected RefundRequestRepositoryInterface $refundRequests,
+        protected RefundRequestItemRepositoryInterface $refundItems,
         protected WalletRepositoryInterface $wallets,
         protected WalletTransactionRepositoryInterface $walletTransactions,
     ) {}
