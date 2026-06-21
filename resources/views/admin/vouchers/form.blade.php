@@ -76,7 +76,7 @@
 <div class="mb-3">
     <label>Số lượt dùng</label>
     <input type="number" name="quantity" class="form-control" min="0"
-           value="{{ old('quantity', isset($voucher) ? ($voucher->quantity === 0 ? '' : $voucher->quantity) : '') }}"
+           value="{{ old('quantity', isset($voucher) ? ($voucher->is_unlimited ? '' : $voucher->quantity) : '') }}"
            placeholder="0 = vô hạn">
     <small class="form-text text-muted">Bỏ trống hoặc nhập 0 nếu muốn số lượt dùng vô hạn.</small>
     @error('quantity')

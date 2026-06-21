@@ -25,13 +25,13 @@ class ClientOrderWorkflowService
 
     public function confirmReceived(int $id, int $userId): void
     {
-        $order = $this->orders->findForUser($id, $userId);
+        DB::transaction(function () use ($id, $userId) {
+            $order = $this->orders->lockForUser($id, $userId);
 
-        if (! $order->can_confirm_received) {
-            throw new RuntimeException('Đơn hàng chưa đủ điều kiện để xác nhận đã nhận hàng.');
-        }
+            if (! $order->can_confirm_received) {
+                throw new RuntimeException('Đơn hàng chưa đủ điều kiện để xác nhận đã nhận hàng.');
+            }
 
-        DB::transaction(function () use ($order, $userId) {
             $this->orders->update($order, [
                 'customer_confirmed_at' => now(),
             ]);

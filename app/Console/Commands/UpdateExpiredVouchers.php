@@ -2,9 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Enums\VoucherStatus;
-use App\Models\Voucher;
-use Carbon\Carbon;
+use App\Services\Admin\Vouchers\AdminVoucherService;
 use Illuminate\Console\Command;
 
 class UpdateExpiredVouchers extends Command
@@ -26,23 +24,15 @@ class UpdateExpiredVouchers extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(AdminVoucherService $vouchers)
     {
-        $now = Carbon::now();
+        $count = $vouchers->expireEndedVouchers();
 
-        $expiredVouchers = Voucher::where('end_date', '<', $now)
-            ->where('status', VoucherStatus::Active->value)
-            ->get();
-
-        if ($expiredVouchers->isEmpty()) {
+        if ($count === 0) {
             $this->info('Không có voucher hết hạn nào để cập nhật.');
 
             return Command::SUCCESS;
         }
-
-        $count = Voucher::where('end_date', '<', $now)
-            ->where('status', VoucherStatus::Active->value)
-            ->update(['status' => VoucherStatus::Expired->value]);
 
         $this->info("Đã cập nhật {$count} voucher hết hạn.");
 

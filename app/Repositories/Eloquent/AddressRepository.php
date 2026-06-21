@@ -4,10 +4,16 @@ namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\AddressRepositoryInterface;
 use App\Models\Address;
+use App\Models\User;
 use Illuminate\Support\Collection;
 
 class AddressRepository implements AddressRepositoryInterface
 {
+    public function lockUser(int $userId): void
+    {
+        User::whereKey($userId)->lockForUpdate()->firstOrFail();
+    }
+
     public function forUser(int $userId): Collection
     {
         return Address::where('user_id', $userId)

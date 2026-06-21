@@ -5,6 +5,7 @@ namespace App\Services\Client\Cart;
 use App\Contracts\Repositories\CartRepositoryInterface;
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
 use App\Models\Cart;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class ClientCartService
@@ -31,31 +32,41 @@ class ClientCartService
 
     public function add(int $userId, int $variantId, int $quantity): void
     {
-        $variant = $this->variants->find($variantId);
-
-        if ($variant->quantity < 1) {
-            throw new RuntimeException('Biến thể này đã hết hàng.');
+        if ($quantity < 1) {
+            throw new RuntimeException('Số lượng phải lớn hơn 0.');
         }
 
-        $cart = $this->carts->firstOrCreateForUser($userId);
-        $cartDetail = $this->carts->findDetailByVariant($cart->id, $variant->id);
-        $newQty = ($cartDetail ? $cartDetail->quantity : 0) + $quantity;
+        DB::transaction(function () use ($userId, $variantId, $quantity) {
+            $variant = $this->variants->lockAvailableForCart($variantId);
 
-        if ($newQty > $variant->quantity) {
-            throw new RuntimeException('Số lượng vượt quá tồn kho.');
-        }
+            if (! $variant) {
+                throw new RuntimeException('Sản phẩm hoặc biến thể hiện không còn được bán.');
+            }
 
-        if ($cartDetail) {
-            $this->carts->updateDetail($cartDetail, ['quantity' => $newQty]);
+            if ((int) $variant->quantity < 1) {
+                throw new RuntimeException('Biến thể này đã hết hàng.');
+            }
 
-            return;
-        }
+            $cart = $this->carts->firstOrCreateForUser($userId);
+            $cartDetail = $this->carts->lockDetailByVariant((int) $cart->id, (int) $variant->id);
+            $newQty = ($cartDetail ? (int) $cartDetail->quantity : 0) + $quantity;
 
-        $this->carts->createDetail([
-            'id_cart' => $cart->id,
-            'id_variant' => $variant->id,
-            'quantity' => $quantity,
-        ]);
+            if ($newQty > (int) $variant->quantity) {
+                throw new RuntimeException('Số lượng vượt quá tồn kho.');
+            }
+
+            if ($cartDetail) {
+                $this->carts->updateDetail($cartDetail, ['quantity' => $newQty]);
+
+                return;
+            }
+
+            $this->carts->createDetail([
+                'id_cart' => $cart->id,
+                'id_variant' => $variant->id,
+                'quantity' => $quantity,
+            ]);
+        });
     }
 
     public function update(int $userId, array $quantities): void
@@ -66,24 +77,31 @@ class ClientCartService
             throw new RuntimeException('Không tìm thấy giỏ hàng.');
         }
 
-        $cartItems = $this->carts->detailsForUpdate($cart->id, array_keys($quantities));
+        DB::transaction(function () use ($cart, $quantities) {
+            $cartItems = $this->carts->detailsForUpdate($cart->id, array_keys($quantities));
 
-        foreach ($cartItems as $item) {
-            $newQty = (int) ($quantities[$item->id] ?? 1);
-            $stock = (int) ($item->variant->quantity ?? 0);
+            foreach ($cartItems as $item) {
+                $newQty = (int) ($quantities[$item->id] ?? 1);
 
-            if ($stock < 1) {
-                $this->carts->deleteDetail($item);
+                if ($newQty < 1) {
+                    throw new RuntimeException('Số lượng phải lớn hơn 0.');
+                }
 
-                continue;
+                $variant = $this->variants->lockAvailableForCart((int) $item->id_variant);
+
+                if (! $variant || (int) $variant->quantity < 1) {
+                    $this->carts->deleteDetail($item);
+
+                    continue;
+                }
+
+                if ($newQty > (int) $variant->quantity) {
+                    throw new RuntimeException('Sản phẩm "'.($variant->product->name ?? 'N/A').'" vượt quá tồn kho.');
+                }
+
+                $this->carts->updateDetail($item, ['quantity' => $newQty]);
             }
-
-            if ($newQty > $stock) {
-                throw new RuntimeException('Sản phẩm "'.($item->variant->product->name ?? 'N/A').'" vượt quá tồn kho.');
-            }
-
-            $this->carts->updateDetail($item, ['quantity' => $newQty]);
-        }
+        });
 
         $this->syncSelectedCheckoutItems($cart);
     }

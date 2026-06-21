@@ -36,7 +36,5 @@ interface CartRepositoryInterface
 
     public function deleteAllDetails(int $cartId): int;
 
-    public function deleteDetailsByVariants(int $cartId, array $variantIds): int;
-
     public function validDetailIds(int $cartId, array $ids): array;
 }

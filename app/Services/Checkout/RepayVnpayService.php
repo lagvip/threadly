@@ -3,7 +3,6 @@
 namespace App\Services\Checkout;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
-use App\Contracts\Repositories\ProductVariantRepositoryInterface;
 use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
@@ -16,9 +15,9 @@ class RepayVnpayService
 {
     public function __construct(
         protected OrderRepositoryInterface $orders,
-        protected ProductVariantRepositoryInterface $variants,
         protected CheckoutVoucherService $vouchers,
         protected VnpayPaymentService $vnpay,
+        protected CheckoutInventoryService $inventory,
     ) {}
 
     public function execute(User $user, int $orderId, ?string $clientIp = null): string
@@ -38,34 +37,32 @@ class RepayVnpayService
         }
 
         try {
-            DB::transaction(function () use ($order) {
-                foreach ($order->details as $detail) {
-                    if (! $detail->variant_id) {
-                        throw new RuntimeException('Có sản phẩm trong đơn không còn biến thể hợp lệ.');
-                    }
+            return DB::transaction(function () use ($order, $clientIp) {
+                $lockedOrder = $this->orders->lockById((int) $order->id);
 
-                    $variant = $this->variants->lockById((int) $detail->variant_id);
-
-                    if (! $variant) {
-                        throw new RuntimeException('Có sản phẩm trong đơn không còn tồn tại.');
-                    }
-
-                    if ((int) $variant->quantity < (int) $detail->quantity) {
-                        throw new RuntimeException('Sản phẩm "'.($detail->product_name ?? 'N/A').'" không đủ tồn kho để thanh toán lại.');
-                    }
+                if ((int) $lockedOrder->user_id !== (int) $order->user_id || ! $lockedOrder->can_repay) {
+                    throw new RuntimeException('Đơn này không còn ở trạng thái cho phép thanh toán lại.');
                 }
 
-                $this->vouchers->reserveVoucherForRepay($order);
+                $lockedOrder->loadMissing('details');
 
-                $this->orders->update($order, [
-                    'previous_status' => $order->order_status,
+                if ($lockedOrder->details->isEmpty()) {
+                    throw new RuntimeException('Đơn hàng không có sản phẩm để thanh toán lại.');
+                }
+
+                $this->vouchers->reserveVoucherForRepay($lockedOrder);
+                $this->inventory->decreaseStockFromOrder($lockedOrder);
+
+                $this->orders->update($lockedOrder, [
+                    'previous_status' => $lockedOrder->order_status,
                     'order_status' => OrderStatus::Pending->value,
                     'payment_status' => OrderPaymentStatus::Pending->value,
                     'cancel_reason' => null,
+                    'voucher_released_at' => null,
                 ]);
-            });
 
-            return $this->vnpay->createPaymentUrl($order, $clientIp);
+                return $this->vnpay->createPaymentUrl($lockedOrder, $clientIp);
+            });
         } catch (RuntimeException $e) {
             throw $e;
         } catch (\Throwable $e) {

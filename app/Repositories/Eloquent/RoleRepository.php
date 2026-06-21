@@ -54,6 +54,11 @@ class RoleRepository implements RoleRepositoryInterface
         return Role::where('slug', $slug)->first();
     }
 
+    public function lockBySlug(string $slug): ?Role
+    {
+        return Role::where('slug', $slug)->lockForUpdate()->first();
+    }
+
     public function findTrashedWithUserCount(int $id): Role
     {
         return Role::onlyTrashed()

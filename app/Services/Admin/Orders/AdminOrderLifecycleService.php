@@ -22,6 +22,14 @@ class AdminOrderLifecycleService
 
     public function updateStatus(Order $order, string $newStatus, ?string $note, int $adminId): void
     {
+        DB::transaction(function () use ($order, $newStatus, $note, $adminId) {
+            $order = $this->orders->lockById((int) $order->id);
+            $this->applyStatusUpdate($order, $newStatus, $note, $adminId);
+        });
+    }
+
+    protected function applyStatusUpdate(Order $order, string $newStatus, ?string $note, int $adminId): void
+    {
         $currentStatus = $order->order_status;
         $currentEnum = OrderStatus::from($currentStatus);
         $newEnum = OrderStatus::from($newStatus);
@@ -108,13 +116,11 @@ class AdminOrderLifecycleService
             throw new RuntimeException('Chỉ có thể hủy khi đơn đang chờ xử lý hoặc đang xử lý.');
         }
 
-        DB::transaction(function () use ($order) {
-            $this->orders->update($order, [
-                'order_status' => OrderStatus::Cancelled->value,
-            ]);
+        $this->orders->update($order, [
+            'order_status' => OrderStatus::Cancelled->value,
+        ]);
 
-            $this->inventory->releaseCancelledOrder($order);
-        });
+        $this->inventory->releaseCancelledOrder($order);
 
         OrderStatusChanged::dispatch((int) $order->id, OrderStatus::Cancelled->value, $note, $adminId);
     }

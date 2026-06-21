@@ -6,6 +6,7 @@ use App\Contracts\Repositories\BannerRepositoryInterface;
 use App\Models\Banner;
 use App\Support\Pagination;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
@@ -36,13 +37,27 @@ class AdminBannerService
 
     public function create(array $data, ?UploadedFile $image = null, bool $isActive = false): void
     {
+        $newImagePath = null;
+
         if ($image) {
-            $data['image'] = $image->store('banner', 'public');
+            $newImagePath = $image->store('banner', 'public');
+
+            if (! $newImagePath) {
+                throw new RuntimeException('Không thể lưu ảnh banner.');
+            }
+
+            $data['image'] = $newImagePath;
         }
 
         $data['is_active'] = $isActive;
 
-        $this->banners->create($data);
+        try {
+            $this->banners->create($data);
+        } catch (\Throwable $e) {
+            $this->deletePath($newImagePath);
+
+            throw $e;
+        }
     }
 
     public function update(int $id, array $data, ?UploadedFile $image = null, bool $isActive = false): void
@@ -55,17 +70,30 @@ class AdminBannerService
 
         if ($image) {
             $newImagePath = $image->store('banner', 'public');
+
+            if (! $newImagePath) {
+                throw new RuntimeException('Không thể lưu ảnh banner.');
+            }
+
             $data['image'] = $newImagePath;
         }
 
         $data['is_active'] = $isActive;
 
-        if (! $this->banners->update($banner, $data)) {
-            throw new RuntimeException('Cập nhật không thành công!');
-        }
+        try {
+            DB::transaction(function () use ($banner, $data, $newImagePath, $currentImage) {
+                if (! $this->banners->update($banner, $data)) {
+                    throw new RuntimeException('Cập nhật không thành công!');
+                }
 
-        if ($newImagePath && $currentImage && Storage::disk('public')->exists($currentImage)) {
-            Storage::disk('public')->delete($currentImage);
+                if ($newImagePath) {
+                    DB::afterCommit(fn () => $this->deletePath($currentImage));
+                }
+            });
+        } catch (\Throwable $e) {
+            $this->deletePath($newImagePath);
+
+            throw $e;
         }
     }
 
@@ -86,5 +114,12 @@ class AdminBannerService
     public function restore(int $id): void
     {
         $this->banners->restore($this->banners->findTrashed($id));
+    }
+
+    protected function deletePath(?string $path): void
+    {
+        if ($path) {
+            Storage::disk('public')->delete($path);
+        }
     }
 }

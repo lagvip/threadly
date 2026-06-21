@@ -5,10 +5,10 @@ namespace Tests\Unit\Checkout;
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\DTOs\Checkout\VnpayCallbackData;
 use App\Enums\OrderPaymentStatus;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Events\Sales\OrderPlaced;
 use App\Models\Order;
-use App\Services\Checkout\CheckoutCartService;
-use App\Services\Checkout\CheckoutInventoryService;
 use App\Services\Checkout\VnpayCallbackService;
 use App\Services\Checkout\VnpayPaymentService;
 use Illuminate\Support\Facades\DB;
@@ -95,13 +95,7 @@ class VnpayCallbackServiceTest extends TestCase
         $orders->expects($this->once())->method('lockById')->with(10)->willReturn($lockedOrder);
         $orders->expects($this->once())->method('update');
 
-        $inventory = $this->createMock(CheckoutInventoryService::class);
-        $inventory->expects($this->once())->method('decreaseStockFromOrder')->with($lockedOrder);
-
-        $cart = $this->createMock(CheckoutCartService::class);
-        $cart->expects($this->once())->method('clearUserCartByOrder')->with($lockedOrder);
-
-        $result = $this->service($orders, $vnpay, $inventory, $cart)->handleIpn($this->callbackData());
+        $result = $this->service($orders, $vnpay)->handleIpn($this->callbackData());
 
         $this->assertSame(['RspCode' => '00', 'Message' => 'Confirm Success'], $result);
         Event::assertDispatched(OrderPlaced::class);
@@ -125,29 +119,92 @@ class VnpayCallbackServiceTest extends TestCase
         $orders->expects($this->once())->method('lockById')->with(10)->willReturn($lockedOrder);
         $orders->expects($this->never())->method('update');
 
-        $inventory = $this->createMock(CheckoutInventoryService::class);
-        $inventory->expects($this->never())->method('decreaseStockFromOrder');
-
-        $cart = $this->createMock(CheckoutCartService::class);
-        $cart->expects($this->never())->method('clearUserCartByOrder');
-
-        $result = $this->service($orders, $vnpay, $inventory, $cart)->handleIpn($this->callbackData());
+        $result = $this->service($orders, $vnpay)->handleIpn($this->callbackData());
 
         $this->assertSame(['RspCode' => '00', 'Message' => 'Confirm Success'], $result);
         Event::assertNotDispatched(OrderPlaced::class);
     }
 
+    public function test_successful_ipn_does_not_revive_expired_order(): void
+    {
+        DB::shouldReceive('transaction')->twice()->andReturnUsing(fn ($callback) => $callback());
+
+        $order = $this->order(OrderPaymentStatus::Pending->value);
+        $lockedOrder = $this->order(OrderPaymentStatus::Expired->value);
+        $lockedOrder->order_status = OrderStatus::Cancelled->value;
+
+        $vnpay = $this->createMock(VnpayPaymentService::class);
+        $vnpay->method('hasValidSignature')->willReturn(true);
+        $vnpay->method('isValidAmount')->willReturn(true);
+
+        $orders = $this->createMock(OrderRepositoryInterface::class);
+        $orders->method('findByCode')->willReturn($order);
+        $orders->expects($this->exactly(2))->method('lockById')->with(10)->willReturn($lockedOrder);
+        $orders->expects($this->once())
+            ->method('update')
+            ->with(
+                $lockedOrder,
+                $this->callback(function (array $payload): bool {
+                    return $payload['payment_transaction_no'] === '123456'
+                        && $payload['payment_response_code'] === '00'
+                        && isset($payload['payment_reconciliation_required_at']);
+                })
+            );
+
+        $result = $this->service($orders, $vnpay)->handleIpn($this->callbackData());
+
+        $this->assertSame(['RspCode' => '02', 'Message' => 'Order already confirmed'], $result);
+    }
+
+    public function test_successful_ipn_requires_reconciliation_without_active_stock_reservation(): void
+    {
+        DB::shouldReceive('transaction')->twice()->andReturnUsing(fn ($callback) => $callback());
+
+        $order = $this->order(OrderPaymentStatus::Pending->value);
+        $lockedOrder = $this->order(OrderPaymentStatus::Pending->value);
+        $lockedOrder->stock_deducted_at = null;
+
+        $vnpay = $this->createMock(VnpayPaymentService::class);
+        $vnpay->method('hasValidSignature')->willReturn(true);
+        $vnpay->method('isValidAmount')->willReturn(true);
+        $vnpay->expects($this->never())->method('paymentMeta');
+
+        $orders = $this->createMock(OrderRepositoryInterface::class);
+        $orders->method('findByCode')->willReturn($order);
+        $orders->expects($this->exactly(2))->method('lockById')->with(10)->willReturn($lockedOrder);
+        $orders->expects($this->once())
+            ->method('update')
+            ->with(
+                $lockedOrder,
+                $this->callback(fn (array $payload): bool => isset($payload['payment_reconciliation_required_at'])
+                    && str_contains($payload['payment_reconciliation_note'], 'reservation tồn kho')
+                )
+            );
+
+        $result = $this->service($orders, $vnpay)->handleIpn($this->callbackData());
+
+        $this->assertSame(['RspCode' => '02', 'Message' => 'Order already confirmed'], $result);
+    }
+
+    public function test_order_requiring_reconciliation_cannot_be_paid_again(): void
+    {
+        $order = new Order([
+            'payment_method' => PaymentMethod::Vnpay->value,
+            'payment_status' => OrderPaymentStatus::Expired->value,
+            'order_status' => OrderStatus::Cancelled->value,
+            'payment_reconciliation_required_at' => now(),
+        ]);
+
+        $this->assertFalse($order->can_repay);
+    }
+
     protected function service(
         OrderRepositoryInterface $orders,
         VnpayPaymentService $vnpay,
-        ?CheckoutInventoryService $inventory = null,
-        ?CheckoutCartService $cart = null,
     ): VnpayCallbackService {
         return new VnpayCallbackService(
             $orders,
             $vnpay,
-            $inventory ?? $this->createMock(CheckoutInventoryService::class),
-            $cart ?? $this->createMock(CheckoutCartService::class),
         );
     }
 
@@ -172,7 +229,9 @@ class VnpayCallbackServiceTest extends TestCase
         $order = new Order([
             'order_code' => 'OD001',
             'payment_status' => $paymentStatus,
+            'order_status' => OrderStatus::Pending->value,
             'total_price' => 10000,
+            'stock_deducted_at' => now(),
         ]);
         $order->id = 10;
         $order->exists = true;

@@ -7,12 +7,13 @@ use App\DTOs\Checkout\VnpayCallbackData;
 use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
 use App\Models\Order;
+use App\Services\Inventory\OrderInventoryService;
 
 class VnpayPaymentService
 {
     public function __construct(
         protected OrderRepositoryInterface $orders,
-        protected CheckoutVoucherService $vouchers,
+        protected OrderInventoryService $inventory,
     ) {}
 
     public function hasValidSignature(array $inputData): bool
@@ -91,7 +92,7 @@ class VnpayPaymentService
             return;
         }
 
-        $this->vouchers->restoreVoucherForOrder($order);
+        $this->inventory->releaseCancelledOrder($order);
 
         if ($responseCode === '97') {
             $this->orders->update($order, [

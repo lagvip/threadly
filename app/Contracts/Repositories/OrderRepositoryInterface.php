@@ -30,6 +30,8 @@ interface OrderRepositoryInterface
 
     public function lockById(int $id): Order;
 
+    public function pendingVnpayExpirationCandidateIds(string $now, string $legacyCutoff, int $limit = 100): array;
+
     public function paginateTrashedForAdmin(int $perPage = 10): LengthAwarePaginator;
 
     public function countByStatus(string $status): int;
@@ -55,6 +57,8 @@ interface OrderRepositoryInterface
     public function findForUserWithReviewDetails(int $id, int $userId): Order;
 
     public function findForUser(int $id, int $userId): Order;
+
+    public function lockForUser(int $id, int $userId): Order;
 
     public function lockForUserCancellation(int $id, int $userId): Order;
 

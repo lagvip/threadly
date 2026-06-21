@@ -3,6 +3,7 @@
 namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
+use App\Enums\ProductStatus;
 use App\Models\ProductVariant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -42,6 +43,16 @@ class ProductVariantRepository implements ProductVariantRepositoryInterface
     public function lockById(int $id): ?ProductVariant
     {
         return ProductVariant::whereKey($id)->lockForUpdate()->first();
+    }
+
+    public function findAvailableForCart(int $id): ?ProductVariant
+    {
+        return $this->availableForCartQuery($id)->first();
+    }
+
+    public function lockAvailableForCart(int $id): ?ProductVariant
+    {
+        return $this->availableForCartQuery($id)->lockForUpdate()->first();
     }
 
     public function findForProduct(int $variantId, int $productId): ?ProductVariant
@@ -134,5 +145,14 @@ class ProductVariantRepository implements ProductVariantRepositoryInterface
             ->orderBy('id_color')
             ->orderBy('id_size')
             ->get();
+    }
+
+    protected function availableForCartQuery(int $id): Builder
+    {
+        return ProductVariant::query()
+            ->with('product')
+            ->whereKey($id)
+            ->where('status', ProductStatus::Active->value)
+            ->whereHas('product', fn ($query) => $query->where('status', ProductStatus::Active->value));
     }
 }

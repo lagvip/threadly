@@ -9,6 +9,7 @@ use App\Enums\OrderStatus;
 use App\Models\Address;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class ClientAccountService
@@ -53,12 +54,32 @@ class ClientAccountService
             'name' => $data['name'],
         ];
 
-        if ($avatar) {
-            $this->deleteLocalAvatar($user);
-            $payload['avatar'] = $avatar->store('users', 'public');
+        $oldAvatarPath = $user->avatar;
+        $newAvatarPath = $avatar?->store('users', 'public') ?: null;
+
+        if ($avatar && ! $newAvatarPath) {
+            throw new \RuntimeException('Không thể lưu ảnh đại diện.');
         }
 
-        $this->users->update($user, $payload);
+        if ($newAvatarPath) {
+            $payload['avatar'] = $newAvatarPath;
+        }
+
+        try {
+            DB::transaction(function () use ($user, $payload, $newAvatarPath, $oldAvatarPath) {
+                if (! $this->users->update($user, $payload)) {
+                    throw new \RuntimeException('Cập nhật tài khoản không thành công.');
+                }
+
+                if ($newAvatarPath) {
+                    DB::afterCommit(fn () => $this->deleteLocalAvatarPath($oldAvatarPath));
+                }
+            });
+        } catch (\Throwable $e) {
+            $this->deleteLocalAvatarPath($newAvatarPath);
+
+            throw $e;
+        }
     }
 
     protected function defaultAddress(int $userId): ?Address
@@ -66,10 +87,10 @@ class ClientAccountService
         return $this->addresses->defaultForUser($userId);
     }
 
-    protected function deleteLocalAvatar(User $user): void
+    protected function deleteLocalAvatarPath(?string $path): void
     {
-        if (! empty($user->avatar) && ! str_starts_with($user->avatar, 'http')) {
-            Storage::disk('public')->delete($user->avatar);
+        if (! empty($path) && ! str_starts_with($path, 'http')) {
+            Storage::disk('public')->delete($path);
         }
     }
 }

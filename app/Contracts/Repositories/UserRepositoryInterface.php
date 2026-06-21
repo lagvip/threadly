@@ -11,7 +11,11 @@ interface UserRepositoryInterface
 
     public function findWithRoles(int $id): User;
 
+    public function lockWithRoles(int $id): User;
+
     public function findTrashedWithRoles(int $id): User;
+
+    public function lockTrashedWithRoles(int $id): User;
 
     public function paginateTrashedForAdmin(int $perPage = 10): LengthAwarePaginator;
 

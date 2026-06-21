@@ -35,9 +35,19 @@ class UserRepository implements UserRepositoryInterface
         return User::with('roles')->findOrFail($id);
     }
 
+    public function lockWithRoles(int $id): User
+    {
+        return User::with('roles')->whereKey($id)->lockForUpdate()->firstOrFail();
+    }
+
     public function findTrashedWithRoles(int $id): User
     {
         return User::onlyTrashed()->with('roles')->findOrFail($id);
+    }
+
+    public function lockTrashedWithRoles(int $id): User
+    {
+        return User::onlyTrashed()->with('roles')->whereKey($id)->lockForUpdate()->firstOrFail();
     }
 
     public function paginateTrashedForAdmin(int $perPage = 10): LengthAwarePaginator

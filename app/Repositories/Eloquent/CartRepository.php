@@ -81,6 +81,7 @@ class CartRepository implements CartRepositoryInterface
         return CartDetail::with(['variant.product'])
             ->where('id_cart', $cartId)
             ->whereIn('id', $detailIds)
+            ->lockForUpdate()
             ->get();
     }
 
@@ -107,11 +108,6 @@ class CartRepository implements CartRepositoryInterface
     public function deleteAllDetails(int $cartId): int
     {
         return CartDetail::where('id_cart', $cartId)->delete();
-    }
-
-    public function deleteDetailsByVariants(int $cartId, array $variantIds): int
-    {
-        return CartDetail::where('id_cart', $cartId)->whereIn('id_variant', $variantIds)->delete();
     }
 
     public function validDetailIds(int $cartId, array $ids): array

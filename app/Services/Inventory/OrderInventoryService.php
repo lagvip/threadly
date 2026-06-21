@@ -96,7 +96,7 @@ class OrderInventoryService
 
         // Nếu voucher còn tồn tại thì cộng lại 1 lượt dùng.
         if ($voucher) {
-            $voucher->increment('quantity');
+            $this->vouchers->incrementQuantity($voucher);
         }
 
         // Đánh dấu đã hoàn voucher để tránh hoàn nhiều lần.
@@ -107,12 +107,16 @@ class OrderInventoryService
 
     protected function wasStockDeducted(Order $order): bool
     {
+        if ($order->stock_deducted_at) {
+            return true;
+        }
+
         // COD đã trừ kho ngay khi tạo đơn nên nếu hủy thì cần hoàn kho.
         if ($order->payment_method === PaymentMethod::Cod->value) {
             return true;
         }
 
-        // VNPay chỉ trừ kho sau khi thanh toán thành công.
+        // Fallback cho dữ liệu cũ trước khi có marker stock_deducted_at.
         return $order->payment_method === PaymentMethod::Vnpay->value
             && $order->payment_status === OrderPaymentStatus::Paid->value;
     }

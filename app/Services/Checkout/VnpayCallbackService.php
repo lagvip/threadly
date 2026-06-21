@@ -7,6 +7,7 @@ use App\DTOs\Checkout\VnpayCallbackData;
 use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
 use App\Events\Sales\OrderPlaced;
+use App\Exceptions\OrderNotAwaitingVnpayPaymentException;
 use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -16,8 +17,6 @@ class VnpayCallbackService
     public function __construct(
         protected OrderRepositoryInterface $orders,
         protected VnpayPaymentService $vnpay,
-        protected CheckoutInventoryService $inventory,
-        protected CheckoutCartService $cart,
     ) {}
 
     public function handleReturn(VnpayCallbackData $data): array
@@ -59,6 +58,19 @@ class VnpayCallbackService
             $this->markFailedOnce($order, $data);
 
             return ['ok' => false, 'message' => 'Thanh toán VNPay thất bại hoặc bị hủy.'];
+        } catch (OrderNotAwaitingVnpayPaymentException $e) {
+            try {
+                $this->recordReconciliationRequired($order, $data, $e->getMessage());
+            } catch (\Throwable $recordingError) {
+                Log::error('VNPay return reconciliation recording error: '.$recordingError->getMessage());
+
+                return ['ok' => false, 'message' => 'Thanh toán đã được ghi nhận nhưng đối soát đơn hàng gặp lỗi.'];
+            }
+
+            return [
+                'ok' => false,
+                'message' => 'VNPay đã ghi nhận thanh toán nhưng đơn hàng không còn chờ thanh toán. Giao dịch đã được chuyển sang đối soát.',
+            ];
         } catch (\Throwable $e) {
             Log::error('VNPay return process error: '.$e->getMessage());
 
@@ -98,6 +110,23 @@ class VnpayCallbackService
             }
 
             return ['RspCode' => '00', 'Message' => 'Confirm Success'];
+        } catch (OrderNotAwaitingVnpayPaymentException $e) {
+            try {
+                $this->recordReconciliationRequired($order, $data, $e->getMessage());
+            } catch (\Throwable $recordingError) {
+                Log::error('VNPay IPN reconciliation recording error: '.$recordingError->getMessage());
+
+                return ['RspCode' => '99', 'Message' => 'Reconciliation recording failed'];
+            }
+
+            Log::warning('VNPay successful callback received for terminal order', [
+                'order_id' => $order->id,
+                'order_code' => $order->order_code,
+                'payment_status' => $order->payment_status,
+                'order_status' => $order->order_status,
+            ]);
+
+            return ['RspCode' => '02', 'Message' => 'Order already confirmed'];
         } catch (\Throwable $e) {
             Log::error('VNPay IPN error: '.$e->getMessage());
 
@@ -114,12 +143,26 @@ class VnpayCallbackService
                 return;
             }
 
-            $this->inventory->decreaseStockFromOrder($lockedOrder);
-            $this->cart->clearUserCartByOrder($lockedOrder);
+            if (
+                $lockedOrder->payment_status !== OrderPaymentStatus::Pending->value
+                || $lockedOrder->order_status !== OrderStatus::Pending->value
+            ) {
+                throw new OrderNotAwaitingVnpayPaymentException(
+                    'Đơn hàng không còn ở trạng thái chờ thanh toán VNPay.'
+                );
+            }
+
+            if (! $lockedOrder->stock_deducted_at || $lockedOrder->stock_released_at) {
+                throw new OrderNotAwaitingVnpayPaymentException(
+                    'Đơn hàng không có reservation tồn kho hợp lệ khi VNPay báo thanh toán thành công.'
+                );
+            }
 
             $this->orders->update($lockedOrder, array_merge([
                 'payment_status' => OrderPaymentStatus::Paid->value,
                 'order_status' => OrderStatus::Pending->value,
+                'payment_reconciliation_required_at' => null,
+                'payment_reconciliation_note' => null,
             ], $this->vnpay->paymentMeta($data)));
 
             DB::afterCommit(fn () => OrderPlaced::dispatch((int) $lockedOrder->id));
@@ -150,5 +193,26 @@ class VnpayCallbackService
             'response_code' => $data->responseCode(),
             'transaction_status' => $data->transactionStatus(),
         ];
+    }
+
+    protected function recordReconciliationRequired(Order $order, VnpayCallbackData $data, string $reason): void
+    {
+        DB::transaction(function () use ($order, $data, $reason) {
+            $lockedOrder = $this->orders->lockById((int) $order->id);
+
+            if ($lockedOrder->payment_status === OrderPaymentStatus::Paid->value) {
+                return;
+            }
+
+            $this->orders->update($lockedOrder, [
+                'payment_transaction_no' => $data->transactionNo(),
+                'payment_bank_code' => $data->bankCode(),
+                'payment_response_code' => $data->responseCode(),
+                'payment_transaction_status' => $data->transactionStatus(),
+                'payment_pay_date' => $data->payDate(),
+                'payment_reconciliation_required_at' => now(),
+                'payment_reconciliation_note' => $reason,
+            ]);
+        });
     }
 }

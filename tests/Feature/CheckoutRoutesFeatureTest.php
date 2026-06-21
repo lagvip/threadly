@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Enums\OrderPaymentStatus;
+use App\Enums\OrderStatus;
 use App\Events\Sales\OrderPlaced;
 use App\Http\Controllers\Client\CheckoutController;
 use App\Models\Order;
@@ -11,8 +12,6 @@ use App\Models\User;
 use App\Services\Checkout\ApplyCheckoutVoucherService;
 use App\Services\Checkout\BuyNowCheckoutService;
 use App\Services\Checkout\CheckoutAddressPresenter;
-use App\Services\Checkout\CheckoutCartService;
-use App\Services\Checkout\CheckoutInventoryService;
 use App\Services\Checkout\CheckoutPageService;
 use App\Services\Checkout\CheckoutShippingFeeService;
 use App\Services\Checkout\GhnLocationService;
@@ -73,13 +72,7 @@ class CheckoutRoutesFeatureTest extends TestCase
             'payment_transaction_status' => '00',
         ]);
 
-        $inventory = $this->createMock(CheckoutInventoryService::class);
-        $inventory->expects($this->once())->method('decreaseStockFromOrder')->with($firstLockedOrder);
-
-        $cart = $this->createMock(CheckoutCartService::class);
-        $cart->expects($this->once())->method('clearUserCartByOrder')->with($firstLockedOrder);
-
-        $callback = new VnpayCallbackService($orders, $vnpay, $inventory, $cart);
+        $callback = new VnpayCallbackService($orders, $vnpay);
         $this->app->instance(CheckoutController::class, $this->checkoutController(vnpayCallback: $callback));
 
         $this->get(route('client.checkout.vnpay-ipn', $this->vnpayPayload()))
@@ -130,7 +123,9 @@ class CheckoutRoutesFeatureTest extends TestCase
         $order = new Order([
             'order_code' => 'OD001',
             'payment_status' => $paymentStatus,
+            'order_status' => OrderStatus::Pending->value,
             'total_price' => 10000,
+            'stock_deducted_at' => now(),
         ]);
         $order->id = 10;
         $order->exists = true;

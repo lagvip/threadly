@@ -43,7 +43,11 @@ class AdminOrderGhnService
 
         try {
             $response = $this->ghn->getOrderInfo($order->ghn_order_code);
-            $this->ghn->syncOrderFromGhnInfo($order, $response, $adminId, 'Admin đồng bộ GHN');
+
+            DB::transaction(function () use ($order, $response, $adminId) {
+                $order = $this->orders->lockById((int) $order->id);
+                $this->ghn->syncOrderFromGhnInfo($order, $response, $adminId, 'Admin đồng bộ GHN');
+            });
 
             return 'Đã đồng bộ trạng thái GHN thành công.';
         } catch (\Throwable $e) {

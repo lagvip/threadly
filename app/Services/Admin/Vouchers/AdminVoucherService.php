@@ -48,6 +48,11 @@ class AdminVoucherService
         $this->vouchers->forceDelete($this->vouchers->findWithTrashed($id));
     }
 
+    public function expireEndedVouchers(): int
+    {
+        return $this->vouchers->expireActiveEndedAt(now()->format('Y-m-d H:i:s'));
+    }
+
     protected function assertBusinessRules(array $data): void
     {
         if (! empty($data['start_date']) && ! empty($data['end_date']) && Carbon::parse($data['end_date'])->lte(Carbon::parse($data['start_date']))) {
@@ -74,6 +79,7 @@ class AdminVoucherService
                 ? Carbon::parse($data['end_date'])->format('Y-m-d H:i:s')
                 : Carbon::now()->addYears(10)->format('Y-m-d H:i:s'),
             'quantity' => isset($data['quantity']) && $data['quantity'] !== '' ? (int) $data['quantity'] : 0,
+            'is_unlimited' => ! isset($data['quantity']) || $data['quantity'] === '' || (int) $data['quantity'] === 0,
             'max_uses_per_user' => $data['max_uses_per_user'],
             'max_uses_per_order' => $data['max_uses_per_order'],
         ];

@@ -5,9 +5,11 @@ namespace App\Repositories\Eloquent;
 use App\Contracts\Repositories\ChatRepositoryInterface;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class ChatRepository implements ChatRepositoryInterface
 {
@@ -35,15 +37,19 @@ class ChatRepository implements ChatRepositoryInterface
 
     public function firstOrCreateOpenConversationForUser(int $userId): ChatConversation
     {
-        return ChatConversation::firstOrCreate(
-            [
-                'user_id' => $userId,
-                'status' => 'open',
-            ],
-            [
-                'last_message_at' => now(),
-            ]
-        );
+        return DB::transaction(function () use ($userId) {
+            User::whereKey($userId)->lockForUpdate()->firstOrFail();
+
+            return ChatConversation::firstOrCreate(
+                [
+                    'user_id' => $userId,
+                    'status' => 'open',
+                ],
+                [
+                    'last_message_at' => now(),
+                ]
+            );
+        });
     }
 
     public function messagesForConversation(ChatConversation $conversation): Collection

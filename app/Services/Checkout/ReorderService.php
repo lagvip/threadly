@@ -38,7 +38,12 @@ class ReorderService
 
                     $variant = $this->variants->findWithRelationsOrNull((int) $detail->variant_id);
 
-                    if (! $variant || ! $variant->product || $variant->status !== ProductStatus::Active->value) {
+                    if (
+                        ! $variant
+                        || ! $variant->product
+                        || $variant->status !== ProductStatus::Active->value
+                        || $variant->product->status !== ProductStatus::Active->value
+                    ) {
                         $skipped++;
 
                         continue;

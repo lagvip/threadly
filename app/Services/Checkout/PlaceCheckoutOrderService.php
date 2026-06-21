@@ -12,6 +12,7 @@ use App\DTOs\Checkout\CheckoutOrderResult;
 use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
+use App\Enums\ProductStatus;
 use App\Events\Sales\OrderPlaced;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -113,18 +114,18 @@ class PlaceCheckoutOrderService
                 ]);
             }
 
-            session()->forget(config('threadly.checkout.voucher_session_key'));
+            $this->checkoutInventory->decreaseStockFromOrder($order);
+
+            if ($checkoutSource === 'buy_now') {
+                DB::afterCommit(fn () => session()->forget(config('threadly.checkout.buy_now_session_key')));
+            } else {
+                $this->checkoutCart->clearSelectedCartItems($cart, $selectedCartItemIds);
+                DB::afterCommit(fn () => session()->forget(config('threadly.checkout.cart_session_key')));
+            }
+
+            DB::afterCommit(fn () => session()->forget(config('threadly.checkout.voucher_session_key')));
 
             if ($data->paymentMethod === PaymentMethod::Cod->value) {
-                $this->checkoutInventory->decreaseStockFromOrder($order);
-
-                if ($checkoutSource === 'buy_now') {
-                    session()->forget(config('threadly.checkout.buy_now_session_key'));
-                } else {
-                    $this->checkoutCart->clearSelectedCartItems($cart, $selectedCartItemIds);
-                    session()->forget(config('threadly.checkout.cart_session_key'));
-                }
-
                 OrderPlaced::dispatch((int) $order->id);
 
                 return new CheckoutOrderResult($order, $data->paymentMethod);
@@ -147,6 +148,14 @@ class PlaceCheckoutOrderService
 
             if (! $variant) {
                 throw new RuntimeException('Có sản phẩm không hợp lệ.');
+            }
+
+            if (
+                $variant->status !== ProductStatus::Active->value
+                || ! $variant->product
+                || $variant->product->status !== ProductStatus::Active->value
+            ) {
+                throw new RuntimeException('Có sản phẩm đã ngừng bán hoặc không còn khả dụng.');
             }
 
             if ($variant->quantity < $item->quantity) {

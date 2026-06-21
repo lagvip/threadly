@@ -25,9 +25,9 @@ class ClientWishlistService
 
     public function add(int $userId, int $variantId): void
     {
-        $variant = $this->variants->findWithProduct($variantId);
+        $variant = $this->variants->findAvailableForCart($variantId);
 
-        if ($variant->status !== ProductStatus::Active->value) {
+        if (! $variant || $variant->status !== ProductStatus::Active->value) {
             throw new RuntimeException('Biến thể này hiện không khả dụng.');
         }
 

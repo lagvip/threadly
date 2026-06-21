@@ -5,6 +5,7 @@ namespace App\Services\Admin\Categories;
 use App\Contracts\Repositories\CategoryRepositoryInterface;
 use App\Models\Category;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
@@ -15,12 +16,23 @@ class AdminCategoryService
     public function create(array $data, UploadedFile $image): void
     {
         $this->assertValidParent($data['id_parent'] ?? null);
+        $newImagePath = Storage::disk('public')->putFile('category', $image);
 
-        $this->categories->create([
-            'name' => $data['name'],
-            'id_parent' => ! empty($data['id_parent']) ? $data['id_parent'] : null,
-            'image' => Storage::disk('public')->putFile('category', $image),
-        ]);
+        if (! $newImagePath) {
+            throw new RuntimeException('Không thể lưu ảnh danh mục.');
+        }
+
+        try {
+            $this->categories->create([
+                'name' => $data['name'],
+                'id_parent' => ! empty($data['id_parent']) ? $data['id_parent'] : null,
+                'image' => $newImagePath,
+            ]);
+        } catch (\Throwable $e) {
+            $this->deletePath($newImagePath);
+
+            throw $e;
+        }
     }
 
     public function update(int $id, array $data, ?UploadedFile $image = null): void
@@ -40,15 +52,28 @@ class AdminCategoryService
 
         if ($image) {
             $newImagePath = Storage::disk('public')->putFile('category', $image);
+
+            if (! $newImagePath) {
+                throw new RuntimeException('Không thể lưu ảnh danh mục.');
+            }
+
             $payload['image'] = $newImagePath;
         }
 
-        if (! $this->categories->update($category, $payload)) {
-            throw new RuntimeException('Sửa không thành công!');
-        }
+        try {
+            DB::transaction(function () use ($category, $payload, $newImagePath, $currentImage) {
+                if (! $this->categories->update($category, $payload)) {
+                    throw new RuntimeException('Sửa không thành công!');
+                }
 
-        if ($newImagePath && $currentImage && Storage::disk('public')->exists($currentImage)) {
-            Storage::disk('public')->delete($currentImage);
+                if ($newImagePath) {
+                    DB::afterCommit(fn () => $this->deletePath($currentImage));
+                }
+            });
+        } catch (\Throwable $e) {
+            $this->deletePath($newImagePath);
+
+            throw $e;
         }
     }
 
@@ -76,11 +101,11 @@ class AdminCategoryService
     {
         $category = $this->categories->findWithTrashed($id);
 
-        if ($category->image) {
-            Storage::disk('public')->delete($category->image);
-        }
-
-        $this->categories->forceDelete($category);
+        DB::transaction(function () use ($category) {
+            $imagePath = $category->image;
+            $this->categories->forceDelete($category);
+            DB::afterCommit(fn () => $this->deletePath($imagePath));
+        });
     }
 
     protected function assertValidParent($parentId, ?Category $category = null): void
@@ -101,6 +126,13 @@ class AdminCategoryService
 
         if (! is_null($parent->id_parent)) {
             throw new RuntimeException('Chỉ được chọn danh mục gốc làm danh mục cha.');
+        }
+    }
+
+    protected function deletePath(?string $path): void
+    {
+        if ($path) {
+            Storage::disk('public')->delete($path);
         }
     }
 }

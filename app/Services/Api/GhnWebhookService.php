@@ -57,6 +57,8 @@ class GhnWebhookService
 
         try {
             DB::transaction(function () use ($order, $data, $log) {
+                $order = $this->orders->lockById((int) $order->id);
+
                 $syncPayload = [
                     'data' => array_merge($data->payload, [
                         'status' => $data->status() ?: data_get($data->payload, 'status'),

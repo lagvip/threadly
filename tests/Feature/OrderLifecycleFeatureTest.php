@@ -58,7 +58,7 @@ class OrderLifecycleFeatureTest extends TestCase
         ]);
 
         $orders = $this->createMock(OrderRepositoryInterface::class);
-        $orders->expects($this->once())->method('findForUser')->with(10, 5)->willReturn($order);
+        $orders->expects($this->once())->method('lockForUser')->with(10, 5)->willReturn($order);
         $orders->expects($this->once())
             ->method('update')
             ->with($order, $this->callback(fn (array $data) => array_key_exists('customer_confirmed_at', $data)));
