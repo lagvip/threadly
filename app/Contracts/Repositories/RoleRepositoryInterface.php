@@ -20,6 +20,8 @@ interface RoleRepositoryInterface
 
     public function findBySlug(string $slug): ?Role;
 
+    public function lockBySlug(string $slug): ?Role;
+
     public function findTrashedWithUserCount(int $id): Role;
 
     public function create(array $data): Role;

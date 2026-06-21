@@ -25,6 +25,7 @@ class Voucher extends Model
         'start_date',
         'end_date',
         'quantity',
+        'is_unlimited',
         'status',
         'max_uses_per_user',
         'max_uses_per_order',
@@ -34,6 +35,7 @@ class Voucher extends Model
         'start_date' => 'datetime',
         'end_date' => 'datetime',
         'status' => 'string',
+        'is_unlimited' => 'boolean',
     ];
 
     /**
@@ -64,11 +66,6 @@ class Voucher extends Model
             return false;
         }
 
-        // Hết lượt dùng, nhưng 0 được coi là vô hạn
-        if ($this->quantity < 0) {
-            return false;
-        }
-
         $now = Carbon::now();
 
         // Chưa tới ngày hoặc đã hết hạn
@@ -76,7 +73,7 @@ class Voucher extends Model
             return false;
         }
 
-        if (! is_null($this->quantity) && $this->quantity <= 0) {
+        if (! $this->is_unlimited && (int) $this->quantity <= 0) {
             return false;
         }
 
@@ -132,7 +129,7 @@ class Voucher extends Model
      */
     public function decreaseQuantity()
     {
-        if ($this->quantity > 0) {
+        if (! $this->is_unlimited && $this->quantity > 0) {
             $this->quantity -= 1;
             $this->save();
         }
@@ -182,7 +179,7 @@ class Voucher extends Model
         $now = Carbon::now();
 
         return $this->actual_status === VoucherStatus::Active->value
-            && $this->quantity > 0
+            && ($this->is_unlimited || $this->quantity > 0)
             && (! $this->start_date || ! $now->lt($this->start_date))
             && (! $this->end_date || ! $now->gt($this->end_date));
     }

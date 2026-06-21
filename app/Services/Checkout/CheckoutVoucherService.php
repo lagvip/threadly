@@ -71,24 +71,9 @@ class CheckoutVoucherService
         return $this->vouchers->userUsage($voucher, $userId);
     }
 
-    public function restoreVoucherForOrder(Order $order): void
-    {
-        if (! $order->voucher_id) {
-            return;
-        }
-
-        $voucher = $this->vouchers->lockById($order->voucher_id);
-
-        if (! $voucher) {
-            return;
-        }
-
-        $voucher->increment('quantity');
-    }
-
     public function reserveVoucherForRepay(Order $order): void
     {
-        if (! $order->voucher_id) {
+        if (! $order->voucher_id || ! $order->voucher_released_at) {
             return;
         }
 

@@ -3,6 +3,7 @@
 namespace App\Services\Client\Addresses;
 
 use App\Contracts\Repositories\AddressRepositoryInterface;
+use Illuminate\Support\Facades\DB;
 
 class ClientAddressService
 {
@@ -17,51 +18,63 @@ class ClientAddressService
 
     public function create(int $userId, array $data, bool $isDefault): void
     {
-        $data['user_id'] = $userId;
-        $data['is_default'] = $isDefault;
+        DB::transaction(function () use ($userId, $data, $isDefault) {
+            $this->addresses->lockUser($userId);
+            $data['user_id'] = $userId;
+            $data['is_default'] = $isDefault || $this->addresses->countForUser($userId) === 0;
 
-        if ($isDefault) {
-            $this->addresses->unsetDefaultForUser($userId);
-        }
+            if ($data['is_default']) {
+                $this->addresses->unsetDefaultForUser($userId);
+            }
 
-        $this->addresses->createForUser($userId, $data);
+            $this->addresses->createForUser($userId, $data);
+        });
     }
 
     public function update(int $userId, int $id, array $data, bool $isDefault): void
     {
-        $address = $this->addresses->findForUser($id, $userId);
-        $data['is_default'] = $isDefault;
+        DB::transaction(function () use ($userId, $id, $data, $isDefault) {
+            $this->addresses->lockUser($userId);
+            $address = $this->addresses->findForUser($id, $userId);
+            $data['is_default'] = $isDefault || (bool) $address->is_default;
 
-        if ($isDefault) {
-            $this->addresses->unsetDefaultForUser($userId, $address->id);
-        }
+            if ($data['is_default']) {
+                $this->addresses->unsetDefaultForUser($userId, $address->id);
+            }
 
-        $this->addresses->update($address, $data);
+            $this->addresses->update($address, $data);
+        });
     }
 
     public function delete(int $userId, int $id): void
     {
-        $address = $this->addresses->findForUser($id, $userId);
-        $wasDefault = (bool) $address->is_default;
+        DB::transaction(function () use ($userId, $id) {
+            $this->addresses->lockUser($userId);
+            $address = $this->addresses->findForUser($id, $userId);
+            $wasDefault = (bool) $address->is_default;
 
-        $this->addresses->delete($address);
+            $this->addresses->delete($address);
 
-        if (! $wasDefault) {
-            return;
-        }
+            if (! $wasDefault) {
+                return;
+            }
 
-        $next = $this->addresses->latestForUser($userId);
+            $next = $this->addresses->latestForUser($userId);
 
-        if ($next) {
-            $this->addresses->update($next, ['is_default' => 1]);
-        }
+            if ($next) {
+                $this->addresses->update($next, ['is_default' => 1]);
+            }
+        });
     }
 
     public function setDefault(int $userId, int $id): void
     {
-        $address = $this->addresses->findForUser($id, $userId);
+        DB::transaction(function () use ($userId, $id) {
+            $this->addresses->lockUser($userId);
+            $address = $this->addresses->findForUser($id, $userId);
 
-        $this->addresses->unsetDefaultForUser($userId);
-        $this->addresses->update($address, ['is_default' => 1]);
+            $this->addresses->unsetDefaultForUser($userId);
+            $this->addresses->update($address, ['is_default' => 1]);
+        });
     }
 }

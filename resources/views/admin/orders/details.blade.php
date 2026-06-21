@@ -239,6 +239,17 @@
     </style>
 
     <div class="order-detail-page">
+        @if($order->payment_reconciliation_required_at)
+            <div class="alert alert-warning" role="alert">
+                <strong>Cần đối soát VNPay.</strong>
+                Giao dịch {{ $order->payment_transaction_no ?: 'chưa có mã' }} được callback sau khi đơn không còn đủ điều kiện xác nhận.
+                <div class="small mt-1">
+                    {{ $order->payment_reconciliation_note }}
+                    Ghi nhận lúc {{ $order->payment_reconciliation_required_at->format('d/m/Y H:i:s') }}.
+                </div>
+            </div>
+        @endif
+
         @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i>

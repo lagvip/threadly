@@ -74,6 +74,11 @@ class Order extends Model
         'refunded_amount',
         'last_refund_requested_at',
         'last_refunded_at',
+        'stock_released_at',
+        'stock_deducted_at',
+        'voucher_released_at',
+        'payment_reconciliation_required_at',
+        'payment_reconciliation_note',
     ];
 
     protected $casts = [
@@ -85,6 +90,10 @@ class Order extends Model
         'refunded_amount' => 'float',
         'last_refund_requested_at' => 'datetime',
         'last_refunded_at' => 'datetime',
+        'stock_released_at' => 'datetime',
+        'stock_deducted_at' => 'datetime',
+        'voucher_released_at' => 'datetime',
+        'payment_reconciliation_required_at' => 'datetime',
         'ghn_expected_delivery_time' => 'datetime',
         'ghn_raw_response' => 'array',
         'ghn_synced_at' => 'datetime',
@@ -265,6 +274,10 @@ class Order extends Model
     public function canRepayVnpay(): bool
     {
         if ($this->payment_method !== PaymentMethod::Vnpay->value) {
+            return false;
+        }
+
+        if ($this->payment_reconciliation_required_at) {
             return false;
         }
 

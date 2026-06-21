@@ -4,8 +4,8 @@ namespace Tests\Unit\Checkout;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Models\Order;
-use App\Services\Checkout\CheckoutVoucherService;
 use App\Services\Checkout\VnpayPaymentService;
+use App\Services\Inventory\OrderInventoryService;
 use Tests\TestCase;
 
 class VnpayPaymentServiceTest extends TestCase
@@ -53,7 +53,7 @@ class VnpayPaymentServiceTest extends TestCase
     {
         return new VnpayPaymentService(
             $this->createMock(OrderRepositoryInterface::class),
-            $this->createMock(CheckoutVoucherService::class)
+            $this->createMock(OrderInventoryService::class)
         );
     }
 

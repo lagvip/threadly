@@ -4,6 +4,8 @@ namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\OrderRepositoryInterface;
 use App\Enums\OrderPaymentStatus;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Models\Order;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -100,6 +102,31 @@ class OrderRepository implements OrderRepositoryInterface
     public function lockById(int $id): Order
     {
         return Order::whereKey($id)->lockForUpdate()->firstOrFail();
+    }
+
+    public function pendingVnpayExpirationCandidateIds(string $now, string $legacyCutoff, int $limit = 100): array
+    {
+        return Order::query()
+            ->where('payment_method', PaymentMethod::Vnpay->value)
+            ->where('payment_status', OrderPaymentStatus::Pending->value)
+            ->where('order_status', OrderStatus::Pending->value)
+            ->where(function ($query) use ($now, $legacyCutoff) {
+                $query->where(function ($datedQuery) use ($now) {
+                    $datedQuery->whereNotNull('payment_expire_date')
+                        ->where('payment_expire_date', '!=', '')
+                        ->where('payment_expire_date', '<=', $now);
+                })->orWhere(function ($legacyQuery) use ($legacyCutoff) {
+                    $legacyQuery->where(function ($missingDateQuery) {
+                        $missingDateQuery->whereNull('payment_expire_date')
+                            ->orWhere('payment_expire_date', '');
+                    })->where('created_at', '<=', $legacyCutoff);
+                });
+            })
+            ->orderBy('id')
+            ->limit($limit)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     public function paginateTrashedForAdmin(int $perPage = 10): LengthAwarePaginator
@@ -225,6 +252,14 @@ class OrderRepository implements OrderRepositoryInterface
     public function findForUser(int $id, int $userId): Order
     {
         return Order::where('user_id', $userId)->findOrFail($id);
+    }
+
+    public function lockForUser(int $id, int $userId): Order
+    {
+        return Order::where('user_id', $userId)
+            ->whereKey($id)
+            ->lockForUpdate()
+            ->firstOrFail();
     }
 
     public function lockForUserCancellation(int $id, int $userId): Order

@@ -12,6 +12,7 @@ use App\Enums\RefundRequestType;
 use App\Models\Order;
 use App\Models\RefundRequest;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -26,42 +27,50 @@ class ClientRefundRequestService
 
     public function submit(array $data, array $evidenceFiles, Order $order, int $userId): void
     {
-        DB::transaction(function () use ($data, $evidenceFiles, $order, $userId) {
-            $order = $this->orders->lockForRefundRequest($order->id);
+        $storedEvidencePaths = [];
 
-            $this->assertOrderOwner($order, $userId);
+        try {
+            DB::transaction(function () use ($data, $evidenceFiles, $order, $userId, &$storedEvidencePaths) {
+                $order = $this->orders->lockForRefundRequest($order->id);
 
-            if (! $order->can_request_refund) {
-                throw new RuntimeException('Đơn hàng này chưa đủ điều kiện hoặc không còn số tiền để yêu cầu hoàn.');
-            }
+                $this->assertOrderOwner($order, $userId);
 
-            [$selectedItems, $requestedAmount] = $this->resolveRefundSelection(
-                $data['items'] ?? [],
-                $order,
-                (string) $data['type']
-            );
+                if (! $order->can_request_refund) {
+                    throw new RuntimeException('Đơn hàng này chưa đủ điều kiện hoặc không còn số tiền để yêu cầu hoàn.');
+                }
 
-            if ($requestedAmount <= 0 || $requestedAmount > (float) $order->refundable_amount) {
-                throw new RuntimeException('Số tiền yêu cầu hoàn không hợp lệ.');
-            }
+                [$selectedItems, $requestedAmount] = $this->resolveRefundSelection(
+                    $data['items'] ?? [],
+                    $order,
+                    (string) $data['type']
+                );
 
-            $refundRequest = $this->refundRequests->create([
-                'order_id' => $order->id,
-                'user_id' => $userId,
-                'type' => $data['type'],
-                'requested_amount' => $requestedAmount,
-                'reason' => trim((string) $data['reason']),
-                'status' => RefundRequestStatus::Pending->value,
-            ]);
+                if ($requestedAmount <= 0 || $requestedAmount > (float) $order->refundable_amount) {
+                    throw new RuntimeException('Số tiền yêu cầu hoàn không hợp lệ.');
+                }
 
-            $this->storeItems($refundRequest, $selectedItems);
-            $this->storeEvidences($refundRequest, $evidenceFiles);
+                $refundRequest = $this->refundRequests->create([
+                    'order_id' => $order->id,
+                    'user_id' => $userId,
+                    'type' => $data['type'],
+                    'requested_amount' => $requestedAmount,
+                    'reason' => trim((string) $data['reason']),
+                    'status' => RefundRequestStatus::Pending->value,
+                ]);
 
-            $this->orders->update($order, [
-                'refund_status' => OrderRefundStatus::Requested->value,
-                'last_refund_requested_at' => now(),
-            ]);
-        });
+                $this->storeItems($refundRequest, $selectedItems);
+                $this->storeEvidences($refundRequest, $evidenceFiles, $storedEvidencePaths);
+
+                $this->orders->update($order, [
+                    'refund_status' => OrderRefundStatus::Requested->value,
+                    'last_refund_requested_at' => now(),
+                ]);
+            });
+        } catch (\Throwable $e) {
+            Storage::disk('public')->delete($storedEvidencePaths);
+
+            throw $e;
+        }
     }
 
     public function buildRefundableItems(Order $order): array
@@ -180,15 +189,22 @@ class ClientRefundRequestService
         }
     }
 
-    protected function storeEvidences(RefundRequest $refundRequest, array $files): void
+    protected function storeEvidences(RefundRequest $refundRequest, array $files, array &$storedPaths): void
     {
         foreach ($files as $file) {
             $mime = (string) $file->getMimeType();
+            $path = $file->store('refund-evidences/'.now()->format('Y/m'), 'public');
+
+            if (! $path) {
+                throw new RuntimeException('Không thể lưu tệp minh chứng hoàn tiền.');
+            }
+
+            $storedPaths[] = $path;
 
             $this->refundEvidences->create([
                 'refund_request_id' => $refundRequest->id,
                 'file_type' => Str::startsWith($mime, 'video/') ? 'video' : 'image',
-                'file_path' => $file->store('refund-evidences/'.now()->format('Y/m'), 'public'),
+                'file_path' => $path,
                 'original_name' => $file->getClientOriginalName(),
                 'mime_type' => $mime,
                 'file_size' => $file->getSize() ?: 0,

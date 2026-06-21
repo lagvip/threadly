@@ -5,15 +5,13 @@ namespace App\Services\Checkout;
 use App\Contracts\Repositories\CartRepositoryInterface;
 use App\Contracts\Repositories\ProductVariantRepositoryInterface;
 use App\Models\Cart;
-use App\Models\Order;
 
 class CheckoutCartService
 {
     public function __construct(
         protected CartRepositoryInterface $carts,
         protected ProductVariantRepositoryInterface $variants,
-    ) {
-    }
+    ) {}
 
     public function getSelectedCheckoutItemIds(Cart $cart): array
     {
@@ -60,39 +58,17 @@ class CheckoutCartService
         $this->carts->deleteAllDetails($cart->id);
     }
 
-    public function clearUserCartByOrder(Order $order): void
-    {
-        $cart = $this->carts->findForUser($order->user_id);
-
-        if (!$cart) {
-            return;
-        }
-
-        $variantIds = $order->details()
-            ->whereNotNull('variant_id')
-            ->pluck('variant_id')
-            ->map(fn ($id) => (int) $id)
-            ->values()
-            ->toArray();
-
-        if (empty($variantIds)) {
-            return;
-        }
-
-        $this->carts->deleteDetailsByVariants($cart->id, $variantIds);
-    }
-
     public function getBuyNowItems()
     {
         $buyNow = session(config('threadly.checkout.buy_now_session_key'));
 
-        if (!$buyNow || empty($buyNow['variant_id']) || empty($buyNow['quantity'])) {
+        if (! $buyNow || empty($buyNow['variant_id']) || empty($buyNow['quantity'])) {
             return collect();
         }
 
-        $variant = $this->variants->findWithRelationsOrNull((int) $buyNow['variant_id']);
+        $variant = $this->variants->findAvailableForCart((int) $buyNow['variant_id']);
 
-        if (!$variant) {
+        if (! $variant) {
             return collect();
         }
 
@@ -122,7 +98,7 @@ class CheckoutCartService
             ];
         }
 
-        if (!$cart) {
+        if (! $cart) {
             return [
                 'source' => 'cart',
                 'items' => collect(),

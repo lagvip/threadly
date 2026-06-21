@@ -10,7 +10,6 @@ use App\Http\Controllers\Admin\ColorController;
 use App\Http\Controllers\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Admin\InventoryReceiptController;
 use App\Http\Controllers\Admin\OrderController;
-use App\Http\Controllers\Admin\OrderDetailController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\RefundRequestController as AdminRefundRequestController;
 use App\Http\Controllers\Admin\ReviewController;
@@ -326,7 +325,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/orders/{order}/ghn/simulate/{status}', [OrderController::class, 'simulateGhnStatus'])
             ->name('orders.ghn.simulate');
 
-        Route::resource('order-details', OrderDetailController::class)->only(['index', 'store', 'destroy']);
         Route::prefix('deleted')->name('deleted.')->group(function () {
             Route::get('/', [OrderController::class, 'trash'])->name('index');
             Route::post('/restore', [OrderController::class, 'restore'])->name('restore');

@@ -94,7 +94,7 @@ class VoucherRepository implements VoucherRepositoryInterface
     {
         return Voucher::query()
             ->where('status', VoucherStatus::Active->value)
-            ->where('quantity', '>', 0)
+            ->where(fn ($query) => $query->where('is_unlimited', true)->orWhere('quantity', '>', 0))
             ->where('start_date', '<=', now())
             ->where('end_date', '>=', now())
             ->orderByDesc('value')
@@ -103,6 +103,21 @@ class VoucherRepository implements VoucherRepositoryInterface
                 return $voucher->isValid($subtotal, $this->countUserUsage($voucher, $userId), 1);
             })
             ->values();
+    }
+
+    public function incrementQuantity(Voucher $voucher): void
+    {
+        if (! $voucher->is_unlimited) {
+            $voucher->increment('quantity');
+        }
+    }
+
+    public function expireActiveEndedAt(string $now): int
+    {
+        return Voucher::query()
+            ->where('end_date', '<', $now)
+            ->where('status', VoucherStatus::Active->value)
+            ->update(['status' => VoucherStatus::Expired->value]);
     }
 
     protected function countUserUsage(Voucher $voucher, int $userId): int

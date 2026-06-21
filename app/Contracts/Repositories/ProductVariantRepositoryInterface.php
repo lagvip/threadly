@@ -19,6 +19,10 @@ interface ProductVariantRepositoryInterface
 
     public function lockById(int $id): ?ProductVariant;
 
+    public function findAvailableForCart(int $id): ?ProductVariant;
+
+    public function lockAvailableForCart(int $id): ?ProductVariant;
+
     public function findForProduct(int $variantId, int $productId): ?ProductVariant;
 
     public function existsActiveCombination(int $productId, int $colorId, int $sizeId): bool;

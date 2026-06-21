@@ -15,9 +15,9 @@ class BuyNowCheckoutService
 
     public function execute(BuyNowData $data): void
     {
-        $variant = $this->variants->findWithRelations($data->variantId);
+        $variant = $this->variants->findAvailableForCart($data->variantId);
 
-        if ($variant->status !== ProductStatus::Active->value) {
+        if (! $variant || $variant->status !== ProductStatus::Active->value) {
             throw new RuntimeException('Biến thể sản phẩm hiện không khả dụng.');
         }
 

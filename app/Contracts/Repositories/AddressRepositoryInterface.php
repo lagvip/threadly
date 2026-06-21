@@ -7,6 +7,8 @@ use Illuminate\Support\Collection;
 
 interface AddressRepositoryInterface
 {
+    public function lockUser(int $userId): void;
+
     public function forUser(int $userId): Collection;
 
     public function defaultForUser(int $userId): ?Address;

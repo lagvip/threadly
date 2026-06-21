@@ -33,4 +33,8 @@ interface VoucherRepositoryInterface
     public function findByCode(string $code): ?Voucher;
 
     public function findActiveForCheckout(float $subtotal, int $userId): Collection;
+
+    public function incrementQuantity(Voucher $voucher): void;
+
+    public function expireActiveEndedAt(string $now): int;
 }

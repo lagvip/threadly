@@ -35,6 +35,40 @@ class ArchitectureConventionsTest extends TestCase
         $this->assertSame([], $violations);
     }
 
+    public function test_console_commands_delegate_business_queries_to_services(): void
+    {
+        $violations = [];
+
+        foreach ($this->phpFiles(['app/Console/Commands']) as $file) {
+            $contents = file_get_contents($file->getPathname());
+
+            if (preg_match('/[A-Z][A-Za-z0-9_]*::(query|where|update|create|find)\s*\(/', $contents)) {
+                $violations[] = $this->relativePath($file);
+            }
+        }
+
+        $this->assertSame([], $violations);
+    }
+
+    public function test_order_release_markers_are_mass_assignable_and_cast_to_datetime(): void
+    {
+        $order = new \App\Models\Order;
+
+        foreach (['stock_deducted_at', 'stock_released_at', 'voucher_released_at'] as $attribute) {
+            $this->assertContains($attribute, $order->getFillable());
+            $this->assertSame('datetime', $order->getCasts()[$attribute] ?? null);
+        }
+    }
+
+    public function test_admin_order_details_cannot_be_created_or_deleted_independently(): void
+    {
+        $routes = file_get_contents(base_path('routes/web.php'));
+
+        $this->assertStringNotContainsString("Route::resource('order-details'", $routes);
+        $this->assertFileDoesNotExist(base_path('app/Services/Admin/OrderDetails/AdminOrderDetailService.php'));
+        $this->assertFileDoesNotExist(base_path('app/Http/Requests/Admin/OrderDetails/StoreOrderDetailRequest.php'));
+    }
+
     public function test_services_are_grouped_by_bounded_context(): void
     {
         $violations = [];
